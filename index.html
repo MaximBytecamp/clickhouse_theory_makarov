@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F0EEE8">
+  <title>Справочник по ClickHouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .cover { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .8fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+    .cover h1 { margin: 12px 0 10px; font-family: var(--display); font-size: clamp(36px, 5.6vw, 74px); line-height: 1.02; letter-spacing: -.5px; }
+    .cover__sub { margin: 0 0 22px; font-family: var(--display); font-size: clamp(17px, 1.8vw, 26px); color: var(--leaf); }
+    .cover__meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; }
+    .cover__meta span { padding: 8px 12px; border: 2px solid var(--ink); background: #fff; font: 600 11px/1 var(--pixel); letter-spacing: 1px; }
+
+    /* Обложка справа: лист-логотип и живой сервер. */
+    .card-stand { padding: 26px 24px 22px; border: 3px solid var(--ink); background: var(--page); box-shadow: 7px 7px 0 var(--ink); transform: rotate(-.7deg); }
+    .card-stand__tag { display: inline-block; margin: 0 0 16px; padding: 6px 11px; background: var(--ink); color: var(--leaf-bright); font: 600 10px/1 var(--pixel); letter-spacing: 1.4px; text-transform: uppercase; }
+    .card-stand blockquote { margin: 0 0 18px; font-family: var(--display); font-style: italic; font-size: clamp(18px, 1.7vw, 24px); line-height: 1.4; }
+    .card-stand__sign { display: block; padding-top: 12px; border-top: 2px solid var(--rule); font: 600 11px/1.5 var(--pixel); letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-soft); }
+    .card-stand__live { display: flex; align-items: center; gap: 9px; margin-top: 14px; font: 600 11px/1 var(--pixel); letter-spacing: 1.1px; text-transform: uppercase; color: var(--ink-soft); }
+
+    .dbs { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 22px 0 8px; }
+    .db { padding: 15px 17px; border: 3px solid var(--ink); background: var(--page); box-shadow: 5px 5px 0 var(--leaf); }
+    .db b { display: block; font: 700 15px/1 var(--mono); color: var(--leaf); margin-bottom: 7px; }
+    .db p { margin: 0 0 9px; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+    .db code { display: block; font-size: 12.5px; color: var(--ink); }
+
+    .modules { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 16px; margin-top: 22px; }
+    .module { display: grid; grid-template-columns: 40px minmax(0, 1fr); border: 3px solid var(--ink); background: var(--page); box-shadow: 6px 6px 0 var(--ink); }
+    .module__spine { background: var(--ink); color: var(--leaf-bright); display: flex; align-items: center; justify-content: center; }
+    .module__spine b { writing-mode: vertical-rl; transform: rotate(180deg); font: 700 12px/1 var(--mono); letter-spacing: 2px; }
+    .module__body { padding: 18px 20px 16px; }
+    .module h3 { margin: 0 0 6px; font-family: var(--display); font-size: 19px; }
+    .module > .module__body > p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
+    .module__db { display: inline-block; margin-bottom: 12px; padding: 3px 9px; border: 2px solid var(--leaf); font: 600 10px/1.5 var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--leaf); }
+    .toc { margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--rule); }
+    .toc li { border-bottom: 2px solid var(--rule); }
+    .toc li:last-child { border-bottom: 0; }
+    .toc a, .toc s { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; text-decoration: none; font-size: 15px; }
+    .toc a { color: var(--ink); font-weight: 600; }
+    .toc a:hover { color: var(--leaf); }
+    .toc s { color: var(--ink-faint); text-decoration: none; }
+    .toc a > span, .toc s > span { flex: 1 1 auto; min-width: 0; line-height: 1.35; }
+    .toc b { flex: 0 0 auto; font: 600 12px/1.4 var(--mono); color: var(--ink-faint); }
+    .toc em { flex: 0 0 auto; margin-left: auto; font: 600 10px/1 var(--pixel); letter-spacing: 1px; text-transform: uppercase; font-style: normal; color: var(--leaf); }
+    .toc s em { color: var(--ink-faint); }
+    .toc--work { margin-top: 10px; border-top: 0; }
+    .toc--work li { border-bottom: 0; }
+    .toc--work a, .toc--work s { padding: 7px 10px; margin-top: 6px; border: 2px solid var(--ink); font-size: 14px; }
+    .toc--work .work-kind { font: 600 10px/1 var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--leaf); }
+    .toc--work s .work-kind { color: var(--ink-faint); }
+    /* Подпись вида работы — колонка постоянной ширины: название не наезжает на неё и не съезжает к середине. */
+    .toc--work .work-kind { flex: 0 0 92px; white-space: nowrap; }
+    /* Карточка соседнего справочника System design: заметнее обычной ссылки. */
+    .sd-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 22px; align-items: center; margin: 22px 0 10px; padding: 20px 22px; border: 3px solid var(--ink); background: var(--ink); color: #fff; text-decoration: none; box-shadow: 8px 8px 0 #0B6E8A; transition: transform .15s ease, box-shadow .15s ease; }
+    .sd-card:hover { color: #fff; transform: translate(-2px, -2px); box-shadow: 10px 10px 0 var(--leaf-bright); }
+    .sd-card__scheme { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .sd-card__scheme i { padding: 4px 9px; border: 2px solid #4FC3DD; color: #D6EEF3; font: 600 11px/1.3 var(--mono); font-style: normal; }
+    .sd-card__scheme b { color: #4FC3DD; font: 700 14px/1 var(--mono); }
+    .sd-card__text { display: block; }
+    .sd-card__tag { display: block; margin-bottom: 4px; font: 600 10.5px/1.4 var(--pixel); letter-spacing: 1.3px; text-transform: uppercase; color: #4FC3DD; }
+    .sd-card strong { display: block; margin-bottom: 6px; font-family: var(--display); font-size: clamp(21px, 2.4vw, 28px); line-height: 1.15; }
+    .sd-card__text > span:last-child { display: block; font-size: 15px; line-height: 1.5; color: #C8D9D2; }
+    .sd-card__go { padding: 12px 18px; background: #4FC3DD; color: var(--ink); font: 700 12px/1.3 var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+    @media (max-width: 700px) { .sd-card { grid-template-columns: 1fr; } .sd-card__go { justify-self: start; } }
+  </style>
+</head>
+<body>
+  <div class="book">
+    <div class="book__body">
+      <div class="spine"><span>Справочник по ClickHouse · Макаров М. Н.</span></div>
+
+      <main class="leaf">
+        <div class="running">
+          <p class="eyebrow">Издание для старших курсов</p>
+          <p class="running__folio">Макаров Максим Николаевич</p>
+        </div>
+
+        <section class="cover">
+          <div>
+            <h1>Справочник<br>по ClickHouse</h1>
+            <p class="cover__sub">От первой таблицы до аналитической витрины:<br>запросы, хранение и скорость</p>
+            <p>ClickHouse — аналитическая база данных. Она хранит таблицу по столбцам и поэтому за доли секунды считает итоги по миллионам строк: сколько покупок было за день, какая доля посетителей дошла до оплаты, как менялась температура на складе. Справочник показывает, как с ней работать, на настоящем сервере и данных, одинаковых у всех.</p>
+            <p>Основной язык книги — SQL. Запрос пишется одинаково в любом драйвере, поэтому код на Python, C++, Go и Ruby появляется там, где драйверы действительно различаются: подключение, параметры запроса, пакетная вставка и программы целиком.</p>
+            <p>Порядок глав — это порядок изучения: конструкция не встретится в примере раньше, чем разобрана. После набора тем идёт практическая работа с готовым решением, за ней — контрольная точка без разбора.</p>
+            <div class="cover__meta">
+              <span>ClickHouse 26.8</span><span>SQL · Python · C++ · Go · Ruby</span><span>3 базы, 13 млн строк</span><span>кадры Play UI</span>
+            </div>
+          </div>
+
+          <aside class="card-stand">
+            <span class="card-stand__tag">Стенд</span>
+            <blockquote>Одна команда — и на компьютере сервер ClickHouse с магазином, 10 миллионами действий посетителей сайта и 3 миллионами замеров датчиков.</blockquote>
+            <span class="card-stand__sign">docker compose up -d</span>
+            <p class="card-stand__live"><span class="pulse"></span> localhost:8123/play · student / student</p>
+          </aside>
+        </section>
+
+        <h2><span class="sec">Базы</span>На чём мы работаем</h2>
+        <p>Все примеры выполнены на трёх базах стенда. Они восстанавливаются одной командой, данные детерминированные — числа в книге совпадут с вашими. Как поднять стенд — глава 0.1.</p>
+        <div class="dbs">
+          <article class="db">
+            <b>shop</b>
+            <p>Тот же магазин электроники, что в справочнике по MongoDB, разложенный по таблицам. Для первых запросов и сравнения двух моделей.</p>
+            <code>products 21 · stock 42 · customers 20 · orders 120 · order_items 271</code>
+          </article>
+          <article class="db">
+            <b>web</b>
+            <p>Действия посетителей сайта магазина за три месяца: просмотры, поиск, корзина, оформление, покупка. Для скорости и аналитики.</p>
+            <code>events 10 324 592</code>
+          </article>
+          <article class="db">
+            <b>iot</b>
+            <p>Датчики температуры и влажности на четырёх складах, замер раз в минуту. Для временных рядов и сроков хранения.</p>
+            <code>readings 3 174 480</code>
+          </article>
+        </div>
+        <p><a class="repo" href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice — стенд, данные и решения практик</a></p>
+        <p><a class="repo" href="https://maximbytecamp.github.io/mongodb_theory_makarov/">Справочник по MongoDB — документная база того же магазина</a></p>
+
+        <h2 id="modules"><span class="sec">План</span>Модули и главы</h2>
+
+        <div class="modules">
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 0</b></div>
+            <div class="module__body">
+              <h3>Рабочее место</h3>
+              <span class="module__db">Docker, Play UI, clickhouse-client</span>
+              <p>Стенд в Docker, базы, клиенты и первая программа на одном из четырёх языков. Модуль проходят один раз, до первых запросов.</p>
+              <ul class="toc">
+                <li><s><b>0.1</b><span>Стенд: Docker и базы</span><em>скоро</em></s></li>
+                <li><s><b>0.1а</b><span>Windows: Docker Desktop и WSL 2</span><em>скоро</em></s></li>
+                <li><s><b>0.2</b><span>Клиенты: clickhouse-client, Play UI, DBeaver</span><em>скоро</em></s></li>
+                <li><s><b>0.3</b><span>Программа на четырёх языках</span><em>скоро</em></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 1</b></div>
+            <div class="module__body">
+              <h3>Первые данные</h3>
+              <span class="module__db">базы shop и sandbox</span>
+              <p>Сервер, база и таблица, типы и пустые значения, создание таблицы, вставка, чтение, запрос из программы, изменение и удаление.</p>
+              <ul class="toc">
+                <li><s><b>1.1</b><span>Сервер, база, таблица</span><em>скоро</em></s></li>
+                <li><s><b>1.2</b><span>Типы данных</span><em>скоро</em></s></li>
+                <li><s><b>1.3</b><span>Пустое значение: DEFAULT и Nullable</span><em>скоро</em></s></li>
+                <li><s><b>1.4</b><span>CREATE TABLE и движок</span><em>скоро</em></s></li>
+                <li><s><b>1.5</b><span>INSERT: строки и пачки</span><em>скоро</em></s></li>
+                <li><s><b>1.6</b><span>Чтение: столбцы, WHERE, ORDER BY, LIMIT</span><em>скоро</em></s></li>
+                <li><s><b>1.7</b><span>Запрос из программы и параметры</span><em>скоро</em></s></li>
+                <li><s><b>1.8</b><span>Изменить и удалить: мутации</span><em>скоро</em></s></li>
+                <li><s><b>1.9</b><span>Скрипт целиком: отчёт по магазину</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-01</span><span>Каталог: загрузка и правки</span></s></li>
+                <li><s><span class="work-kind">КТ-01</span><span>Инвентаризация склада</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 2</b></div>
+            <div class="module__body">
+              <h3>SELECT в ClickHouse</h3>
+              <span class="module__db">базы shop и web</span>
+              <p>Условия, порядок, функции, дата и время, группировка, комбинаторы агрегатов, подзапросы и соединения.</p>
+              <ul class="toc">
+                <li><s><b>2.1</b><span>Условия: IN, BETWEEN, LIKE, NULL</span><em>скоро</em></s></li>
+                <li><s><b>2.2</b><span>ORDER BY, LIMIT BY, WITH TIES</span><em>скоро</em></s></li>
+                <li><s><b>2.3</b><span>Функции строк и чисел, if и multiIf</span><em>скоро</em></s></li>
+                <li><s><b>2.4</b><span>Дата, время и часовые пояса</span><em>скоро</em></s></li>
+                <li><s><b>2.5</b><span>GROUP BY, HAVING, TOTALS и ROLLUP</span><em>скоро</em></s></li>
+                <li><s><b>2.6</b><span>Комбинаторы: -If, -Distinct, -OrNull</span><em>скоро</em></s></li>
+                <li><s><b>2.7</b><span>Подзапросы и WITH</span><em>скоро</em></s></li>
+                <li><s><b>2.8</b><span>JOIN: правая таблица в памяти</span><em>скоро</em></s></li>
+                <li><s><b>2.9</b><span>Скрипт целиком: отчёт по сайту</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-02</span><span>Отчёт по продажам</span></s></li>
+                <li><s><span class="work-kind">КТ-02</span><span>Починить сломанные запросы</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 3</b></div>
+            <div class="module__body">
+              <h3>MergeTree и скорость</h3>
+              <span class="module__db">база web, 10 млн строк</span>
+              <p>Почему ClickHouse быстрый: столбцы, части и слияния, разреженный индекс, ключ сортировки, партиции, план и журнал запросов.</p>
+              <ul class="toc">
+                <li><s><b>3.1</b><span>Колоночное хранение и сжатие</span><em>скоро</em></s></li>
+                <li><s><b>3.2</b><span>Части и слияния</span><em>скоро</em></s></li>
+                <li><s><b>3.3</b><span>Разреженный индекс и гранулы</span><em>скоро</em></s></li>
+                <li><s><b>3.4</b><span>Выбор ключа сортировки</span><em>скоро</em></s></li>
+                <li><s><b>3.5</b><span>PARTITION BY</span><em>скоро</em></s></li>
+                <li><s><b>3.6</b><span>EXPLAIN и журнал запросов</span><em>скоро</em></s></li>
+                <li><s><b>3.7</b><span>Индексы пропуска и проекции</span><em>скоро</em></s></li>
+                <li><s><b>3.8</b><span>LowCardinality и кодеки</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-03</span><span>Журнал событий: два варианта ключа</span></s></li>
+                <li><s><span class="work-kind">КТ-03</span><span>Медленный отчёт</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 4</b></div>
+            <div class="module__body">
+              <h3>Загрузка и дубли</h3>
+              <span class="module__db">файлы, генератор, sandbox</span>
+              <p>Форматы, табличные функции, пакетная вставка, битые события и дубли.</p>
+              <ul class="toc">
+                <li><s><b>4.1</b><span>Форматы: CSV, JSONEachRow, Parquet</span><em>скоро</em></s></li>
+                <li><s><b>4.2</b><span>Табличные функции и генератор стенда</span><em>скоро</em></s></li>
+                <li><s><b>4.3</b><span>Пакетная вставка из программы</span><em>скоро</em></s></li>
+                <li><s><b>4.4</b><span>Контракт схемы и битые события</span><em>скоро</em></s></li>
+                <li><s><b>4.5</b><span>Дубли: ReplacingMergeTree и FINAL</span><em>скоро</em></s></li>
+                <li><s><b>4.6</b><span>Изменяемые данные: версия строки</span><em>скоро</em></s></li>
+                <li><s><b>4.7</b><span>Скрипт целиком: загрузчик событий</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-04</span><span>Приём событий с контролем качества</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 5</b></div>
+            <div class="module__body">
+              <h3>Аналитические функции</h3>
+              <span class="module__db">базы web и iot</span>
+              <p>Временные ряды, уникальные и квантили, массивы, окна, воронки и словари.</p>
+              <ul class="toc">
+                <li><s><b>5.1</b><span>Временные ряды и WITH FILL</span><em>скоро</em></s></li>
+                <li><s><b>5.2</b><span>uniq и uniqExact</span><em>скоро</em></s></li>
+                <li><s><b>5.3</b><span>Квантили: медиана и p95</span><em>скоро</em></s></li>
+                <li><s><b>5.4</b><span>Массивы и ARRAY JOIN</span><em>скоро</em></s></li>
+                <li><s><b>5.5</b><span>Оконные функции</span><em>скоро</em></s></li>
+                <li><s><b>5.6</b><span>Воронки и удержание</span><em>скоро</em></s></li>
+                <li><s><b>5.7</b><span>Словари и dictGet</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-05</span><span>Продуктовые метрики</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 6</b></div>
+            <div class="module__body">
+              <h3>Предрасчёт и жизненный цикл</h3>
+              <span class="module__db">базы web и iot</span>
+              <p>Материализованные представления, агрегирующие движки и TTL.</p>
+              <ul class="toc">
+                <li><s><b>6.1</b><span>Материализованное представление</span><em>скоро</em></s></li>
+                <li><s><b>6.2</b><span>SummingMergeTree и AggregatingMergeTree</span><em>скоро</em></s></li>
+                <li><s><b>6.3</b><span>Заполнение истории и ошибки MV</span><em>скоро</em></s></li>
+                <li><s><b>6.4</b><span>TTL: удаление, перенос, свёртка</span><em>скоро</em></s></li>
+                <li><s><b>6.5</b><span>Обычные и параметризованные представления</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">ПР-06</span><span>Дашборд по сайту</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 7</b></div>
+            <div class="module__body">
+              <h3>ClickHouse в платформе данных</h3>
+              <span class="module__db">все базы</span>
+              <p>Честный замер, производная витрина, доступ, резервные копии, диагностика и миграции.</p>
+              <ul class="toc">
+                <li><s><b>7.1</b><span>Тот же отчёт в MongoDB и ClickHouse</span><em>скоро</em></s></li>
+                <li><s><b>7.2</b><span>Производная витрина: пересборка и повтор</span><em>скоро</em></s></li>
+                <li><s><b>7.3</b><span>Пользователи, роли и квоты</span><em>скоро</em></s></li>
+                <li><s><b>7.4</b><span>BACKUP и RESTORE</span><em>скоро</em></s></li>
+                <li><s><b>7.5</b><span>Диагностика: слияния, память, лимиты</span><em>скоро</em></s></li>
+                <li><s><b>7.6</b><span>Миграции схемы</span><em>скоро</em></s></li>
+                <li><s><b>7.7</b><span>Где ClickHouse не нужен</span><em>скоро</em></s></li>
+              </ul>
+              <ul class="toc toc--work">
+                <li><s><span class="work-kind">КТ</span><span>Аналитический контур</span></s></li>
+              </ul>
+            </div>
+          </article>
+          <article class="module">
+            <div class="module__spine"><b>МОДУЛЬ 8</b></div>
+            <div class="module__body">
+              <h3>Курсовые работы</h3>
+              <span class="module__db">папка на Google Диске</span>
+              <p>Курсовые работы по дисциплине собраны в одной папке на Google Диске.</p>
+              <ul class="toc toc--work">
+                <li><a href="https://drive.google.com/drive/folders/1jJkZDFJcSgztaFWketCZnz65b5UvsKJO?usp=sharing" target="_blank" rel="noopener"><span class="work-kind">ПАПКА</span><span>Курсовые работы на Google Диске</span></a></li>
+              </ul>
+            </div>
+          </article>
+        </div>
+
+        <div class="colophon">
+          <span>Справочник по ClickHouse · МДК.04.01</span>
+          <span class="author-line">© Макаров Максим Николаевич</span>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
