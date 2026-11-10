@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F0EEE8">
+  <title>0.1 Стенд: Docker и базы · Справочник по ClickHouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../styles.css">
+  <script>
+    /* Система проставляется до отрисовки: без сохранённого выбора определяется по браузеру. */
+    (function () {
+      var os = null;
+      try { os = localStorage.getItem('clickhouse-book-os'); } catch (e) {}
+      if (!os) {
+        var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+        os = /win/i.test(p) ? 'win' : /mac|iphone|ipad/i.test(p) ? 'mac' : 'linux';
+      }
+      document.documentElement.dataset.os = os;
+    })();
+  </script>
+</head>
+<body>
+  <div class="book">
+    <div class="book__body">
+      <div class="spine"><span>Модуль 0 · Рабочее место</span></div>
+
+      <main class="leaf">
+        <div class="running">
+          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 0 · рабочее место</p>
+          <p class="running__folio">Глава 0.1</p>
+        </div>
+
+        <header class="chapter-head">
+          <span class="chapter-num">0.1</span>
+          <h1>Стенд:<br>Docker и базы</h1>
+          <p class="lead">Все запросы, числа и кадры справочника получены на одном сервере ClickHouse с тремя базами. В этой главе вы поднимете у себя такой же сервер одной командой, проверите, что базы загрузились, и откроете их в браузере и в терминале. Главу проходят один раз, до первых запросов.</p>
+        </header>
+
+        <dl class="passport">
+          <div><dt>Категория</dt><dd>Подготовка рабочего места</dd></div>
+          <div><dt>Уровень</dt><dd>Начальный</dd></div>
+          <div><dt>Связанные темы</dt><dd>0.1а Windows: Docker Desktop и WSL 2 · 0.2 Клиенты</dd></div>
+          <div><dt>Зачем это знать</dt><dd>Чтобы запросы из глав давали у вас те же числа, что в книге</dd></div>
+        </dl>
+
+        <p><a class="repo" href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice — стенд и базы</a></p>
+
+        <nav class="contents">
+          <b>В этой главе</b>
+          <ol>
+            <li><a href="#s1">Что такое стенд и почему Docker</a></li>
+            <li><a href="#s2">Что будет запущено</a></li>
+            <li><a href="#s3">Шаг 1. Поставить и проверить Docker</a></li>
+            <li><a href="#s4">Шаг 2. Скачать репозиторий</a></li>
+            <li><a href="#s5">Шаг 3. Поднять стенд</a></li>
+            <li><a href="#s6">Что загрузилось</a></li>
+            <li><a href="#s7">Шаг 4. Базы в браузере</a></li>
+            <li><a href="#s8">Шаг 5. Клиент в терминале</a></li>
+            <li><a href="#s9">Как запрос доходит до сервера</a></li>
+            <li><a href="#s10">Сбросить, остановить, удалить</a></li>
+            <li><a href="#s11">Место на диске и память</a></li>
+            <li><a href="#s12">Частые ошибки</a></li>
+            <li><a href="#s13">Проверьте себя</a></li>
+            <li><a href="#s14">Шпаргалка</a></li>
+            <li><a href="#s15">Глоссарий</a></li>
+          </ol>
+        </nav>
+
+        <h2 id="s1"><span class="sec">§1</span>Что такое стенд и почему Docker</h2>
+        <p>В лаборатории у всех студентов одинаковые приборы и реактивы, поэтому результат опыта можно сверить с учебником. <b>Стенд</b> играет ту же роль: это сервер ClickHouse с заранее загруженными данными, на котором выполняются все примеры книги. У каждого студента он одинаковый: та же версия сервера, те же таблицы, те же строки. Поэтому запрос из главы даёт у вас то же число, что напечатано в книге. Если число другое, ошибка в запросе: данные у всех одни и те же.</p>
+        <p>Сервер ClickHouse выпускается для Linux и macOS. Для Windows отдельной сборки нет. Поэтому стенд запускается в <b>Docker</b> — программе, которая запускает другие программы в изолированных «коробках» со своей маленькой системой Linux внутри. Такая коробка называется <b>контейнером</b>. Контейнер одинаково работает на Windows, macOS и Linux: Docker сам предоставляет ему Linux, даже если на компьютере Windows.</p>
+        <p>Контейнер создаётся из <b>образа</b> — готового шаблона, в котором уже лежит программа со всем нужным для работы. Образ похож на установочный диск, а контейнер — на программу, установленную с этого диска и запущенную. Из одного образа можно создать несколько контейнеров. Стенд использует официальный образ сервера <code>clickhouse/clickhouse-server:26.8.36.3</code>. Версия в имени записана до последней цифры, поэтому у всех запускается один и тот же сервер.</p>
+        <p>Рисунок показывает, что делает Docker на любой из трёх систем и как образ связан с контейнером.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 230" role="img" aria-label="Docker на Windows, macOS и Linux запускает один и тот же контейнер из образа">
+            <rect class="sc-box" x="10" y="20" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="45">Windows</text>
+            <rect class="sc-box" x="10" y="80" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="105">macOS</text>
+            <rect class="sc-box" x="10" y="140" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="165">Linux</text>
+            <path class="sc-arrow" d="M164 40 L240 92 M164 100 L240 100 M164 160 L240 108 M233 95 L240 100 L233 105"/>
+            <rect class="sc-acc" x="246" y="62" width="150" height="76" rx="8"/><text class="tb tc" x="321" y="92">Docker</text><text class="t tc" x="321" y="114">даёт Linux</text>
+            <rect class="sc-warm" x="450" y="20" width="160" height="56" rx="6"/><text class="tb tc" x="530" y="44">образ</text><text class="tm tc" x="530" y="64">clickhouse-server</text>
+            <path class="sc-arrow" d="M530 80 L530 112 M524 105 L530 112 L536 105"/>
+            <rect class="sc-ink" x="440" y="118" width="180" height="62" rx="6"/><text class="tw tc" x="530" y="144" style="font:700 13px var(--mono)">контейнер</text><text class="tw tc" x="530" y="164" style="font:500 12px var(--mono)">course-clickhouse</text>
+            <path class="sc-arrow" d="M400 100 L434 140 M427 137 L434 140 L433 132"/>
+            <text class="t" x="650" y="44">установочный диск:</text><text class="t" x="650" y="62">лежит, не меняется</text>
+            <text class="t" x="650" y="142">запущенная программа:</text><text class="t" x="650" y="160">работает, хранит состояние</text>
+            <text class="t tc" x="440" y="215">одна и та же коробка с Linux внутри — на любой системе</text>
+          </svg>
+          <figcaption>Docker, образ и контейнер</figcaption>
+        </figure>
+        <p>Слева — три системы, на которых может работать студент. Все три стрелки сходятся в Docker: он предоставляет контейнеру Linux, поэтому дальше картина одинаковая. Справа сверху — образ, светлая коробка: он хранится на диске и не меняется. Стрелка вниз — запуск. Тёмная коробка — контейнер, созданный из образа, в нём и работает сервер. Следовательно, у всех студентов сервер один и тот же, независимо от системы. Осталось понять, из каких частей состоит стенд и кто к кому обращается.</p>
+
+
+        <h2 id="s2"><span class="sec">§2</span>Что будет запущено</h2>
+        <p>Весь стенд описан в одном файле — <code>compose.yaml</code> в корне репозитория. Docker читает этот файл и поднимает всё, что в нём перечислено, одной командой. Ниже — схема: что окажется на компьютере после запуска и кто к кому обращается.</p>
+        <div class="dock">
+          <div class="dock__host"><span>ваш компьютер</span><b>Windows · macOS · Linux</b></div>
+          <div class="dock__clients">
+            <div class="dock__client"><b>браузер</b>Play UI — запросы и таблицы<br><i>localhost:8123/play</i></div>
+            <div class="dock__client"><b>терминал</b>команды <code>docker compose</code> и clickhouse-client<br><i>из папки репозитория</i></div>
+            <div class="dock__client"><b>программы</b>ваш код на Python, Go, C++, Ruby<br><i>localhost:8123 · localhost:9000</i></div>
+          </div>
+          <div class="dock__engine">
+            <p>Docker · проект clickhouse-practice</p>
+            <div class="dock__boxes">
+              <div class="dock__box dock__box--main"><b>course-clickhouse</b><span>сервер ClickHouse 26.8 — тот, к которому идут все запросы книги</span><em>работает всё время</em></div>
+              <div class="dock__box dock__box--done"><b>seed</b><span>загружает базы shop, web и iot, если сервер пустой</span><em>завершается сам</em></div>
+            </div>
+            <p class="dock__vol">том clickhouse-data — файлы баз; переживает остановку и удаление контейнеров</p>
+          </div>
+        </div>
+        <p>Схема читается сверху вниз. В тёмной полосе — ваш компьютер. Под ней пунктиром обведены программы, которыми вы будете работать с сервером: браузер, терминал и собственный код. Ниже — то, что запускает Docker. Контейнеров два. <code>course-clickhouse</code> — это сам сервер. Мигающий квадратик у имени означает, что он работает всё время, пока стенд поднят. <code>seed</code> — разовый загрузчик. Он заполняет пустой сервер данными и завершается, поэтому его метка серая.</p>
+        <p>Нижняя строка — <b>том</b>. Его можно сравнить с флешкой: компьютер меняют, а файлы остаются на флешке. Том — это папка, которую Docker хранит отдельно от контейнера, и в ней лежат файлы баз. Контейнер можно остановить, удалить и создать заново, а том остаётся вместе с данными. Подписи <code>localhost:8123</code> и <code>localhost:9000</code> — адреса, по которым программы на компьютере обращаются к серверу в контейнере. Чтобы всё это заработало, нужен сам Docker.</p>
+
+        <h2 id="s3"><span class="sec">§3</span>Шаг 1. Поставить и проверить Docker</h2>
+        <span class="phase">Делаем</span>
+        <ol class="steps" data-os="win">
+          <li><b>Скачайте Docker Desktop для Windows</b>На странице <a href="https://docs.docker.com/desktop/setup/install/windows-install/">docs.docker.com → Install Docker Desktop on Windows</a> скачайте установщик для процессоров x86_64 — так обозначают обычные процессоры Intel и AMD. Файл весит около 600 МБ.</li>
+          <li><b>Запустите установщик и оставьте настройки по умолчанию</b>Первое окно — <b>Configuration</b>. Выбрана установка для текущего пользователя (<b>Per-user installation</b>): ей не нужны права администратора. Движок — <b>WSL 2</b>, встроенная в Windows подсистема, в которой Docker держит свой Linux. Нажмите <b>OK</b>.
+            <figure class="shot"><img src="../../shots/w-dd-01-config.png" alt="Окно Configuration установщика Docker Desktop: выбраны Per-user installation и WSL 2"><figcaption>Установщик Docker Desktop · Configuration · снято на Windows</figcaption></figure>
+          </li>
+          <li><b>Запустите Docker Desktop</b>После установки откройте Docker Desktop из меню «Пуск». Команды работают, только пока он запущен и внизу слева его окна написано <b>Engine running</b> — «движок запущен».</li>
+          <li><b>Откройте PowerShell</b>Нажмите <kbd>Win</kbd> + <kbd>X</kbd> и выберите «Терминал» (в Windows 10 — «Windows PowerShell»). Все команды главы набираются в нём.</li>
+        </ol>
+        <ol class="steps" data-os="mac">
+          <li><b>Узнайте процессор Mac</b>Меню  → «Об этом Mac», строка «Чип» или «Процессор». Apple M1 и новее — это Apple Silicon, остальные — Intel. Сборки Docker Desktop для них разные.</li>
+          <li><b>Скачайте и установите Docker Desktop</b>На странице <a href="https://docs.docker.com/desktop/setup/install/mac-install/">docs.docker.com → Install Docker Desktop on Mac</a> выберите сборку под свой процессор, откройте скачанный <code>Docker.dmg</code> и перетащите Docker в «Программы».</li>
+          <li><b>Запустите Docker Desktop</b>Откройте его из «Программ». Команды работают, пока он запущен и внизу слева его окна написано <b>Engine running</b>.</li>
+          <li><b>Откройте Терминал</b><kbd>Cmd</kbd> + <kbd>Пробел</kbd>, наберите «Терминал». Все команды главы набираются в нём.</li>
+        </ol>
+        <ol class="steps" data-os="linux">
+          <li><b>Поставьте Docker Engine</b>На Linux Docker Desktop не нужен: ставится сам движок вместе с плагином Compose. Его устанавливает официальный скрипт:
+            <figure class="code"><figcaption><span>Терминал</span><span>установка Docker Engine</span></figcaption>
+<pre>curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER</pre></figure>
+          </li>
+          <li><b>Выйдите из системы и войдите снова</b>Последняя команда добавила вас в группу <code>docker</code>. Без нового входа она не действует, и каждую команду пришлось бы начинать с <code>sudo</code>.</li>
+          <li><b>Откройте терминал</b>В большинстве дистрибутивов — <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>.</li>
+        </ol>
+        <figure class="shot" data-os="win mac"><img src="../../shots/05-docker-engine-running.png" alt="Строка Engine running внизу окна Docker Desktop"><figcaption>Docker Desktop · внизу слева — Engine running · кадр с macOS, в Windows строка на том же месте</figcaption></figure>
+        <p>Проверьте, что Docker отвечает. Команда <code>docker version</code> печатает версии двух частей Docker:</p>
+        <figure class="code"><figcaption><span>Терминал</span><span>проверка Docker</span></figcaption>
+<pre>docker version</pre></figure>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>снято на macOS; у вас отличаются OS/Arch и номера версий</span></figcaption>
+<pre>Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5
+ Git commit:        a7dcaa6
+ Built:             Wed Aug  5 18:27:50 2026
+ OS/Arch:           darwin/arm64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.89.0 (238018)
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5
+  Git commit:       6a43e3d
+  Built:            Wed Aug  5 18:28:35 2026
+  OS/Arch:          linux/arm64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.3
+ …</pre></figure>
+        <span class="phase phase--read">Разбираемся</span>
+        <p>В ответе два блока. <code>Client</code> — сама команда <code>docker</code>, которую вы набираете в терминале. <code>Server</code> — движок, который создаёт и запускает контейнеры. Строки <code>OS/Arch</code> у них разные: у клиента <code>darwin/arm64</code> (это macOS), у движка <code>linux/arm64</code>. Это и есть тот Linux, который Docker предоставляет контейнерам на любой системе. Если блока <code>Server</code> нет и вместо него ошибка подключения, движок не запущен: запустите Docker Desktop и дождитесь <b>Engine running</b>. Когда оба блока на месте, можно скачивать стенд.</p>
+
+        <h2 id="s4"><span class="sec">§4</span>Шаг 2. Скачать репозиторий</h2>
+        <p>Описание стенда и данные для загрузки лежат в репозитории <code>clickhouse-practice</code> на GitHub. Его нужно скачать к себе — в любую папку, где вы держите учебные проекты.</p>
+        <span class="phase">Делаем</span>
+        <ol class="steps">
+          <li><b>Откройте страницу репозитория</b><a href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice</a>. Зелёная кнопка <b>Code</b> (рамка 1) открывает меню скачивания.
+            <figure class="shot"><img src="../../shots/06-github-repo.png" alt="Страница репозитория clickhouse-practice на GitHub, выделена кнопка Code"><figcaption>GitHub · MaximBytecamp/clickhouse-practice</figcaption></figure>
+          </li>
+          <li><b>Скачайте одним из двух способов</b>Если установлен Git — скопируйте адрес из поля 1 и выполните <code>git clone</code>. Если Git нет — нажмите <b>Download ZIP</b> (рамка 2) и распакуйте архив.
+            <figure class="shot"><img src="../../shots/07-github-code-zip.png" alt="Меню Code: адрес для git clone и пункт Download ZIP"><figcaption>GitHub · меню Code: 1 — адрес для git clone, 2 — архив</figcaption></figure>
+          </li>
+          <li><b>Перейдите в папку репозитория</b>Все команды дальше выполняются из неё — там, где лежит <code>compose.yaml</code>.</li>
+        </ol>
+        <figure class="code"><figcaption><span>Терминал</span><span>через Git</span></figcaption>
+<pre>git clone https://github.com/MaximBytecamp/clickhouse-practice.git
+cd clickhouse-practice</pre></figure>
+        <figure class="code" data-os="win"><figcaption><span>PowerShell</span><span>архив распакован командой «Извлечь всё» в «Загрузках»</span></figcaption>
+<pre>cd $HOME\Downloads\clickhouse-practice-main\clickhouse-practice-main</pre></figure>
+        <figure class="code" data-os="mac linux"><figcaption><span>Терминал</span><span>архив распакован в «Загрузках»</span></figcaption>
+<pre>cd ~/Downloads/clickhouse-practice-main</pre></figure>
+        <span class="phase phase--read">Разбираемся</span>
+        <p>У архива с GitHub к имени папки добавляется название ветки — <code>-main</code>. На Windows «Извлечь всё» вдобавок кладёт папку в папку с тем же именем, поэтому в пути она встречается дважды. Проверить, что вы на месте, можно командой <code>ls</code> (на Windows работает и <code>dir</code>): в списке должны быть <code>compose.yaml</code>, <code>README.md</code> и папка <code>stend</code>. Из этой папки и поднимается стенд.</p>
+
+        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Поднять стенд</h2>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
+<pre>docker compose up -d</pre></figure>
+        <p><code>docker compose</code> — команда Docker, которая работает с файлом <code>compose.yaml</code>. <code>up</code> означает «поднять всё, что описано в файле». Флаг <code>-d</code> означает «в фоне»: контейнеры продолжат работать, а терминал освободится для следующих команд. Первый запуск дольше: сначала Docker скачивает образ сервера, около 270 МБ. Когда всё поднялось, вывод заканчивается так:</p>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>образ уже скачан; при первом запуске выше — строки скачивания</span></figcaption>
+<pre> ✔ Volume clickhouse-practice_clickhouse-data Created                       0.0s
+ ✔ Network clickhouse-practice_default        Created                       0.0s
+ ✔ Container course-clickhouse                Created                       0.2s
+ ✔ Container clickhouse-practice-seed-1       Created                       0.2s
+ ✔ Container course-clickhouse                Healthy                      10.9s
+ ✔ Container clickhouse-practice-seed-1       Started                      10.9s</pre></figure>
+        <span class="phase phase--read">Разбираемся</span>
+        <p>За этими шестью строками — четыре события, и каждое начинается только после предыдущего. Ниже они показаны по одному.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 300" role="img" aria-label="Четыре шага docker compose up: образ, том и сеть, сервер до Healthy, загрузчик">
+            <rect class="sc-acc" x="10" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="110" y="35">1 · образ</text>
+            <rect class="sc-acc" x="230" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="330" y="35">2 · том и сеть</text>
+            <rect class="sc-acc" x="450" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="550" y="35">3 · сервер</text>
+            <rect class="sc-acc" x="670" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="770" y="35">4 · загрузчик</text>
+            <!-- 1 -->
+            <rect class="sc-box" x="40" y="80" width="140" height="70" rx="6"/><text class="tm tc" x="110" y="108">clickhouse-server</text><text class="tm tc" x="110" y="128">26.8.36.3</text>
+            <path class="sc-arrow" d="M110 160 L110 200 M104 193 L110 200 L116 193"/>
+            <text class="t tc" x="110" y="225">скачан из Docker Hub</text><text class="t tc" x="110" y="243">один раз, ≈ 270 МБ</text>
+            <!-- 2 -->
+            <rect class="sc-warm" x="250" y="80" width="160" height="34" rx="6"/><text class="tm tc" x="330" y="102">том clickhouse-data</text>
+            <rect class="sc-soft" x="250" y="126" width="160" height="34" rx="6"/><text class="tm tc" x="330" y="148">сеть default</text>
+            <text class="t tc" x="330" y="190">папка для файлов баз</text><text class="t tc" x="330" y="208">и сеть, в которой</text><text class="t tc" x="330" y="226">контейнеры видят друг друга</text>
+            <!-- 3 -->
+            <rect class="sc-box" x="470" y="80" width="160" height="70" rx="6"/><text class="tm tc" x="550" y="104">course-clickhouse</text><text class="t tc" x="550" y="126">SELECT 1 → 1 ?</text>
+            <rect class="sc-acc" x="490" y="160" width="120" height="28" rx="14"/><text class="tb tc" x="550" y="179">Healthy</text>
+            <text class="t tc" x="550" y="215">раз в 3 секунды Docker</text><text class="t tc" x="550" y="233">выполняет в контейнере</text><text class="t tc" x="550" y="251">SELECT 1</text>
+            <!-- 4 -->
+            <rect class="sc-box" x="690" y="80" width="160" height="40" rx="6"/><text class="tm tc" x="770" y="105">seed</text>
+            <path class="sc-arrow" d="M770 125 L770 150 M764 143 L770 150 L776 143"/>
+            <text class="tm tc" x="770" y="170">shop · web · iot</text>
+            <text class="t tc" x="770" y="205">стартует после Healthy,</text><text class="t tc" x="770" y="223">загружает базы, завершается</text>
+            <path class="sc-line" d="M215 30 L225 30 M435 30 L445 30 M655 30 L665 30"/>
+            <text class="t tc" x="440" y="290">порядок задан в compose.yaml: загрузчик не стартует, пока сервер не ответил на проверку</text>
+          </svg>
+          <figcaption>docker compose up -d · четыре шага по порядку</figcaption>
+        </figure>
+        <p>Первый столбец — <b>образ</b>: его Docker скачивает один раз, при следующих запусках берёт с диска. Второй — том и сеть: строки <code>Volume … Created</code> и <code>Network … Created</code>. Сеть нужна, чтобы контейнеры обращались друг к другу по имени: загрузчик находит сервер по адресу <code>clickhouse</code>. Третий — сервер: Docker создаёт контейнер <code>course-clickhouse</code>, запускает его и раз в 3 секунды выполняет в нём проверочный запрос <code>SELECT 1</code>. Пока сервер не ответил, он «не готов»; первый ответ даёт статус <code>Healthy</code> — «здоров», у нас он пришёл через 10,9 секунды. Четвёртый — загрузчик <code>seed</code>: он стартует только после <code>Healthy</code>, потому что загружать данные в неготовый сервер бессмысленно.</p>
+        <p>Строка <code>Started</code> у загрузчика означает только запуск: сама загрузка идёт в фоне ещё 20–30 секунд. Что он сделал, видно в его журнале:</p>
+        <figure class="code"><figcaption><span>Терминал</span><span>журнал загрузки</span></figcaption>
+<pre>docker compose logs seed</pre></figure>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>после окончания загрузки</span></figcaption>
+<pre>seed-1  | shop.products           21 строк
+seed-1  | shop.stock              42 строк
+seed-1  | shop.customers          20 строк
+seed-1  | shop.orders            120 строк
+seed-1  | shop.order_items       271 строк
+seed-1  | web.events: генерация, около минуты…
+seed-1  | web.events        10324592 строк
+seed-1  | iot.readings: генерация…
+seed-1  | iot.readings       3174480 строк
+seed-1  | Готово: базы shop, web, iot и пустая sandbox</pre></figure>
+        <p>Загрузка закончена, когда последняя строка — «Готово». Пока её нет, подождите и повторите команду. Состояние контейнеров показывает <code>docker compose ps</code>:</p>
+        <figure class="code"><figcaption><span>Терминал</span><span>какие контейнеры работают</span></figcaption>
+<pre>docker compose ps</pre></figure>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>после загрузки; столбцы IMAGE и COMMAND опущены</span></figcaption>
+<pre>NAME                SERVICE      CREATED          STATUS                    PORTS
+course-clickhouse   clickhouse   53 seconds ago   Up 52 seconds (healthy)   0.0.0.0:8123-&gt;8123/tcp, 0.0.0.0:9000-&gt;9000/tcp</pre></figure>
+        <p>Контейнер остался один — сервер. Загрузчик сделал работу и завершился, поэтому в списке его нет. В столбце <code>STATUS</code> видно, сколько сервер работает и что он <code>healthy</code>. В столбце <code>PORTS</code> — два открытых порта: <code>8123</code> и <code>9000</code>. Запись <code>0.0.0.0:8123-&gt;8123</code> читается так: «порт 8123 компьютера ведёт в порт 8123 контейнера».</p>
+        <p>При следующем <code>docker compose up -d</code> загрузчик проверит таблицу <code>shop.orders</code>. Заказы в ней уже есть, поэтому он напишет «Базы уже загружены» и ничего не изменит. Всё, что вы создадите в своих упражнениях, переживает перезапуск стенда. Теперь посмотрим, что загрузилось.</p>
+
+        <h2 id="s6"><span class="sec">§6</span>Что загрузилось</h2>
+        <p>На сервере оказались четыре базы. Три — эталонные: на них построены все примеры книги, и числа в главах посчитаны по ним. Четвёртая, <code>sandbox</code>, пустая: это песочница для упражнений, в ней создают таблицы, вставляют и удаляют строки.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>База</th><th>Таблица</th><th>Строк</th><th>Что внутри</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="5"><code>shop</code></td><td><code>products</code></td><td>21</td><td rowspan="5">Магазин электроники: товары, остатки на складах, покупатели, заказы и позиции заказов. Тот же магазин, что в справочнике по MongoDB, только каждый заказ разложен на строку заказа и строки позиций. На ней — первые запросы, модули 1–2</td></tr>
+              <tr><td><code>stock</code></td><td>42</td></tr>
+              <tr><td><code>customers</code></td><td>20</td></tr>
+              <tr><td><code>orders</code></td><td>120</td></tr>
+              <tr><td><code>order_items</code></td><td>271</td></tr>
+              <tr><td><code>web</code></td><td><code>events</code></td><td>10 324 592</td><td>Действия посетителей сайта того же магазина с 1 августа по 31 октября 2026 года: просмотры страниц, поиск, корзина, оформление, покупка. Каждая строка — одно действие. На ней видна скорость ClickHouse и строится аналитика</td></tr>
+              <tr><td><code>iot</code></td><td><code>readings</code></td><td>3 174 480</td><td>Замеры температуры и влажности на четырёх складах, раз в минуту за те же три месяца. Для временных рядов и сроков хранения данных</td></tr>
+              <tr><td><code>sandbox</code></td><td>—</td><td>—</td><td>Пустая база для упражнений</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Таблицы <code>web.events</code> и <code>iot.readings</code> не хранятся в репозитории готовыми файлами — это были бы сотни мегабайт. Загрузчик вычисляет их строки прямо на сервере: каждое значение получается из номера строки по формуле, поэтому результат у всех одинаковый до последней цифры. Проверить, что числа сошлись, проще всего в браузере.</p>
+
+        <h2 id="s7"><span class="sec">§7</span>Шаг 4. Базы в браузере</h2>
+        <p>Сервер ClickHouse сам отдаёт простую веб-страницу для запросов — <b>Play UI</b>. Ставить для неё ничего не нужно: достаточно браузера.</p>
+        <span class="phase">Делаем</span>
+        <ol class="steps">
+          <li><b>Откройте <a href="http://localhost:8123/play">localhost:8123/play</a></b>Вверху — поле адреса сервера (1), поля пользователя (2) и пароля (3). Адрес уже заполнен: <code>http://localhost:8123</code>. Впишите пользователя <code>student</code> и пароль <code>student</code>.
+            <figure class="shot"><img src="../../shots/01-play-login.png" alt="Play UI: поле адреса, пользователя, пароля и кнопка Run"><figcaption>Play UI · 1 — адрес сервера, 2 — пользователь, 3 — пароль, 4 — запуск запроса</figcaption></figure>
+          </li>
+          <li><b>Выполните первый запрос</b>В большое поле впишите <code>SHOW DATABASES</code> и нажмите <b>Run</b> (4) или <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (на Mac — <kbd>Cmd</kbd> + <kbd>Enter</kbd>). Значок с базами слева открывает их список; щелчок по базе показывает её таблицы.
+            <figure class="shot"><img src="../../shots/02-play-databases.png" alt="Результат SHOW DATABASES и список баз слева, раскрыта база shop"><figcaption>Play UI · SHOW DATABASES · слева раскрыта база shop</figcaption></figure>
+          </li>
+          <li><b>Проверьте число строк</b>Замените запрос на этот и выполните его:
+            <figure class="code"><figcaption><span>Play UI</span><span>проверка загрузки</span></figcaption>
+<pre>SELECT database, name AS table, total_rows
+FROM system.tables
+WHERE database IN ('shop', 'web', 'iot')
+ORDER BY database, table</pre></figure>
+            <figure class="shot"><img src="../../shots/03-play-check.png" alt="Таблица баз и таблиц с числом строк: iot.readings 3174480, web.events 10324592"><figcaption>Play UI · число строк во всех таблицах стенда</figcaption></figure>
+          </li>
+        </ol>
+        <span class="phase phase--read">Разбираемся</span>
+        <p><code>SHOW DATABASES</code> вернул восемь строк. Четыре из них — базы стенда (<code>iot</code>, <code>sandbox</code>, <code>shop</code>, <code>web</code>, на кадре в рамках). Остальные четыре — служебные, они есть на любом сервере ClickHouse. <code>system</code> хранит сведения о самом сервере. <code>default</code> — база по умолчанию. <code>INFORMATION_SCHEMA</code> и <code>information_schema</code> — стандартное описание таблиц, как в других базах данных SQL. Над таблицей результата Play UI пишет, сколько строк вернулось и за сколько секунд: <code>8 rows in result, 0.01 sec.</code></p>
+        <p>Третий запрос — проверочный, сейчас нужен только его результат. Он берёт из служебной базы <code>system</code> список таблиц стенда и для каждой показывает число строк <code>total_rows</code>. Сверьте два самых больших числа (рамки 1 и 2): <code>3174480</code> у <code>iot.readings</code> и <code>10324592</code> у <code>web.events</code>. Жёлтые полосы в этом столбце Play UI рисует сам — длина полосы показывает величину числа. Если числа совпали с таблицей из <a href="#s6">§6</a>, стенд готов. Те же запросы можно выполнять и без браузера — в терминале.</p>
+
+        <h2 id="s8"><span class="sec">§8</span>Шаг 5. Клиент в терминале</h2>
+        <p>Второй способ работать с сервером — <b>clickhouse-client</b>, программа для запросов в терминале. Ставить её тоже не нужно: она уже лежит в контейнере сервера, и Docker запускает её там.</p>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
+<pre>docker compose exec clickhouse clickhouse-client</pre></figure>
+        <p>После приглашения <code>course :)</code> наберите <code>SHOW DATABASES</code> и нажмите <kbd>Enter</kbd>, затем <code>SELECT count() FROM web.events</code>, затем <code>exit</code>. Так выглядит весь сеанс:</p>
+        <figure class="code code--out"><figcaption><span>Терминал</span><span>сеанс clickhouse-client целиком</span></figcaption>
+<pre>ClickHouse client version 26.8.36.3 (official build).
+Connecting to localhost:9000 as user student.
+Connected to ClickHouse server version 26.8.36.
+
+Warnings:
+ * Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 &gt; /proc/sys/kernel/task_delayacct'` or by using sysctl.
+ * Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+
+course :) SHOW DATABASES
+
+SHOW DATABASES
+
+Query id: 2110de2e-e6f7-42e6-b51b-2b11fa513ab4
+
+   ┌─name───────────────┐
+1. │ INFORMATION_SCHEMA │
+2. │ default            │
+3. │ information_schema │
+4. │ iot                │
+5. │ sandbox            │
+6. │ shop               │
+7. │ system             │
+8. │ web                │
+   └────────────────────┘
+
+8 rows in set. Elapsed: 0.006 sec.
+
+course :) SELECT count() FROM web.events
+
+SELECT count()
+FROM web.events
+
+Query id: d045ac73-50b0-4b58-9a24-47974f87a685
+
+   ┌──count()─┐
+1. │ 10324592 │ -- 10.32 million
+   └──────────┘
+
+1 row in set. Elapsed: 0.014 sec.
+
+course :) exit
+Bye.</pre></figure>
+        <span class="phase phase--read">Разбираемся</span>
+                <p>Перед разбором сеанса — рисунок: какой путь проходит команда <code>docker compose exec</code> и где в итоге работает клиент.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 200" role="img" aria-label="Терминал, Docker, контейнер: clickhouse-client рядом с сервером, порт 9000 внутри контейнера">
+            <rect class="sc-box" x="10" y="60" width="170" height="70" rx="6"/><text class="tb tc" x="95" y="88">терминал</text><text class="tm tc" x="95" y="110">docker compose exec</text>
+            <path class="sc-arrow" d="M184 95 L244 95 M237 89 L244 95 L237 101"/>
+            <rect class="sc-acc" x="250" y="66" width="120" height="58" rx="8"/><text class="tb tc" x="310" y="92">Docker</text><text class="t tc" x="310" y="112">запусти внутри</text>
+            <path class="sc-arrow" d="M374 95 L434 95 M427 89 L434 95 L427 101"/>
+            <rect class="sc-ink" x="440" y="14" width="430" height="172" rx="8"/>
+            <text class="tw" x="456" y="36" style="font:600 12px var(--mono)">контейнер course-clickhouse</text>
+            <rect class="sc-box" x="460" y="60" width="160" height="70" rx="6"/><text class="tb tc" x="540" y="90">clickhouse-client</text><text class="tm tc" x="540" y="112">student / student</text>
+            <path class="sc-arrow" d="M624 95 L684 95 M677 89 L684 95 L677 101"/>
+            <rect class="sc-acc" x="636" y="132" width="60" height="28" rx="14"/><text class="tb tc" x="666" y="151">9000</text>
+            <rect class="sc-box" x="690" y="60" width="160" height="70" rx="6"/><text class="tb tc" x="770" y="90">сервер</text><text class="tm tc" x="770" y="112">course :)</text>
+            <text class="tw" x="456" y="176" style="font:500 12px var(--body)">клиент и сервер в одном контейнере: адрес localhost:9000 — это он сам</text>
+          </svg>
+          <figcaption>docker compose exec: клиент запускается внутри контейнера сервера</figcaption>
+        </figure>
+        <p>Слева — ваш терминал, в нём набрана команда. Docker (жёлтый блок) находит контейнер сервера и запускает программу внутри него. Поэтому clickhouse-client оказывается в тёмной области рядом с сервером. С сервером он соединяется через порт 9000 — круглую метку между ними. Подпись внизу объясняет, почему в приветствии клиента стоит <code>localhost</code>: для программы внутри контейнера «этот компьютер» — сам контейнер.</p>
+        <p>Сама команда состоит из трёх частей. <code>docker compose exec</code> означает «выполнить программу внутри работающего контейнера». <code>clickhouse</code> — имя сервиса из <code>compose.yaml</code>, то есть контейнер сервера. <code>clickhouse-client</code> — программа, которую нужно запустить. Пользователь и пароль набирать не нужно: стенд положил их в настройки клиента внутри контейнера.</p>
+        <p>Первые три строки сообщают версии клиента и сервера и под каким пользователем выполнен вход — <code>student</code>. Адрес <code>localhost:9000</code> здесь означает «этот же контейнер»: клиент запущен рядом с сервером. Блок <code>Warnings</code> — два предупреждения о настройках ядра Linux внутри Docker. Первое сообщает, что сервер не собирает одну из метрик ожидания диска. Второе — о режиме крупных страниц памяти. На стенде они ни на что не влияют и появляются при каждом входе.</p>
+        <p>Приглашение <code>course :)</code> — имя сервера и смайлик: после него вводится запрос. Набранный запрос клиент сначала повторяет в аккуратном виде, затем печатает <code>Query id</code> — уникальный номер запроса, по которому его потом можно найти в журнале сервера. Ниже — сам результат в рамке, число строк и время выполнения. Пересчёт всех 10,3 миллиона строк <code>web.events</code> занял 0,014 секунды. Пометку <code>-- 10.32 million</code> клиент добавляет к большим числам сам, чтобы их было легче прочитать. <code>exit</code> закрывает клиент, а сервер продолжает работать. Остаётся разобраться, как запросы из браузера попадают в контейнер снаружи.</p>
+
+        <h2 id="s9"><span class="sec">§9</span>Как запрос доходит до сервера</h2>
+        <p>Сервер работает внутри контейнера, а браузер — на вашем компьютере, снаружи. Рисунок показывает путь запроса из Play UI до таблицы и обратно. Так же ходят запросы ваших программ.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 290" role="img" aria-label="Путь запроса: браузер, порт 8123 компьютера, проброс в контейнер, сервер, том с файлами">
+            <rect class="sc-soft" x="10" y="10" width="860" height="270" rx="10"/>
+            <text class="t" x="24" y="32">ваш компьютер</text>
+            <rect class="sc-box" x="30" y="70" width="150" height="60" rx="6"/><text class="tb tc" x="105" y="96">браузер</text><text class="tm tc" x="105" y="116">Play UI</text>
+            <rect class="sc-acc" x="250" y="76" width="120" height="48" rx="24"/><text class="tm tc" x="310" y="96">порт</text><text class="tb tc" x="310" y="114">8123</text>
+            <rect class="sc-ink" x="430" y="44" width="420" height="190" rx="8"/>
+            <text class="tw" x="446" y="66" style="font:600 12px var(--mono)">контейнер course-clickhouse</text>
+            <rect class="sc-acc" x="450" y="80" width="110" height="40" rx="20"/><text class="tb tc" x="505" y="105">8123</text>
+            <rect class="sc-box" x="610" y="76" width="220" height="48" rx="6"/><text class="tb tc" x="720" y="98">сервер ClickHouse</text><text class="t tc" x="720" y="116">выполняет SQL</text>
+            <rect class="sc-warm" x="610" y="160" width="220" height="60" rx="6"/><text class="tm tc" x="720" y="186">том clickhouse-data</text><text class="t tc" x="720" y="206">файлы таблиц shop, web, iot</text>
+            <path class="sc-arrow" d="M184 92 L244 92 M237 86 L244 92 L237 98"/>
+            <path class="sc-arrow" d="M374 92 L444 92 M437 86 L444 92 L437 98"/>
+            <path class="sc-arrow" d="M564 92 L604 92 M597 86 L604 92 L597 98"/>
+            <path class="sc-arrow" d="M700 128 L700 154 M694 147 L700 154 L706 147"/>
+            <path class="sc-arrow-w" d="M740 154 L740 128 M734 135 L740 128 L746 135"/>
+            <path class="sc-arrow-w" d="M640 128 L640 142 L105 142 L105 136 M99 141 L105 134 L111 141"/>
+            <text class="tb tc" x="214" y="84">1</text><text class="tb tc" x="409" y="84">2</text><text class="tw tc" x="584" y="84" style="font-weight:700">3</text><text class="tw" x="680" y="146" style="font-weight:700">4</text>
+            <text class="t" x="30" y="166">5 · результат идёт обратно (пунктир)</text>
+            <text class="t" x="30" y="264">проброс порта «8123 компьютера → 8123 контейнера» задан в compose.yaml</text>
+          </svg>
+          <figcaption>запрос из браузера: компьютер → проброс порта → контейнер → сервер → файлы на томе</figcaption>
+        </figure>
+        <p>Номера на стрелках — шаги. (1) Браузер отправляет запрос на адрес <code>localhost:8123</code>, то есть на порт 8123 вашего же компьютера. <b>Порт</b> — номер «двери», через которую программа принимает соединения; у одного компьютера их тысячи, и каждая программа слушает свою. (2) Docker держит эту дверь открытой и передаёт всё, что в неё пришло, в порт 8123 контейнера. Это называется <b>проброс порта</b>. Его и описывает запись <code>0.0.0.0:8123-&gt;8123</code> из <code>docker compose ps</code>. (3) Внутри контейнера порт 8123 слушает сервер ClickHouse. (4) Сервер читает нужные столбцы из файлов на томе. (5) Результат возвращается тем же путём — пунктирная стрелка.</p>
+        <p>Портов у сервера два, и они нужны разным клиентам. <code>8123</code> — HTTP, тот же протокол, что у веб-страниц. Через него работают браузер с Play UI и драйверы Python и Ruby. <code>9000</code> — собственный двоичный протокол ClickHouse. Им пользуются clickhouse-client и драйверы Go и C++. Сервер и данные одни и те же, различается только способ доставки запроса. Когда стенд работает, нужно уметь его сбросить и остановить.</p>
+
+        <h2 id="s10"><span class="sec">§10</span>Сбросить, остановить, удалить</h2>
+        <p>Четыре команды покрывают всю жизнь стенда. Все выполняются из папки репозитория.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Команда</th><th>Что делает</th><th>Что с данными</th></tr></thead>
+            <tbody>
+              <tr><td><code>docker compose run --rm reset</code></td><td>Заново загружает базы <code>shop</code>, <code>web</code>, <code>iot</code> и очищает <code>sandbox</code>; около 25 секунд</td><td>Эталонные базы — как при первом запуске, упражнения в <code>sandbox</code> стираются</td></tr>
+              <tr><td><code>docker compose stop</code></td><td>Останавливает сервер, контейнер остаётся</td><td>Сохраняются. Запуск — <code>docker compose up -d</code></td></tr>
+              <tr><td><code>docker compose down</code></td><td>Останавливает и удаляет контейнеры и сеть</td><td>Сохраняются: том не удаляется</td></tr>
+              <tr><td><code>docker compose down -v</code></td><td>То же и удаляет том</td><td>Удаляются. Следующий <code>up -d</code> загрузит базы заново</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>В <code>reset</code> слово <code>run</code> означает «запустить разовую задачу», а <code>--rm</code> — удалить её контейнер сразу после окончания, чтобы они не копились. Сбрасывать базы нужно, если после упражнения числа перестали совпадать с книгой. Флаг <code>-v</code> у <code>down</code> — от слова volume, «том». Он стирает файлы баз. Применяйте его, когда стенд больше не нужен или вы хотите начать с чистого листа:</p>
+        <figure class="code code--out"><figcaption><span>Вывод docker compose down -v</span><span>том удаляется последним</span></figcaption>
+<pre> Container course-clickhouse Stopping
+ Container course-clickhouse Stopped
+ Container course-clickhouse Removing
+ Container course-clickhouse Removed
+ Volume clickhouse-practice_clickhouse-data Removing
+ Network clickhouse-practice_default Removing
+ Network clickhouse-practice_default Removed
+ Volume clickhouse-practice_clickhouse-data Removed</pre></figure>
+
+        <h2 id="s11"><span class="sec">§11</span>Место на диске и память</h2>
+                <p>Рисунок показывает размеры в масштабе: полосы одной шкалы, от 0 до 1,4 ГБ.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 220" role="img" aria-label="Размеры: образ 1,1 ГБ, том сразу после загрузки 1,2 ГБ, через несколько минут 0,55 ГБ, web.events 353 МБ сжатая и 1,37 ГБ без сжатия">
+            <text class="t" x="10" y="34">образ сервера</text><rect class="sc-acc" x="250" y="18" width="480" height="24" rx="3"/><text class="tm" x="740" y="35">1,1 ГБ</text>
+            <text class="t" x="10" y="74">том сразу после загрузки</text><rect class="sc-warm" x="250" y="58" width="524" height="24" rx="3"/><text class="tm" x="784" y="75">1,2 ГБ</text>
+            <text class="t" x="10" y="114">том через несколько минут</text><rect class="sc-warm" x="250" y="98" width="240" height="24" rx="3"/><text class="tm" x="500" y="115">550 МБ</text>
+            <text class="t" x="10" y="154">web.events на диске</text><rect class="sc-ink" x="250" y="138" width="154" height="24" rx="3"/><text class="tm" x="414" y="155">353 МБ</text>
+            <text class="t" x="10" y="194">web.events без сжатия</text><rect class="sc-soft" x="250" y="178" width="598" height="24" rx="3"/><text class="tm" x="760" y="195">1,37 ГБ</text>
+          </svg>
+          <figcaption>место на диске · одна шкала для всех полос</figcaption>
+        </figure>
+        <p>Первые три полосы — то, что стенд занимает на диске: образ (жёлтая) и том (розовые). Сразу после загрузки том почти вдвое больше: сервер удаляет промежуточные файлы загрузки через несколько минут. Две нижние полосы сравнивают одну таблицу. Тёмная — сколько <code>web.events</code> занимает на диске, пунктирная — сколько заняли бы те же 10,3 миллиона строк без сжатия. Разница почти в четыре раза.</p>
+        <p>Отсюда правило: закладывайте под стенд 3 ГБ свободного места.</p>
+        <p>Памяти сервер в покое берёт около 700 МБ, загрузка баз добавляет до 460 МБ. Стенду хватает 2 ГБ памяти, выделенных Docker. Сколько памяти занимает сервер прямо сейчас, показывает <code>docker stats course-clickhouse</code>. Выход из неё — <kbd>Ctrl</kbd> + <kbd>C</kbd>. Если что-то из этой главы пошло не так, ответ, скорее всего, в таблице ниже.</p>
+
+        <h2 id="s12"><span class="sec">§12</span>Частые ошибки</h2>
+        <div class="table-scroll errors-table">
+          <table>
+            <thead><tr><th>Что происходит</th><th>Что видно</th><th>В чём дело</th></tr></thead>
+            <tbody>
+              <tr data-os="win"><td>Docker Desktop не запущен</td><td><code>error during connect: … open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.</code></td><td>Команда <code>docker</code> есть, движка нет. Запустите Docker Desktop и дождитесь <b>Engine running</b>. Не запускается — глава <a href="../01a-windows-wsl/index.html">0.1а</a></td></tr>
+              <tr data-os="mac"><td>Docker Desktop не запущен</td><td><code>failed to connect to the docker API at unix:///Users/…/.docker/run/docker.sock; check if the path is correct and if the daemon is running</code></td><td>Команда <code>docker</code> есть, движка нет. Запустите Docker Desktop из «Программ» и дождитесь <b>Engine running</b></td></tr>
+              <tr data-os="linux"><td>Служба Docker не запущена</td><td><code>failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running</code></td><td><code>sudo systemctl start docker</code>; чтобы стартовала вместе с системой — <code>sudo systemctl enable docker</code></td></tr>
+              <tr data-os="win"><td>Терминал открыт до установки Docker</td><td><code>docker : The term 'docker' is not recognized as the name of a cmdlet…</code></td><td>Закройте PowerShell и откройте заново: новый путь к программе подхватывается только новым окном</td></tr>
+              <tr data-os="mac"><td>Docker Desktop ни разу не запускался</td><td><code>zsh: command not found: docker</code></td><td>Команду <code>docker</code> в систему добавляет первый запуск Docker Desktop. Запустите его и откройте новое окно терминала</td></tr>
+              <tr data-os="linux"><td>Пользователь не в группе <code>docker</code></td><td><code>permission denied while trying to connect to the docker API at unix:///var/run/docker.sock</code></td><td>Выполните <code>sudo usermod -aG docker $USER</code>, выйдите из системы и войдите снова</td></tr>
+              <tr><td>Команда выполнена не в той папке</td><td><code>no configuration file provided: not found</code></td><td>Docker ищет <code>compose.yaml</code> в текущей папке. Перейдите в папку репозитория, <a href="#s4">§4</a></td></tr>
+              <tr><td>Стенд поднят второй раз из другой папки</td><td><code>Conflict. The container name "/course-clickhouse" is already in use by container "201c6972…". You have to remove (or rename) that container to be able to reuse that name.</code></td><td>Репозиторий скачан дважды, и первый стенд ещё работает. Остановите его из его папки (<code>docker compose down</code>) или работайте в той же папке, что и раньше</td></tr>
+              <tr><td>Порт 8123 или 9000 занят другой программой</td><td><code>ports are not available: exposing port TCP 0.0.0.0:8123 -&gt; 127.0.0.1:0: listen tcp 0.0.0.0:8123: bind: address already in use</code> <small>(снято на macOS; на Windows конец сообщения — <code>Only one usage of each socket address … is normally permitted</code>)</small></td><td>Порт 9000 занимают, например, PHP-FPM и MinIO. Создайте рядом с <code>compose.yaml</code> файл <code>.env</code> со строкой <code>NATIVE_PORT=9001</code> (или <code>HTTP_PORT=8124</code>) и снова <code>docker compose up -d</code>. Адреса в книге тогда меняются на ваш порт</td></tr>
+              <tr><td>Запрос выполнен, пока загрузка не закончилась</td><td><code>SELECT count() FROM web.events</code> возвращает <code>0</code> или число меньше <code>10324592</code></td><td>Таблица уже создана, а строки ещё вычисляются. Дождитесь «Готово» в <code>docker compose logs seed</code></td></tr>
+              <tr><td>Неверный пароль в Play UI</td><td><code>Code: 516. DB::Exception: student: Authentication failed: password is incorrect, or there is no user with such name. (AUTHENTICATION_FAILED)</code></td><td>Пароль <code>student</code> — строчными латинскими буквами. Ключик справа вверху Play UI снова открывает поля входа</td></tr>
+              <tr><td>Клиент запущен при остановленном сервере</td><td><code>service "clickhouse" is not running</code></td><td>Стенд остановлен командой <code>stop</code> или после перезагрузки компьютера. <code>docker compose up -d</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="shot"><img src="../../shots/04-play-wrong-password.png" alt="Play UI: ошибка AUTHENTICATION_FAILED при неверном пароле"><figcaption>Play UI · пароль набран с ошибкой: сервер отвечает кодом 516</figcaption></figure>
+        <p>На кадре — как выглядит ошибка входа в Play UI: красная рамка под кнопкой <b>Run</b> вместо таблицы результата. У каждой ошибки ClickHouse есть номер (<code>Code: 516</code>) и имя в скобках (<code>AUTHENTICATION_FAILED</code>). По имени ошибку находят в документации и в интернете.</p>
+
+        <h2 id="s13"><span class="sec">§13</span>Проверьте себя</h2>
+        <details>
+          <summary>Чем образ отличается от контейнера?</summary>
+          <p>Образ — неизменный шаблон с программой, его скачивают один раз. Контейнер — запущенная копия, созданная из образа; у него своё состояние, его можно остановить и удалить. Из образа <code>clickhouse/clickhouse-server:26.8.36.3</code> стенд создаёт контейнер <code>course-clickhouse</code>, а загрузчик <code>seed</code> — второй контейнер из того же образа.</p>
+        </details>
+        <details>
+          <summary>После <code>docker compose down</code> и снова <code>up -d</code> упражнения в <code>sandbox</code> пропадут?</summary>
+          <p>Нет. <code>down</code> удаляет контейнеры, том остаётся, а данные лежат в нём. Новый контейнер подключит тот же том, а загрузчик увидит, что базы уже есть, и ничего не тронет. Данные стирают только <code>down -v</code> и <code>reset</code>.</p>
+        </details>
+        <details>
+          <summary>Почему загрузчик <code>seed</code> не стартует одновременно с сервером?</summary>
+          <p>В <code>compose.yaml</code> загрузчик запускается только после статуса <code>Healthy</code> — когда сервер ответил на проверочный запрос. Сразу после запуска контейнера сервер ещё не принимает запросы, и загрузка упала бы с ошибкой подключения.</p>
+        </details>
+        <details>
+          <summary>Play UI и clickhouse-client показали одни и те же базы. Это один сервер или два?</summary>
+          <p>Один. Play UI приходит к нему через порт 8123 по протоколу HTTP, clickhouse-client — через порт 9000 по собственному протоколу ClickHouse. Сервер, базы и данные те же.</p>
+        </details>
+
+        <h2 id="s14"><span class="sec">§14</span>Шпаргалка</h2>
+        <div class="cheat">
+          <div>
+            <b>Скачать</b>
+            <code>git clone https://github.com/</code>
+            <code>  MaximBytecamp/clickhouse-practice.git</code>
+            <code>cd clickhouse-practice</code>
+          </div>
+          <div>
+            <b>Поднять и проверить</b>
+            <code>docker compose up -d</code>
+            <code>docker compose logs seed   # «Готово»</code>
+            <code>docker compose ps          # healthy</code>
+          </div>
+          <div>
+            <b>Клиенты</b>
+            <code>http://localhost:8123/play</code>
+            <code>  student / student</code>
+            <code>docker compose exec clickhouse clickhouse-client</code>
+          </div>
+          <div>
+            <b>Сброс и остановка</b>
+            <code>docker compose run --rm reset</code>
+            <code>docker compose down       # данные остаются</code>
+            <code>docker compose down -v    # и данные удаляются</code>
+          </div>
+        </div>
+
+        <h2 id="s15"><span class="sec">§15</span>Глоссарий</h2>
+        <p>Термины главы: формулировка, пример и рисунок.</p>
+        <div class="glossary">
+          <article class="gl" id="g-stend">
+            <div class="gl__text">
+              <h3>Стенд</h3>
+              <p class="gl__def">Сервер ClickHouse с заранее загруженными данными, одинаковый у всех. На нём выполняются примеры книги.</p>
+              <p class="gl__ex"><b>Пример</b>контейнер <code>course-clickhouse</code> с базами <code>shop</code>, <code>web</code>, <code>iot</code> и <code>sandbox</code>.</p>
+              <p class="gl__where"><b>Где</b>глава 0.1</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Стенд: сервер и четыре базы"><rect class="sc-ink" x="20" y="14" width="220" height="36" rx="6"/><text class="tw tc" x="130" y="37" style="font:600 13px var(--mono)">ClickHouse 26.8</text><rect class="sc-acc" x="20" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="44" y="91">shop</text><rect class="sc-acc" x="77" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="101" y="91">web</text><rect class="sc-acc" x="134" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="158" y="91">iot</text><rect class="sc-soft" x="191" y="64" width="50" height="44" rx="4"/><text class="t tc" x="216" y="91" style="font-size:10px">sandbox</text></svg></figure>
+          </article>
+          <article class="gl" id="g-docker">
+            <div class="gl__text">
+              <h3>Docker</h3>
+              <p class="gl__def">Программа, которая запускает другие программы в изолированных контейнерах со своей системой Linux внутри. Работает на Windows, macOS и Linux одинаково.</p>
+              <p class="gl__ex"><b>Пример</b><code>docker version</code> показывает клиента (<code>darwin/arm64</code>) и движок (<code>linux/arm64</code>).</p>
+              <p class="gl__where"><b>Где</b>§1, §3</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Docker: на любой системе даёт контейнерам Linux"><rect class="sc-box" x="14" y="12" width="232" height="106" rx="8"/><text class="t" x="26" y="32">Windows · macOS · Linux</text><rect class="sc-acc" x="30" y="44" width="200" height="62" rx="6"/><text class="tb tc" x="130" y="66">Docker</text><text class="tm tc" x="130" y="90">Linux для контейнеров</text></svg></figure>
+          </article>
+          <article class="gl" id="g-obraz">
+            <div class="gl__text">
+              <h3>Образ<i>image</i></h3>
+              <p class="gl__def">Неизменный шаблон, в котором лежит программа со всем нужным для её работы. Скачивается один раз, из него создаются контейнеры.</p>
+              <p class="gl__ex"><b>Пример</b><code>clickhouse/clickhouse-server:26.8.36.3</code>, около 270 МБ при скачивании.</p>
+              <p class="gl__where"><b>Где</b>§1, §5</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Из одного образа создаются два контейнера"><rect class="sc-acc" x="14" y="44" width="90" height="44" rx="6"/><text class="tb tc" x="59" y="71">образ</text><path class="sc-arrow" d="M108 60 L150 34 M142 34 L150 34 L146 41"/><path class="sc-arrow" d="M108 74 L150 100 M146 93 L150 100 L142 100"/><rect class="sc-box" x="154" y="14" width="94" height="38" rx="6"/><text class="tm tc" x="201" y="37">контейнер</text><rect class="sc-box" x="154" y="82" width="94" height="38" rx="6"/><text class="tm tc" x="201" y="105">контейнер</text></svg></figure>
+          </article>
+          <article class="gl" id="g-konteyner">
+            <div class="gl__text">
+              <h3>Контейнер<i>container</i></h3>
+              <p class="gl__def">Запущенная копия программы из образа, отделённая от остальной системы. Его можно остановить, удалить и создать заново.</p>
+              <p class="gl__ex"><b>Пример</b><code>course-clickhouse</code> — сервер, работает всё время; <code>seed</code> — загрузчик, завершается сам.</p>
+              <p class="gl__where"><b>Где</b>§1, §2, §5</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Контейнер: работает или завершён"><rect class="sc-box" x="14" y="24" width="110" height="60" rx="6"/><text class="tm tc" x="69" y="50">course-</text><text class="tm tc" x="69" y="68">clickhouse</text><rect class="sc-acc" x="34" y="92" width="70" height="22" rx="11"/><text class="t tc" x="69" y="108" style="font-size:11px">работает</text><rect class="sc-soft" x="140" y="24" width="106" height="60" rx="6"/><text class="tm tc" x="193" y="59">seed</text><rect class="sc-soft" x="158" y="92" width="70" height="22" rx="11"/><text class="t tc" x="193" y="108" style="font-size:11px">завершён</text></svg></figure>
+          </article>
+          <article class="gl" id="g-tom">
+            <div class="gl__text">
+              <h3>Том<i>volume</i></h3>
+              <p class="gl__def">Папка с данными, которую Docker хранит отдельно от контейнера. Переживает остановку и удаление контейнера; стирается только явно.</p>
+              <p class="gl__ex"><b>Пример</b><code>clickhouse-practice_clickhouse-data</code> — файлы всех баз стенда; удаляется командой <code>docker compose down -v</code>.</p>
+              <p class="gl__where"><b>Где</b>§2, §10</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Контейнер удалён, том остался"><rect class="sc-soft" x="30" y="14" width="200" height="40" rx="6"/><text class="t tc" x="130" y="39">контейнер — удалён и создан заново</text><path class="sc-line" d="M130 58 L130 72"/><rect class="sc-warm" x="50" y="76" width="160" height="40" rx="6"/><text class="tm tc" x="130" y="101">том: данные на месте</text></svg></figure>
+          </article>
+          <article class="gl" id="g-compose">
+            <div class="gl__text">
+              <h3>Docker Compose</h3>
+              <p class="gl__def">Часть Docker, которая поднимает несколько контейнеров по описанию из файла <code>compose.yaml</code>: какие образы, порты, тома и в каком порядке.</p>
+              <p class="gl__ex"><b>Пример</b><code>docker compose up -d</code> — поднять стенд, <code>docker compose ps</code> — что работает.</p>
+              <p class="gl__where"><b>Где</b>§2, §5, §10</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="compose.yaml превращается в контейнеры, том и сеть"><rect class="sc-acc" x="14" y="40" width="96" height="50" rx="6"/><text class="tm tc" x="62" y="70">compose.yaml</text><path class="sc-arrow" d="M114 65 L140 65 M133 59 L140 65 L133 71"/><rect class="sc-box" x="146" y="12" width="100" height="30" rx="5"/><text class="t tc" x="196" y="32">2 контейнера</text><rect class="sc-warm" x="146" y="50" width="100" height="30" rx="5"/><text class="t tc" x="196" y="70">том</text><rect class="sc-soft" x="146" y="88" width="100" height="30" rx="5"/><text class="t tc" x="196" y="108">сеть</text></svg></figure>
+          </article>
+          <article class="gl" id="g-healthy">
+            <div class="gl__text">
+              <h3>Проверка готовности<i>healthcheck</i></h3>
+              <p class="gl__def">Команда, которую Docker регулярно выполняет в контейнере, чтобы узнать, готова ли программа работать. Первый успешный ответ даёт статус <code>healthy</code>.</p>
+              <p class="gl__ex"><b>Пример</b>раз в 3 секунды <code>SELECT 1</code>; у нас <code>Healthy</code> пришёл через 10,9 секунды.</p>
+              <p class="gl__where"><b>Где</b>§5</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Три проверки: две без ответа, третья даёт healthy"><line class="sc-line" x1="20" y1="70" x2="240" y2="70"/><circle class="sc-soft" cx="50" cy="70" r="14"/><circle class="sc-soft" cx="120" cy="70" r="14"/><circle class="sc-acc" cx="190" cy="70" r="14"/><text class="t tc" x="50" y="104">нет</text><text class="t tc" x="120" y="104">нет</text><text class="ta tc" x="190" y="104">healthy</text><text class="t tc" x="130" y="30">SELECT 1 каждые 3 секунды</text></svg></figure>
+          </article>
+          <article class="gl" id="g-port">
+            <div class="gl__text">
+              <h3>Порт и проброс порта</h3>
+              <p class="gl__def">Порт — номер, по которому программа принимает соединения. Проброс — правило Docker: соединения на порт компьютера передаются в порт контейнера.</p>
+              <p class="gl__ex"><b>Пример</b><code>0.0.0.0:8123-&gt;8123/tcp</code> — порт 8123 компьютера ведёт в порт 8123 контейнера.</p>
+              <p class="gl__where"><b>Где</b>§5, §9</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Порт 8123 компьютера ведёт в порт 8123 контейнера"><rect class="sc-acc" x="14" y="46" width="80" height="38" rx="19"/><text class="tb tc" x="54" y="70">8123</text><path class="sc-arrow" d="M98 65 L158 65 M151 59 L158 65 L151 71"/><rect class="sc-ink" x="162" y="26" width="86" height="78" rx="6"/><rect class="sc-acc" x="172" y="46" width="66" height="38" rx="19"/><text class="tb tc" x="205" y="70">8123</text><text class="t tc" x="54" y="108">компьютер</text><text class="tw tc" x="205" y="118" style="font-size:11px">контейнер</text></svg></figure>
+          </article>
+          <article class="gl" id="g-play">
+            <div class="gl__text">
+              <h3>Play UI</h3>
+              <p class="gl__def">Веб-страница для SQL-запросов, встроенная в сервер ClickHouse. Работает в браузере, ставить ничего не нужно.</p>
+              <p class="gl__ex"><b>Пример</b><code>http://localhost:8123/play</code>, вход <code>student</code> / <code>student</code>.</p>
+              <p class="gl__where"><b>Где</b>§7</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Окно браузера: поле запроса, кнопка Run, таблица результата"><rect class="sc-box" x="14" y="10" width="232" height="110" rx="6"/><rect class="sc-soft" x="24" y="20" width="212" height="30" rx="3"/><text class="tm" x="32" y="40">SHOW DATABASES</text><rect class="sc-acc" x="24" y="56" width="40" height="18" rx="2"/><text class="t tc" x="44" y="69" style="font-size:11px">Run</text><line class="sc-line" x1="24" y1="84" x2="236" y2="84"/><line class="sc-line" x1="24" y1="98" x2="236" y2="98"/><line class="sc-line" x1="24" y1="112" x2="236" y2="112"/></svg></figure>
+          </article>
+          <article class="gl" id="g-client">
+            <div class="gl__text">
+              <h3>clickhouse-client</h3>
+              <p class="gl__def">Программа для SQL-запросов в терминале. Подключается к серверу по порту 9000 и печатает результат таблицей в рамке.</p>
+              <p class="gl__ex"><b>Пример</b><code>docker compose exec clickhouse clickhouse-client</code>, приглашение <code>course :)</code>, выход — <code>exit</code>.</p>
+              <p class="gl__where"><b>Где</b>§8</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Терминал с приглашением course и результатом count"><rect class="sc-ink" x="14" y="12" width="232" height="106" rx="6"/><text class="tw" x="26" y="38" style="font:500 12px var(--mono)">course :) SELECT count()</text><text class="tw" x="26" y="58" style="font:500 12px var(--mono)">FROM web.events</text><text style="font:700 13px var(--mono);fill:var(--leaf-bright)" x="26" y="88">│ 10324592 │</text><text class="tw" x="26" y="108" style="font:500 11px var(--mono)">Elapsed: 0.014 sec.</text></svg></figure>
+          </article>
+        </div>
+
+        <h3>Итог главы</h3>
+        <p>Стенд — это сервер ClickHouse 26.8 в контейнере Docker с базами <code>shop</code>, <code>web</code>, <code>iot</code> и песочницей <code>sandbox</code>. Его поднимает команда <code>docker compose up -d</code> из папки репозитория, базы загружает разовый контейнер <code>seed</code>, а данные лежат в томе и переживают перезапуск. К серверу можно обратиться из браузера через Play UI на порту 8123 и из терминала через clickhouse-client на порту 9000. Проверка готовности — число строк: 10 324 592 в <code>web.events</code> и 3 174 480 в <code>iot.readings</code>. Если на Windows Docker Desktop не запускается, следующая глава — <a href="../01a-windows-wsl/index.html">0.1а</a>; если всё работает, переходите к главе 0.2 о клиентах.</p>
+
+        <div class="pager"><a href="../../index.html">К содержанию справочника</a><a href="../01a-windows-wsl/index.html">0.1а Windows: Docker Desktop и WSL 2 →</a></div>
+
+        <div class="colophon">
+          <span>Глава 0.1 · Стенд: Docker и базы · Справочник по ClickHouse</span>
+          <span class="author-line">Автор: Макаров Максим Николаевич</span>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../../book.js"></script>
+</body>
+</html>
