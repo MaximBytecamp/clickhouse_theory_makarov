@@ -8,18 +8,20 @@
 
 /* ── 1. Переменные и основа ──────────────────────────────────── */
 :root {
-  --ink: #1D1B16;
-  --ink-soft: #4A463C;
-  --ink-faint: #A39C8A;
-  --leaf: #8A5800;
-  --leaf-bright: #F5B800;
-  --leaf-pale: #FBEAB8;
-  --clay: #B4531F;
-  --clay-pale: #F7E2D4;
-  --violet: #5B4B8A;
-  --paper: #F0EEE8;
-  --page: #FFFDF6;
-  --rule: rgba(29, 27, 22, .16);
+  /* Палитра логотипа ClickHouse: чёрные столбцы и лимонный #FAFF69.
+     Лимонный — только заливка и текст на чёрном; на светлом фоне текст тёмный. */
+  --ink: #151515;
+  --ink-soft: #46473F;
+  --ink-faint: #9C9D92;
+  --leaf: #5A5F00;
+  --leaf-bright: #FAFF69;
+  --leaf-pale: #FBFFC4;
+  --clay: #C2410C;
+  --clay-pale: #FDE3D3;
+  --violet: #4B4F8A;
+  --paper: #EEEEE8;
+  --page: #FFFFFC;
+  --rule: rgba(21, 21, 21, .16);
   --pixel: "Pixelify Sans", "Roboto Mono", monospace;
   --body: Inter, system-ui, -apple-system, sans-serif;
   --display: Literata, "PT Serif", Georgia, "Times New Roman", serif;
@@ -37,8 +39,8 @@ body {
   line-height: 1.6;
   /* Фон-«миллиметровка»: намёк на разлинованную тетрадь, а не на экран. */
   background-image:
-    linear-gradient(rgba(29, 27, 22, .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(29, 27, 22, .05) 1px, transparent 1px);
+    linear-gradient(rgba(21, 21, 21, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 21, 21, .05) 1px, transparent 1px);
   background-size: 32px 32px;
   -webkit-font-smoothing: antialiased;
 }
@@ -93,7 +95,7 @@ code, kbd, samp { font-family: var(--mono); }
 .spine::before, .spine::after {
   content: "";
   position: absolute; top: 16px; bottom: 16px;
-  border-left: 2px dotted rgba(200, 238, 218, .45);
+  border-left: 2px dotted rgba(250, 255, 105, .45);
 }
 .spine::before { left: 16px; }
 .spine::after { right: 16px; }
@@ -184,7 +186,7 @@ figure.code figcaption {
   font: 600 10.5px/1.4 var(--pixel); letter-spacing: 1.1px; text-transform: uppercase;
 }
 figure.code pre { margin: 0; padding: 15px 18px; overflow-x: auto; font: 400 14px/1.65 var(--mono); }
-figure.code--out pre { background: #1D1B16; color: #F3E9CC; }
+figure.code--out pre { background: #151515; color: #F1F3D0; }
 figure.code--out figcaption { background: var(--ink-soft); }
 
 /* Кнопка копирования: подставляется скриптом в подпись блока кода.
@@ -397,7 +399,7 @@ figure.code[data-lang] figcaption span:first-child { color: var(--leaf-bright); 
 .shot img { display: block; width: 100%; height: auto; background: #fff; cursor: zoom-in; }
 .shot figcaption { padding: 9px 14px; border-top: 2px solid var(--ink); font: 600 11px/1.5 var(--mono); color: var(--ink-soft); }
 
-.lightbox { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: clamp(14px, 3vw, 42px); background: rgba(29, 27, 22, .9); cursor: zoom-out; }
+.lightbox { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: clamp(14px, 3vw, 42px); background: rgba(21, 21, 21, .9); cursor: zoom-out; }
 .lightbox.is-open { display: grid; }
 .lightbox figure { margin: 0; max-width: 100%; max-height: 100%; border: 3px solid var(--page); background: var(--page); }
 .lightbox img { display: block; max-width: 100%; max-height: 86vh; width: auto; }
@@ -513,7 +515,7 @@ figure.code[data-lang] figcaption span:first-child { color: var(--leaf-bright); 
 .chips i small { font: 400 10.5px/1.2 var(--mono); color: var(--ink-soft); }
 .chips i.out { opacity: .35; text-decoration: line-through; }
 .chips i.hl { outline: 3px solid var(--ink); outline-offset: 1px; }
-.k0 { background: #FBEAB8 !important; } .k1 { background: #E4DDF5 !important; } .k2 { background: #F7E2D4 !important; }
+.k0 { background: #FBFFC4 !important; } .k1 { background: #E4DDF5 !important; } .k2 { background: #F7E2D4 !important; }
 .k3 { background: #D6E8F7 !important; } .k4 { background: #F3EBC2 !important; } .k5 { background: #EADBD0 !important; }
 .sorter__arrow { margin: 10px 0; font: 700 12.5px/1.3 var(--mono); color: var(--leaf); }
 .bins { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
@@ -632,3 +634,89 @@ figure.pic figcaption { margin-top: 10px; padding-top: 8px; border-top: 2px soli
 .repo::before { margin-right: 9px; }
 /* Длинные адреса в тексте и шагах переносятся, а не растягивают страницу. */
 .leaf p a, .steps a, .leaf td a { overflow-wrap: anywhere; }
+
+/* ── 7. Меньше текста на виду ────────────────────────────────────
+   .gist — «Суть за две минуты» под паспортом: три карточки и маршрут главы.
+   .route — шаги главы полосой. .purpose — «Зачем этот шаг» в начале раздела.
+   details.more — подробности под раскрытием. details.simple — «По-простому»:
+   раскадровка .vsteps из карточек .vcard на бытовой аналогии и строка .simple__map.
+   .tech — строка «В коде:». .dbs — базы стенда карточками. .life — команды
+   жизни стенда: что остаётся. .err — частая ошибка под раскрытием. */
+.gist { margin: 22px 0 26px; padding: 16px 18px 18px; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); background: var(--leaf-pale); }
+.gist__head { display: inline-block; margin: 0 0 12px; padding: 4px 9px; background: var(--ink); color: var(--leaf-bright); font: 600 11px/1.3 var(--pixel); letter-spacing: 1.3px; text-transform: uppercase; }
+.gist__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.gist__cards > div { padding: 12px 14px; border: 2px solid var(--ink); background: var(--page); }
+.gist__cards > div > b { display: block; margin-bottom: 6px; font: 700 17px/1.3 var(--display); }
+.gist__cards > div > b::before { content: attr(data-n); display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; background: var(--ink); color: var(--leaf-bright); font: 700 13px/1 var(--mono); vertical-align: 2px; }
+.gist__cards p { margin: 0; font-size: 15px; line-height: 1.5; }
+.gist__cards p + p { margin-top: 6px; color: var(--ink-soft); font-size: 14px; }
+
+.route { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 16px 0 0; padding: 0; list-style: none; counter-reset: route; }
+.route li { position: relative; margin: 0; padding: 10px 10px 10px 12px; border: 2px solid var(--ink); background: var(--page); font-size: 13.5px; line-height: 1.35; }
+.route li + li { border-left: 0; }
+.route li::before { counter-increment: route; content: counter(route); display: inline-grid; place-items: center; width: 22px; height: 22px; margin-bottom: 6px; background: var(--leaf-bright); border: 2px solid var(--ink); font: 700 12px/1 var(--mono); }
+.route li b { display: block; font-size: 14px; }
+.route li small { color: var(--ink-soft); }
+.route a { color: inherit; text-decoration: none; }
+.route a:hover b { text-decoration: underline; }
+
+.purpose { margin: 0 0 16px; padding: 10px 14px; border-left: 6px solid var(--ink); background: var(--leaf-pale); font-size: 15.5px; }
+.purpose > b:first-child { display: block; margin-bottom: 2px; font: 600 10.5px/1.3 var(--pixel); letter-spacing: 1.2px; text-transform: uppercase; color: var(--leaf); }
+.tech { margin: 6px 0 14px; padding: 6px 10px; border-left: 3px solid var(--ink-faint); background: var(--paper); font-size: 13.5px; line-height: 1.45; color: var(--ink-soft); }
+.tech b { font-weight: 600; }
+.check { margin: 14px 0; padding: 10px 14px; border: 2px solid var(--ink); background: var(--page); font-size: 15.5px; }
+.check::before { content: "✓ Получилось, если"; display: block; margin-bottom: 4px; font: 600 10.5px/1.3 var(--pixel); letter-spacing: 1.2px; text-transform: uppercase; color: var(--leaf); }
+ul.short { padding-left: 20px; }
+ul.short li { margin-bottom: 4px; }
+
+details.more { border-style: dashed; }
+details.more summary::before { content: "Подробнее · "; font: 600 10.5px/1 var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--leaf); }
+details.simple { margin: 18px 0 24px; border: 3px dashed var(--ink); background: var(--leaf-pale); }
+details.simple summary::before { content: "По-простому · "; font: 600 10.5px/1 var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--leaf); }
+.simple__map { margin: 12px 0 0; padding: 8px 12px; border-left: 4px solid var(--ink); background: #fff; font-size: 14.5px; }
+
+.vsteps { display: flex; align-items: stretch; margin: 12px 0; }
+.vcard { flex: 1 1 0; min-width: 0; padding: 10px 12px 12px; border: 2px solid var(--ink); background: #fff; }
+.vcard > i { display: block; margin-bottom: 6px; font-style: normal; font-size: 26px; line-height: 1; }
+.vcard > h5 { margin: 0 0 4px; font: 600 10px/1.3 var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--ink-faint); }
+.vcard > b { display: block; font: 700 14px/1.35 var(--body); overflow-wrap: break-word; }
+.vcard > small { display: block; margin-top: 4px; font-size: 13px; line-height: 1.4; color: var(--ink-soft); overflow-wrap: break-word; }
+.vcard.is-hot { background: var(--leaf-bright); }
+.vcard.is-hot > h5 { color: var(--ink-soft); }
+.vcard.is-dark { background: var(--ink); color: #fff; }
+.vcard.is-dark > small, .vcard.is-dark > h5 { color: #D9DACB; }
+.vcard.is-bad { background: var(--clay-pale); border-color: var(--clay); }
+.varr { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 36px; max-width: 90px; padding: 0 6px; font: 500 11px/1.3 var(--mono); color: var(--ink-soft); text-align: center; }
+.varr::before { content: "→"; font: 700 20px/1 var(--mono); color: var(--ink); }
+
+.dbs { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 18px 0; }
+.db { padding: 12px 14px; border: 2px solid var(--ink); background: var(--page); }
+.db > code { display: inline-block; padding: 2px 8px; background: var(--ink); color: var(--leaf-bright); font-weight: 700; }
+.db > p { margin: 8px 0 10px; font-size: 14.5px; line-height: 1.45; }
+.db__n { font: 700 22px/1.1 var(--mono); }
+.db__n small { font: 500 12px/1.3 var(--body); color: var(--ink-soft); }
+.db__bar { height: 10px; margin-top: 6px; border: 2px solid var(--ink); background: #fff; }
+.db__bar span { display: block; min-width: 3px; height: 100%; background: var(--leaf-bright); }
+.db--empty { border-style: dashed; }
+
+.life { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 18px 0; }
+.life > div { padding: 12px 14px; border: 2px solid var(--ink); background: var(--page); }
+.life > div > code { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; word-break: break-word; }
+.life > div > p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
+.life__keep { display: flex; gap: 6px; flex-wrap: wrap; }
+.life__keep span { padding: 2px 7px; border: 2px solid var(--ink); font: 600 11.5px/1.3 var(--body); }
+.life__keep .y { background: var(--leaf-bright); }
+.life__keep .n { background: var(--clay-pale); border-color: var(--clay); text-decoration: line-through; }
+.life > div.is-danger { border-color: var(--clay); box-shadow: 4px 4px 0 var(--clay); }
+
+details.err summary { font-weight: 600; }
+details.err summary small { display: block; margin-top: 2px; font: 400 12.5px/1.4 var(--mono); color: var(--clay); word-break: break-word; }
+details.err p { font-size: 15px; }
+
+@media (max-width: 720px) {
+  .route { grid-template-columns: 1fr; }
+  .route li + li { border-left: 2px solid var(--ink); border-top: 0; }
+  .vsteps { flex-direction: column; }
+  .varr { max-width: none; min-height: 30px; flex-direction: row; gap: 8px; }
+  .varr::before { content: "↓"; }
+}
