@@ -8,20 +8,20 @@
 
 /* ── 1. Переменные и основа ──────────────────────────────────── */
 :root {
-  /* Палитра логотипа ClickHouse: чёрные столбцы и лимонный #FAFF69.
-     Лимонный — только заливка и текст на чёрном; на светлом фоне текст тёмный. */
-  --ink: #151515;
-  --ink-soft: #46473F;
-  --ink-faint: #9C9D92;
-  --leaf: #5A5F00;
-  --leaf-bright: #FAFF69;
-  --leaf-pale: #FBFFC4;
+  /* Палитра: графит и фиолетово-сиреневый. Светлая сирень — заливка и текст
+     на чёрном; на светлом фоне акцентный текст — тёмно-фиолетовый. */
+  --ink: #1C1A24;
+  --ink-soft: #4A4658;
+  --ink-faint: #9E99AD;
+  --leaf: #5B3DA8;
+  --leaf-bright: #C4B0FF;
+  --leaf-pale: #F1ECFF;
   --clay: #C2410C;
   --clay-pale: #FDE3D3;
   --violet: #4B4F8A;
-  --paper: #EEEEE8;
-  --page: #FFFFFC;
-  --rule: rgba(21, 21, 21, .16);
+  --paper: #EFEDF4;
+  --page: #FFFEFF;
+  --rule: rgba(28, 26, 36, .16);
   --pixel: "Pixelify Sans", "Roboto Mono", monospace;
   --body: Inter, system-ui, -apple-system, sans-serif;
   --display: Literata, "PT Serif", Georgia, "Times New Roman", serif;
@@ -39,8 +39,8 @@ body {
   line-height: 1.6;
   /* Фон-«миллиметровка»: намёк на разлинованную тетрадь, а не на экран. */
   background-image:
-    linear-gradient(rgba(21, 21, 21, .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(21, 21, 21, .05) 1px, transparent 1px);
+    linear-gradient(rgba(28, 26, 36, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 26, 36, .05) 1px, transparent 1px);
   background-size: 32px 32px;
   -webkit-font-smoothing: antialiased;
 }
@@ -95,7 +95,7 @@ code, kbd, samp { font-family: var(--mono); }
 .spine::before, .spine::after {
   content: "";
   position: absolute; top: 16px; bottom: 16px;
-  border-left: 2px dotted rgba(250, 255, 105, .45);
+  border-left: 2px dotted rgba(196, 176, 255, .45);
 }
 .spine::before { left: 16px; }
 .spine::after { right: 16px; }
@@ -186,7 +186,7 @@ figure.code figcaption {
   font: 600 10.5px/1.4 var(--pixel); letter-spacing: 1.1px; text-transform: uppercase;
 }
 figure.code pre { margin: 0; padding: 15px 18px; overflow-x: auto; font: 400 14px/1.65 var(--mono); }
-figure.code--out pre { background: #151515; color: #F1F3D0; }
+figure.code--out pre { background: #1C1A24; color: #E9E3FA; }
 figure.code--out figcaption { background: var(--ink-soft); }
 
 /* Кнопка копирования: подставляется скриптом в подпись блока кода.
@@ -399,7 +399,7 @@ figure.code[data-lang] figcaption span:first-child { color: var(--leaf-bright); 
 .shot img { display: block; width: 100%; height: auto; background: #fff; cursor: zoom-in; }
 .shot figcaption { padding: 9px 14px; border-top: 2px solid var(--ink); font: 600 11px/1.5 var(--mono); color: var(--ink-soft); }
 
-.lightbox { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: clamp(14px, 3vw, 42px); background: rgba(21, 21, 21, .9); cursor: zoom-out; }
+.lightbox { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: clamp(14px, 3vw, 42px); background: rgba(28, 26, 36, .9); cursor: zoom-out; }
 .lightbox.is-open { display: grid; }
 .lightbox figure { margin: 0; max-width: 100%; max-height: 100%; border: 3px solid var(--page); background: var(--page); }
 .lightbox img { display: block; max-width: 100%; max-height: 86vh; width: auto; }
@@ -515,7 +515,7 @@ figure.code[data-lang] figcaption span:first-child { color: var(--leaf-bright); 
 .chips i small { font: 400 10.5px/1.2 var(--mono); color: var(--ink-soft); }
 .chips i.out { opacity: .35; text-decoration: line-through; }
 .chips i.hl { outline: 3px solid var(--ink); outline-offset: 1px; }
-.k0 { background: #FBFFC4 !important; } .k1 { background: #E4DDF5 !important; } .k2 { background: #F7E2D4 !important; }
+.k0 { background: #F1ECFF !important; } .k1 { background: #E4DDF5 !important; } .k2 { background: #F7E2D4 !important; }
 .k3 { background: #D6E8F7 !important; } .k4 { background: #F3EBC2 !important; } .k5 { background: #EADBD0 !important; }
 .sorter__arrow { margin: 10px 0; font: 700 12.5px/1.3 var(--mono); color: var(--leaf); }
 .bins { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
