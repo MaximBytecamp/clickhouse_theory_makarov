@@ -151,13 +151,15 @@
           <li><b>Запустите установщик и оставьте настройки по умолчанию</b>Первое окно — <b>Configuration</b>. Выбрана установка для текущего пользователя (<b>Per-user installation</b>): ей не нужны права администратора. Движок — <b>WSL 2</b>, встроенная в Windows подсистема, в которой Docker держит свой Linux. Нажмите <b>OK</b>.
             <figure class="shot"><img src="../../shots/w-dd-01-config.png" alt="Окно Configuration установщика Docker Desktop: выбраны Per-user installation и WSL 2"><figcaption>Установщик Docker Desktop · Configuration · снято на Windows</figcaption></figure>
           </li>
-          <li><b>Запустите Docker Desktop</b>После установки откройте Docker Desktop из меню «Пуск». Команды работают, только пока он запущен и внизу слева его окна написано <b>Engine running</b> — «движок запущен».</li>
+          <li><b>Запустите Docker Desktop</b>После установки откройте Docker Desktop из меню «Пуск». При первом запуске он предложит войти в учётную запись — для стенда она не нужна, нажмите <b>Skip</b>.
+            <figure class="shot"><img src="../../shots/w-dd-04-welcome.png" alt="Окно Welcome to Docker, выделена ссылка Skip"><figcaption>Docker Desktop · первый запуск · 1 — Skip · снято на Windows</figcaption></figure>
+            Команды работают, только пока Docker Desktop запущен и внизу слева его окна написано <b>Engine running</b> — «движок запущен».</li>
           <li><b>Откройте PowerShell</b>Нажмите <kbd>Win</kbd> + <kbd>X</kbd> и выберите «Терминал» (в Windows 10 — «Windows PowerShell»). Все команды главы набираются в нём.</li>
         </ol>
         <ol class="steps" data-os="mac">
           <li><b>Узнайте процессор Mac</b>Меню  → «Об этом Mac», строка «Чип» или «Процессор». Apple M1 и новее — это Apple Silicon, остальные — Intel. Сборки Docker Desktop для них разные.</li>
           <li><b>Скачайте и установите Docker Desktop</b>На странице <a href="https://docs.docker.com/desktop/setup/install/mac-install/">docs.docker.com → Install Docker Desktop on Mac</a> выберите сборку под свой процессор, откройте скачанный <code>Docker.dmg</code> и перетащите Docker в «Программы».</li>
-          <li><b>Запустите Docker Desktop</b>Откройте его из «Программ». Команды работают, пока он запущен и внизу слева его окна написано <b>Engine running</b>.</li>
+          <li><b>Запустите Docker Desktop</b>Откройте его из «Программ». На предложение войти в учётную запись нажмите <b>Skip</b> — для стенда она не нужна. Команды работают, пока Docker Desktop запущен и внизу слева его окна написано <b>Engine running</b>.</li>
           <li><b>Откройте Терминал</b><kbd>Cmd</kbd> + <kbd>Пробел</kbd>, наберите «Терминал». Все команды главы набираются в нём.</li>
         </ol>
         <ol class="steps" data-os="linux">
@@ -537,7 +539,7 @@ Bye.</pre></figure>
 
         <h2 id="s12"><span class="sec">§12</span>Если не получилось</h2>
         <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
-        <details class="err" data-os="win"><summary>Docker Desktop не запущен<small>error during connect: … open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.</small></summary><p>Команда <code>docker</code> есть, а движка нет. Запустите Docker Desktop и дождитесь <b>Engine running</b>. Не запускается — глава <a href="../01a-windows-wsl/index.html">0.1а</a>.</p></details>
+        <details class="err" data-os="win"><summary>Docker Desktop не запущен<small>failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.</small></summary><p>Команда <code>docker</code> есть, а движка нет. Запустите Docker Desktop и дождитесь <b>Engine running</b>. Не запускается — глава <a href="../01a-windows-wsl/index.html">0.1а</a>.</p></details>
         <details class="err" data-os="mac"><summary>Docker Desktop не запущен<small>failed to connect to the docker API at unix:///Users/…/.docker/run/docker.sock; check if the path is correct and if the daemon is running</small></summary><p>Команда <code>docker</code> есть, а движка нет. Запустите Docker Desktop из «Программ» и дождитесь <b>Engine running</b>.</p></details>
         <details class="err" data-os="linux"><summary>Служба Docker не запущена<small>failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running</small></summary><p><code>sudo systemctl start docker</code>. Чтобы стартовала вместе с системой — <code>sudo systemctl enable docker</code>.</p></details>
         <details class="err" data-os="win"><summary>Терминал открыт до установки Docker<small>docker : The term 'docker' is not recognized as the name of a cmdlet…</small></summary><p>Закройте PowerShell и откройте заново: новое окно узнает про установленную программу.</p></details>
@@ -703,7 +705,7 @@ Bye.</pre></figure>
         </ul>
         <p>Docker Desktop на Windows не запускается — следующая глава <a href="../01a-windows-wsl/index.html">0.1а</a>. Всё работает — переходите к 0.2 о клиентах.</p>
 
-        <div class="pager"><a href="../../index.html">К содержанию справочника</a><a href="../01a-windows-wsl/index.html">0.1а Windows: Docker Desktop и WSL 2 →</a></div>
+        <div class="pager"><a href="../01a-windows-wsl/index.html">0.1а Windows: если Docker Desktop не запускается</a><a href="../02-klienty/index.html">0.2 Клиенты →</a></div>
 
         <div class="colophon">
           <span>Глава 0.1 · Стенд: Docker и базы · Справочник по ClickHouse</span>
