@@ -1,0 +1,75 @@
+[
+  {
+    "name": "11-01-show-tables",
+    "query": "SHOW TABLES FROM shop",
+    "panel": true,
+    "expand": [
+      "shop"
+    ],
+    "mark": [
+      {
+        "at": "#databases",
+        "label": "1"
+      },
+      {
+        "at": "r:#data-table",
+        "label": "2"
+      }
+    ]
+  },
+  {
+    "name": "11-02-describe",
+    "query": "DESCRIBE TABLE shop.products",
+    "height": 720,
+    "mark": [
+      {
+        "at": "r:#data-table thead th:nth-child(3)",
+        "label": "1",
+        "pad": -2
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(7) td:nth-child(3)",
+        "label": "2",
+        "pad": -1
+      }
+    ],
+    "clip": {
+      "box": [
+        0,
+        0,
+        820,
+        548
+      ]
+    }
+  },
+  {
+    "name": "11-03-limit",
+    "query": "SELECT * FROM shop.products LIMIT 5",
+    "mark": [
+      {
+        "at": "r:#data-table tbody tr:nth-child(1) td:nth-child(8)",
+        "label": "1",
+        "pad": -1
+      },
+      {
+        "at": "p:#progress",
+        "label": "2"
+      }
+    ]
+  },
+  {
+    "name": "11-04-count",
+    "query": "SELECT count() FROM web.events",
+    "mark": [
+      {
+        "at": "r:#data-table tbody tr:nth-child(1) td:nth-child(2)",
+        "label": "1",
+        "pad": -1
+      },
+      {
+        "at": "p:#progress",
+        "label": "2"
+      }
+    ]
+  }
+]

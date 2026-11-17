@@ -3,6 +3,7 @@
 
      node tools/shots.mjs                  все кадры из tools/shots.json
      node tools/shots.mjs 03-play-version  один кадр
+     SHOTS=tools/shots-m1.json node tools/shots.mjs   кадры модуля 1
 
    Каждый кадр снимается в новом окне браузера: Play UI хранит вкладки и
    запросы в localStorage, и прошлый прогон не должен попадать в кадр.
@@ -21,13 +22,16 @@
                по нижнему краю результата
 
    Цель — CSS-селектор. Префикс «r:» ищет внутри результата запроса
-   (теневой DOM query-result): «r:#data-table tr:nth-child(3)», «r:#stats».
+   (теневой DOM query-result): «r:#data-table tr:nth-child(3)». Префикс «p:» — полоса
+   под кнопкой Run (теневой DOM query-progress): «p:#progress-text» — строк и секунд,
+   «p:#stats» — сколько строк и байт прочитано.
    Префикс «text:» — элемент с таким текстом: «text:Run». */
 const pw = (await import('/Users/makarovmn/python_presentations/tools/node_modules/playwright/index.js')).default;
 import { readFileSync } from 'node:fs';
 
 const root = new URL('..', import.meta.url).pathname;
-const all = JSON.parse(readFileSync(root + 'tools/shots.json', 'utf8'));
+// SHOTS=tools/shots-m1.json — свой список кадров у модуля, чтобы главы разных модулей не правили один файл
+const all = JSON.parse(readFileSync(root + (process.env.SHOTS || 'tools/shots.json'), 'utf8'));
 const only = process.argv.slice(2);
 const list = only.length ? all.filter(s => only.includes(s.name)) : all;
 if (!list.length) { console.error('нет таких кадров:', only.join(' ')); process.exit(1); }
@@ -40,6 +44,7 @@ async function rect(page, at) {
   const r = await page.evaluate(at => {
     let el;
     if (at.startsWith('r:')) el = document.querySelector('query-result')?.shadowRoot?.querySelector(at.slice(2));
+    else if (at.startsWith('p:')) el = document.querySelector('query-progress')?.shadowRoot?.querySelector(at.slice(2));
     else if (at.startsWith('text:')) {
       const want = at.slice(5);
       el = [...document.querySelectorAll('body *')].find(e => e.children.length === 0 && e.textContent.trim() === want);
