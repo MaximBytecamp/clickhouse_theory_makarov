@@ -139,5 +139,47 @@
         "label": "!"
       }
     ]
+  },
+  {
+    "name": "13-01-null-expr",
+    "query": "SELECT NULL = NULL, NULL + 1, 5 > NULL, isNull(NULL), toTypeName(NULL + 1)",
+    "mark": [
+      {
+        "at": "r:#data-table tbody tr:nth-child(1) td",
+        "label": "1",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(2) td",
+        "label": "2",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(3) td",
+        "label": "3",
+        "pad": -1
+      }
+    ]
+  },
+  {
+    "name": "13-02-null-agg",
+    "query": "SELECT count(), count(discount), avg(discount), avg(ifNull(discount, 0))\nFROM shop.products",
+    "mark": [
+      {
+        "at": "r:#data-table thead th:nth-child(3)",
+        "label": "1",
+        "pad": -2
+      },
+      {
+        "at": "r:#data-table thead th:nth-child(4)",
+        "label": "2",
+        "pad": -2
+      },
+      {
+        "at": "r:#data-table thead th:nth-child(5)",
+        "label": "3",
+        "pad": -2
+      }
+    ]
   }
 ]
