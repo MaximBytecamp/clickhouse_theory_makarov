@@ -71,5 +71,73 @@
         "label": "2"
       }
     ]
+  },
+  {
+    "name": "12-01-typename",
+    "query": "SELECT toTypeName(42), toTypeName(300), toTypeName(-1), toTypeName(1.5),\n       toTypeName('Ноутбук'), toTypeName(true), toTypeName(today()), toTypeName(now())",
+    "mark": [
+      {
+        "at": "r:#data-table tbody tr:nth-child(1) td",
+        "label": "1",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(2) td",
+        "label": "2",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(3) td",
+        "label": "3",
+        "pad": -1
+      }
+    ]
+  },
+  {
+    "name": "12-02-overflow",
+    "query": "SELECT toUInt8(255), toUInt8(256), toUInt8(-1), toInt8(127), toInt8(128)",
+    "mark": [
+      {
+        "at": "r:#data-table tbody tr:nth-child(2) td",
+        "label": "1",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(3) td",
+        "label": "2",
+        "pad": -1
+      },
+      {
+        "at": "r:#data-table tbody tr:nth-child(5) td",
+        "label": "3",
+        "pad": -1
+      }
+    ]
+  },
+  {
+    "name": "12-03-float-decimal",
+    "query": "SELECT sum(0.1) AS float_sum, sum(toDecimal64(0.1, 2)) AS decimal_sum\nFROM numbers(1000000)",
+    "mark": [
+      {
+        "at": "r:#data-table thead th:nth-child(2)",
+        "label": "1",
+        "pad": -2
+      },
+      {
+        "at": "r:#data-table thead th:nth-child(3)",
+        "label": "2",
+        "pad": -2
+      }
+    ]
+  },
+  {
+    "name": "12-04-enum-error",
+    "query": "SELECT CAST('phone' AS Enum8('desktop' = 1, 'mobile' = 2, 'tablet' = 3))",
+    "mark": [
+      {
+        "at": "r:#error",
+        "label": "!"
+      }
+    ]
   }
 ]
