@@ -9,6 +9,33 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../styles.css">
+  <style>
+    .catalog-map { display:grid; grid-template-columns:1fr 36px 1fr 36px 1.35fr; gap:12px; align-items:stretch; margin:24px 0; }
+    .catalog-map__box { border:2px solid var(--ink); background:var(--page); padding:18px; min-width:0; }
+    .catalog-map__box--server { background:var(--ink); color:var(--page); }
+    .catalog-map__box--table { background:var(--leaf-pale); }
+    .catalog-map__label { display:block; margin-bottom:9px; font:700 11px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+    .catalog-map__box p { margin:0; font-size:.92rem; }
+    .catalog-map__box code { white-space:normal; }
+    .catalog-map__items { display:grid; gap:6px; margin-top:12px; }
+    .catalog-map__item { padding:7px 9px; background:rgba(255,255,255,.74); color:var(--ink); border:1px solid var(--ink-soft); font:500 13px var(--mono); }
+    .catalog-map__arrow { align-self:center; text-align:center; font-weight:800; color:var(--leaf); font-size:24px; }
+    .catalog-map__note { grid-column:1 / -1; margin:0; padding:12px 15px; border-left:4px solid var(--leaf); background:var(--page); }
+    .client-context { width:100%; font-size:.9rem; }
+    .client-context td, .client-context th { overflow-wrap:anywhere; }
+    @media (max-width:700px) {
+      .catalog-map { grid-template-columns:1fr; gap:8px; }
+      .catalog-map__arrow { transform:rotate(90deg); height:26px; }
+      .client-context, .client-context tbody, .client-context tr, .client-context td { display:block; width:100%; }
+      .client-context thead { display:none; }
+      .client-context caption { display:block; padding:10px; text-align:left; }
+      .client-context tr { border-top:2px solid var(--ink); }
+      .client-context td:first-child { background:var(--leaf-pale); }
+      .client-context td:nth-child(2)::before { content:'clickhouse-client: '; font-weight:700; }
+      .client-context td:nth-child(3)::before { content:'Play UI: '; font-weight:700; }
+      .client-context td code { white-space:normal; }
+    }
+  </style>
 </head>
 <body>
   <div class="book">
@@ -24,473 +51,221 @@
         <header class="chapter-head">
           <span class="chapter-num">1.1</span>
           <h1>Сервер, база,<br>таблица</h1>
-          <p class="lead">В главе — пять команд, которые показывают, что лежит на сервере: базы, таблицы, их столбцы, первые строки и число строк. С ними можно изучить любую таблицу, не зная о ней заранее ничего.</p>
+          <p class="lead">В этой главе найдём каталог товаров на работающем сервере, прочитаем его структуру и получим несколько строк. Для этого нужны уже запущенный стенд и подключённый клиент.</p>
         </header>
 
         <dl class="passport">
           <div><dt>Категория</dt><dd>Первые запросы</dd></div>
           <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>0.1 Стенд · 1.2 Типы данных · 1.6 Чтение</dd></div>
+          <div><dt>Связанные темы</dt><dd>1.2 Типы данных · 1.3 Пустое значение · 1.6 Чтение</dd></div>
           <div><dt>Понадобится</dt><dd>поднятый стенд, Play UI или clickhouse-client</dd></div>
         </dl>
-
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Три уровня</b><p>На сервере лежат базы, в базах — таблицы, в таблицах — столбцы. Таблицу называют полным именем: <code>shop.products</code>.</p><p>База — до точки, таблица — после.</p></div>
-            <div><b data-n="2">Осмотреться — пять команд</b><p><code>SHOW DATABASES</code>, <code>SHOW TABLES</code>, <code>DESCRIBE</code>, <code>SELECT * … LIMIT</code> и <code>count()</code>.</p><p>Каждая отвечает на свой вопрос.</p></div>
-            <div><b data-n="3">LIMIT — всегда</b><p>В <code>web.events</code> 10 миллионов строк. С <code>LIMIT 5</code> сервер читает десяток строк за 5 мс, без него — гигабайт.</p><p><code>count()</code> отвечает мгновенно: число строк у сервера записано заранее.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s3"><b>Таблицы</b><small>что есть в базе</small></a></li>
-            <li><a href="#s4"><b>Столбцы</b><small>из чего таблица</small></a></li>
-            <li><a href="#s5"><b>Строки</b><small>первые пять</small></a></li>
-            <li><a href="#s7"><b>Широкая строка</b><small>столбиком</small></a></li>
-            <li><a href="#s8"><b>Сколько</b><small>count()</small></a></li>
-          </ol>
-        </section>
 
         <nav class="contents">
           <b>В этой главе</b>
           <ol>
-            <li><a href="#s1">Сервер, база, таблица, столбец</a></li>
-            <li><a href="#s2">Полное имя и база по умолчанию</a></li>
-            <li><a href="#s3">Шаг 1. Какие таблицы в базе</a></li>
-            <li><a href="#s4">Шаг 2. Из чего состоит таблица</a></li>
-            <li><a href="#s5">Шаг 3. Первые строки</a></li>
-            <li><a href="#s6">Почему без LIMIT нельзя</a></li>
-            <li><a href="#s7">Шаг 4. Широкая строка столбиком</a></li>
-            <li><a href="#s8">Шаг 5. Сколько строк</a></li>
-            <li><a href="#s9">Все таблицы одним запросом</a></li>
-            <li><a href="#s10">Если вы знаете MongoDB</a></li>
-            <li><a href="#s11">Если не получилось</a></li>
-            <li><a href="#s12">Проверьте себя</a></li>
-            <li><a href="#s13">Шпаргалка и глоссарий</a></li>
+            <li><a href="#s1">Задача: каталог магазина</a></li>
+            <li><a href="#s2">Как связаны сервер, база и таблица</a></li>
+            <li><a href="#s3">Шаг 1. Найти базу</a></li>
+            <li><a href="#s4">Шаг 2. Найти таблицу</a></li>
+            <li><a href="#s5">Шаг 3. Прочитать устройство таблицы</a></li>
+            <li><a href="#s6">Шаг 4. Прочитать несколько строк</a></li>
+            <li><a href="#s7">Текущая база и команда USE</a></li>
+            <li><a href="#s8">Справка: сколько строк в таблице</a></li>
+            <li><a href="#s9">Частые ошибки</a></li>
+            <li><a href="#s10">Проверьте себя</a></li>
+            <li><a href="#s11">Самостоятельная задача</a></li>
+            <li><a href="#s12">Шпаргалка</a></li>
           </ol>
         </nav>
 
-        <h2 id="s1"><span class="sec">§1</span>Сервер, база, таблица, столбец</h2>
-        <p class="purpose"><b>Зачем это знать</b>Любой запрос начинается с вопроса «где лежат данные». Ответ всегда из трёх частей: какой сервер, какая база, какая таблица.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 270" role="img" aria-label="Сервер course-clickhouse содержит базы shop, web, iot и sandbox; в базе shop пять таблиц; у таблицы products столбцы">
-            <rect class="sc-ink" x="10" y="10" width="860" height="250" rx="10"/>
-            <text class="tw" x="26" y="34" style="font:600 13px var(--mono)">сервер · course-clickhouse</text>
-            <rect class="sc-acc" x="26" y="50" width="250" height="194" rx="8"/>
-            <text class="tb" x="40" y="74">база shop</text>
-            <rect class="sc-box" x="40" y="86" width="110" height="26" rx="4"/><text class="tm" x="50" y="104">customers</text>
-            <rect class="sc-box" x="40" y="118" width="110" height="26" rx="4"/><text class="tm" x="50" y="136">order_items</text>
-            <rect class="sc-box" x="40" y="150" width="110" height="26" rx="4"/><text class="tm" x="50" y="168">orders</text>
-            <rect class="sc-warm" x="40" y="182" width="110" height="26" rx="4"/><text class="tm" x="50" y="200">products</text>
-            <rect class="sc-box" x="40" y="214" width="110" height="26" rx="4"/><text class="tm" x="50" y="232">stock</text>
-            <text class="t" x="164" y="104">5 таблиц</text>
-            <path class="sc-arrow" d="M154 195 L300 140 M291 139 L300 140 L294 147"/>
-            <rect class="sc-warm" x="306" y="50" width="300" height="194" rx="8"/>
-            <text class="tb" x="320" y="74">таблица products</text>
-            <text class="t" x="320" y="96">столбец · тип</text>
-            <text class="tm" x="320" y="122">product_id · String</text>
-            <text class="tm" x="320" y="144">title · String</text>
-            <text class="tm" x="320" y="166">price · UInt32</text>
-            <text class="tm" x="320" y="188">discount · Nullable(UInt8)</text>
-            <text class="tm" x="320" y="210">… ещё 6 столбцов</text>
-            <text class="t" x="320" y="234">и 21 строка — по строке на товар</text>
-            <rect class="sc-box" x="630" y="50" width="110" height="40" rx="6"/><text class="tb tc" x="685" y="75">web</text>
-            <rect class="sc-box" x="630" y="102" width="110" height="40" rx="6"/><text class="tb tc" x="685" y="127">iot</text>
-            <rect class="sc-soft" x="630" y="154" width="110" height="40" rx="6"/><text class="tb tc" x="685" y="179">sandbox</text>
-            <text class="tw" x="756" y="75" style="font:500 12px var(--body)">events</text>
-            <text class="tw" x="756" y="127" style="font:500 12px var(--body)">readings</text>
-            <text class="tw" x="756" y="179" style="font:500 12px var(--body)">пока пусто</text>
-            <text class="tw" x="630" y="232" style="font:600 13px var(--mono)">shop.products</text>
-            <text class="tw" x="630" y="250" style="font:500 12px var(--body)">полное имя: база.таблица</text>
-          </svg>
-          <figcaption>сервер → базы → таблицы → столбцы</figcaption>
-        </figure>
-        <ul class="short">
-          <li><b>Сервер</b> — программа ClickHouse, у нас — контейнер <code>course-clickhouse</code>.</li>
-          <li><b>База</b> — папка для таблиц одной темы: магазин, сайт, датчики.</li>
-          <li><b>Таблица</b> — строки одинакового устройства. У каждого столбца своё имя и свой <b>тип</b> — какие значения в нём допустимы.</li>
-        </ul>
+        <h2 id="s1"><span class="sec">§1</span>Задача: открыть каталог магазина</h2>
+        <p>Вы уже подключились к стенду через Play UI или <code>clickhouse-client</code>. Теперь нужно выяснить: какие товары есть в каталоге и какие сведения о них хранятся. Не начинайте с догадки об имени столбца. Сначала пройдите путь от базы до строк:</p>
+        <ol class="steps">
+          <li>посмотреть базы на подключённом сервере;</li>
+          <li>посмотреть таблицы базы <code>shop</code>;</li>
+          <li>прочитать описание таблицы <code>shop.products</code>;</li>
+          <li>получить несколько строк товаров.</li>
+        </ol>
+        <p>Команды этого маршрута только читают сведения и строки. Сначала разберём, как связаны объекты, которые предстоит найти.</p>
+
+        <h2 id="s2"><span class="sec">§2</span>Сервер, база, таблица и столбец</h2>
+        <p><span class="term">Сервер ClickHouse</span> — работающая программа, которая принимает запросы, управляет хранением данных и выполняет операции с ними. На нашем стенде она запущена в контейнере <code>course-clickhouse</code>. Контейнер — среда запуска этой программы.</p>
+        <p><span class="term">База данных</span> — именованная группа таблиц на одном сервере. В базе <code>shop</code> собраны таблицы магазина. <span class="term">Таблица</span> — набор строк с одинаковыми столбцами. В <code>products</code> каждая строка описывает один товар. <b>Столбец</b> задаёт одно свойство для всех товаров: название, цену или идентификатор. На пересечении строки и столбца находится значение свойства конкретного товара.</p>
 
         <details class="simple">
-          <summary>сервер, база и таблица на примере шкафа с папками</summary>
-          <div class="vsteps">
-            <div class="vcard is-dark"><i>🗄️</i><h5>сервер</h5><b>Шкаф</b><small>Стоит в одном месте, в нём всё хранится.</small></div>
-            <div class="varr">полки</div>
-            <div class="vcard"><i>📚</i><h5>база</h5><b>Полка с подписью</b><small>«Магазин», «Сайт», «Датчики» — чтобы не искать по всему шкафу.</small></div>
-            <div class="varr">папки</div>
-            <div class="vcard is-hot"><i>🗂️</i><h5>таблица</h5><b>Папка одинаковых бланков</b><small>У бланков одни и те же графы. Бланк — строка, графа — столбец.</small></div>
+          <summary>По-простому: учреждение, отдел и картотека</summary>
+          <p>В учреждении есть отделы с отдельными картотеками. Сначала выбирают отдел, затем картотеку; внутри находят карточку и читают её графы.</p>
+          <p><b>Что есть что:</b> учреждение — сервер, отдел — база, картотека — таблица. Карточка соответствует строке, графа — столбцу.</p>
+          <p><b>Граница аналогии:</b> она объясняет выбор по именам. База — логическая группа таблиц. Из этой аналогии нельзя вывести устройство каталогов на диске, вложенность баз или физический порядок строк.</p>
+        </details>
+
+        <p class="purpose"><b>Что проверяем на схеме</b>Где находится таблица каталога, из каких частей состоит её имя и что будет внутри неё.</p>
+        <div class="scheme catalog-map" role="img" aria-label="На сервере ClickHouse есть база shop, в ней таблица products, у таблицы есть столбцы и строки">
+          <div class="catalog-map__box catalog-map__box--server">
+            <span class="catalog-map__label">сервер</span>
+            <b>процесс ClickHouse</b>
+            <div class="catalog-map__items">
+              <div class="catalog-map__item">shop · среди других баз</div>
+              <div class="catalog-map__item">web, iot, …</div>
+            </div>
           </div>
-          <p class="simple__map"><b>Что есть что:</b> шкаф — сервер <code>course-clickhouse</code>, полка — база <code>shop</code>, папка — таблица <code>products</code>. Бланк — строка про один товар, графа «цена» — столбец <code>price</code>. Полное имя <code>shop.products</code> — это «полка “Магазин”, папка “Товары”».</p>
-        </details>
-
-        <h2 id="s2"><span class="sec">§2</span>Полное имя и база по умолчанию</h2>
-        <p class="purpose"><b>Зачем это знать</b>Если не назвать базу, сервер будет искать таблицу в своей базе по умолчанию — и не найдёт.</p>
-        <div class="vsteps" aria-label="Два способа назвать таблицу">
-          <div class="vcard is-hot"><h5>полное имя</h5><b><code>shop.products</code></b><small>Работает всегда и везде. Так написаны все запросы книги.</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>короткое имя</h5><b><code>products</code></b><small>Сервер ищет в текущей базе. После входа это <code>default</code>, и там таблицы нет.</small></div>
-        </div>
-        <p>Узнать текущую базу можно функцией <code>currentDatabase()</code>. Сменить её в clickhouse-client — командой <code>USE</code>:</p>
-        <figure class="code"><figcaption><span>clickhouse-client</span><span>сменить текущую базу</span></figcaption>
-<pre>USE shop
-SHOW TABLES
-SELECT count() FROM orders</pre></figure>
-        <p class="tech"><b>По словам:</b> после <code>USE shop</code> короткое имя <code>orders</code> значит <code>shop.orders</code>. Действует до выхода из клиента.</p>
-        <p class="check">последний запрос вернул <code>120</code> — столько заказов в магазине.</p>
-        <details class="more">
-          <summary>почему в Play UI команда USE не помогает</summary>
-          <p>Play UI отправляет каждый запрос серверу отдельно, по HTTP, и сервер не помнит, что было в прошлом запросе. <code>USE shop</code> выполнится без ошибки, но следующий запрос снова начнётся в базе <code>default</code>:</p>
-          <figure class="code code--out"><figcaption><span>Play UI</span><span>два запроса подряд</span></figcaption>
-<pre>USE shop                    → пустой ответ, ошибки нет
-SELECT currentDatabase()    → default</pre></figure>
-          <p>clickhouse-client держит одно соединение на весь сеанс, поэтому <code>USE</code> в нём работает. Чтобы запросы из книги одинаково выполнялись в обоих клиентах, пишите полное имя.</p>
-          <figure class="code code--out"><figcaption><span>clickhouse-client</span><span>сеанс целиком; приглашение course :) после USE не меняется</span></figcaption>
-<pre>course :) USE shop
-
-USE shop
-
-Query id: 9ac2d38b-4853-438c-a35d-8768b49e7e8d
-
-Ok.
-
-0 rows in set. Elapsed: 0.002 sec.
-
-course :) SHOW TABLES
-
-SHOW TABLES
-
-Query id: dc5dd5b3-7c59-4dfc-8d64-47fb3bbf69f1
-
-   ┌─name────────┐
-1. │ customers   │
-2. │ order_items │
-3. │ orders      │
-4. │ products    │
-5. │ stock       │
-   └─────────────┘
-
-5 rows in set. Elapsed: 0.003 sec.
-
-course :) SELECT count() FROM orders
-
-SELECT count()
-FROM orders
-
-Query id: 1185cac1-55c6-4fa5-b756-7baaabb270aa
-
-   ┌─count()─┐
-1. │     120 │
-   └─────────┘
-
-1 row in set. Elapsed: 0.001 sec.</pre></figure>
-        </details>
-
-        <h2 id="s3"><span class="sec">§3</span>Шаг 1. Какие таблицы в базе</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Список баз вы уже видели в главе 0.1. Теперь заглянем в одну из них.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>таблицы базы shop</span></figcaption>
-<pre>SHOW TABLES FROM shop</pre></figure>
-        <figure class="shot"><img src="../../shots/11-01-show-tables.png" alt="Play UI: слева раскрыта база shop с пятью таблицами, справа результат SHOW TABLES FROM shop — те же пять имён"><figcaption>Play UI · 1 — список слева, щелчок по базе shop; 2 — ответ на SHOW TABLES FROM shop</figcaption></figure>
-        <p>Тот же список виден слева (1): щелчок по базе раскрывает её таблицы. Запрос (2) удобнее, когда таблиц много или вы работаете в терминале.</p>
-        <div class="dbs" aria-label="Таблицы базы shop">
-          <div class="db"><code>products</code><p>Товары: название, бренд, категория, цена, скидка, рейтинг.</p><div class="db__n">21 <small>строка</small></div></div>
-          <div class="db"><code>stock</code><p>Остатки: сколько штук товара на каком складе.</p><div class="db__n">42 <small>строки</small></div></div>
-          <div class="db"><code>customers</code><p>Покупатели: имя, город, дата регистрации, сегмент.</p><div class="db__n">20 <small>строк</small></div></div>
-          <div class="db"><code>orders</code><p>Заказы: кто, когда, сумма, статус, доставка.</p><div class="db__n">120 <small>строк</small></div></div>
-          <div class="db"><code>order_items</code><p>Позиции заказов: какой товар, сколько штук, по какой цене.</p><div class="db__n">271 <small>строка</small></div></div>
-        </div>
-        <p class="check">в ответе пять имён: <code>customers</code>, <code>order_items</code>, <code>orders</code>, <code>products</code>, <code>stock</code>.</p>
-        <details class="more">
-          <summary>SHOW TABLES без FROM и пустая песочница</summary>
-          <p>Без <code>FROM</code> команда показывает таблицы текущей базы. В Play UI это всегда <code>default</code>, а она пустая — ответ без строк. <code>SHOW TABLES FROM sandbox</code> тоже пока ничего не вернёт: таблицы в песочнице вы создадите сами в главе <a href="../14-create-table/index.html">1.4</a>.</p>
-        </details>
-
-        <h2 id="s4"><span class="sec">§4</span>Шаг 2. Из чего состоит таблица</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Прежде чем читать строки, узнаём графы бланка: какие столбцы есть и что в них может лежать.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>устройство таблицы</span></figcaption>
-<pre>DESCRIBE TABLE shop.products</pre></figure>
-        <figure class="shot"><img src="../../shots/11-02-describe.png" alt="Результат DESCRIBE TABLE shop.products: десять столбцов с типами, у discount тип Nullable(UInt8)"><figcaption>Play UI · DESCRIBE: 1 — тип каждого столбца, 2 — столбец, где значения может не быть</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>По строке на столбец. Нужны первые две колонки ответа: имя (<code>name</code>) и тип (<code>type</code>, рамка 1). Остальные пустые — они понадобятся в главах про значения по умолчанию и сжатие.</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Тип в ответе</th><th>Что в нём лежит</th><th>Столбцы products</th></tr></thead>
-            <tbody>
-              <tr><td><code>String</code></td><td>текст любой длины</td><td><code>product_id</code>, <code>sku</code>, <code>title</code>, <code>brand</code>, <code>category</code></td></tr>
-              <tr><td><code>UInt32</code></td><td>целое без знака, от 0 до 4 млрд</td><td><code>price</code>, <code>reviews</code></td></tr>
-              <tr><td><code>Float32</code></td><td>дробное число</td><td><code>rating</code></td></tr>
-              <tr><td><code>Date</code></td><td>дата без времени</td><td><code>added</code></td></tr>
-              <tr><td><code>Nullable(UInt8)</code></td><td>целое от 0 до 255 <b>или пусто</b></td><td><code>discount</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="tech">Все типы подробно — глава <a href="../12-tipy/index.html">1.2</a>. Как устроено «пусто» и чем оно дорого — глава <a href="../13-pustoe-znachenie/index.html">1.3</a>.</p>
-        <p class="check">в ответе 10 строк, и у <code>discount</code> тип <code>Nullable(UInt8)</code> (рамка 2): скидка есть не у всех товаров.</p>
-        <details class="more">
-          <summary>DESCRIBE короче, другие таблицы и как увидеть команду создания</summary>
-          <p>Слово <code>TABLE</code> можно опустить, а <code>DESCRIBE</code> сократить до <code>DESC</code>: <code>DESC shop.orders</code>. Попробуйте на других таблицах — например, у <code>shop.orders</code> 12 столбцов, среди них <code>created DateTime</code> (дата со временем) и <code>paid Bool</code> (да или нет).</p>
-          <p>Команду, которой таблицу создали, показывает <code>SHOW CREATE TABLE shop.products</code>. В ней кроме столбцов видны движок <code>ENGINE = MergeTree</code> и порядок хранения <code>ORDER BY product_id</code> — их разбирает глава <a href="../14-create-table/index.html">1.4</a>.</p>
-        </details>
-
-        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Первые строки</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Типы говорят, что <i>может</i> лежать в столбце. Посмотрим, что лежит на самом деле, — на пяти строках.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>пять строк, все столбцы</span></figcaption>
-<pre>SELECT * FROM shop.products LIMIT 5</pre></figure>
-        <p class="tech"><b>По словам:</b> «выбери (<code>SELECT</code>) все столбцы (<code>*</code>) из (<code>FROM</code>) таблицы <code>shop.products</code>, не больше (<code>LIMIT</code>) пяти строк».</p>
-        <figure class="shot"><img src="../../shots/11-03-limit.png" alt="Пять товаров-ноутбуков; у первых двух в столбце discount NULL; над таблицей — 5 rows in result и Read 21 rows"><figcaption>Play UI · 1 — пустое значение NULL; 2 — сколько строк вернулось и сколько сервер прочитал</figcaption></figure>
-        <ul class="short">
-          <li><b>NULL</b> (рамка 1) — значения нет: на этот ноутбук скидки нет. Это не ноль.</li>
-          <li><b>Полоса над таблицей</b> (рамка 2): слева — сколько строк вернулось и за сколько секунд, справа — сколько строк и байт сервер прочитал. Вернулось 5, прочитана 21 — таблица маленькая, сервер взял её целиком.</li>
-        </ul>
-        <p class="check">первая строка — <code>p-001</code>, «Ноутбук Lenovo IdeaPad 3», цена <code>42990</code>.</p>
-        <details class="more">
-          <summary>какие пять строк придут и почему жёлтые полосы</summary>
-          <p>Без указания порядка <code>LIMIT</code> берёт первые попавшиеся строки — те, что сервер прочитал раньше. На стенде это первые пять товаров, потому что таблица хранится упорядоченной по <code>product_id</code>. Но рассчитывать на это нельзя: на большой таблице порядок может меняться от запуска к запуску. Нужен определённый порядок — пишите <code>ORDER BY</code>, глава <a href="../16-chtenie/index.html">1.6</a>.</p>
-          <p>Жёлтые полосы в числовых столбцах Play UI рисует сам: чем больше число, тем длиннее. В clickhouse-client пустое значение выглядит как <code>ᴺᵁᴸᴸ</code> — мелкими буквами, чтобы не спутать со строкой «NULL».</p>
-        </details>
-
-        <h2 id="s6"><span class="sec">§6</span>Почему без LIMIT нельзя</h2>
-        <p class="purpose"><b>Зачем это знать</b>В магазине 21 товар, а в <code>web.events</code> — 10 миллионов строк. Один и тот же <code>SELECT *</code> на них стоит по-разному.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 210" role="img" aria-label="SELECT * FROM web.events с LIMIT 5: прочитано 10 строк, 970 байт, 5 мс; без LIMIT: 10 324 592 строки, 1,03 ГиБ, 675 мс">
-            <text class="tb" x="10" y="30">SELECT * FROM web.events LIMIT 5</text>
-            <rect class="sc-acc" x="10" y="44" width="6" height="30" rx="2"/>
-            <text class="tm" x="28" y="65">прочитано 10 строк · 970 Б · 5 мс</text>
-            <text class="tb" x="10" y="120">SELECT * FROM web.events</text>
-            <rect class="sc-warm" x="10" y="134" width="860" height="30" rx="3"/>
-            <text class="tm" x="24" y="155">прочитано 10 324 592 строки · 1,03 ГиБ · 675 мс</text>
-            <text class="t" x="10" y="196">полосы в одном масштабе по числу прочитанных байт</text>
-          </svg>
-          <figcaption>один запрос с LIMIT и без · замер на стенде, вывод отброшен</figcaption>
-        </figure>
-        <p>С <code>LIMIT 5</code> сервер останавливается, как только набрал пять строк. Без него сервер читает с диска всю таблицу, это гигабайт, и отправляет 10 миллионов строк. clickhouse-client начнёт печатать их все, и терминал будет занят много минут.</p>
-        <div class="vsteps" aria-label="Запрос без LIMIT в двух клиентах">
-          <div class="vcard"><h5>Play UI</h5><b>показывает 1000 строк и обрывает</b><small>Пишет «1000+ rows in result». Сервер успел прочитать 172 тысячи строк.</small></div>
-          <div class="varr">а</div>
-          <div class="vcard is-bad"><h5>clickhouse-client</h5><b>печатает все 10 миллионов</b><small>Остановить — <kbd>Ctrl</kbd> + <kbd>C</kbd>.</small></div>
-        </div>
-        <p class="check">вы взяли за правило: незнакомую таблицу смотрите только с <code>LIMIT</code>.</p>
-        <details class="more">
-          <summary>как сделан замер</summary>
-          <p>Оба запроса на полосах выполнены в clickhouse-client с добавкой <code>FORMAT Null</code> — «посчитай, но ничего не выводи». Так терминал ничего не печатает, и замер показывает только работу сервера. Прочитанные строки и байты взяты из журнала запросов <code>system.query_log</code>, его разбирает глава 3.6. На вашем компьютере миллисекунды будут другими, строки и байты — те же.</p>
-          <p>Play UI ограничивает вывод: получив тысячу строк, он разрывает соединение, и сервер прекращает работу. Число прочитанных к этому моменту строк зависит от скорости компьютера.</p>
-        </details>
-
-        <h2 id="s7"><span class="sec">§7</span>Шаг 4. Широкая строка столбиком</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>В <code>web.events</code> 12 столбцов, и в терминале строка не помещается по ширине. Её удобнее читать столбиком: имя — значение.</p>
-        <span class="phase">Делаем</span>
-        <p>В clickhouse-client поставьте в конце запроса <code>\G</code> вместо точки с запятой:</p>
-        <figure class="code"><figcaption><span>clickhouse-client</span><span>одна строка столбиком</span></figcaption>
-<pre>SELECT * FROM web.events LIMIT 1\G</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>первое событие на сайте</span></figcaption>
-<pre>Row 1:
-──────
-event_time:  2026-08-01 00:07:37
-session_id:  248349
-user_id:     285338
-event_type:  add_to_cart
-url:         /cart
-product_id:  p-005
-category:    ноутбуки
-price:       89990
-device:      mobile
-city:        Москва
-source:      search
-duration_ms: 441</pre></figure>
-        <p class="tech">Читается так: в 00:07 первого августа посетитель с телефона положил в корзину ноутбук <code>p-005</code> за 89 990 ₽; страница загрузилась за 441 мс.</p>
-        <p class="check">вы видите 12 строк вида «имя: значение».</p>
-        <details class="more">
-          <summary>то же в Play UI</summary>
-          <p><code>\G</code> — команда самого clickhouse-client, другие клиенты её не принимают. Везде работает та же просьба словами — <code>FORMAT Vertical</code> в конце запроса. Пример: <code>SELECT * FROM web.events LIMIT 1 FORMAT Vertical</code>. Play UI тогда покажет ответ текстом в столбик. Форматы вывода подробно — глава 4.1.</p>
-        </details>
-
-        <h2 id="s8"><span class="sec">§8</span>Шаг 5. Сколько строк</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Первый вопрос к любой таблице — «большая ли она». От ответа зависит, можно ли смотреть её целиком.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>число строк</span></figcaption>
-<pre>SELECT count() FROM web.events</pre></figure>
-        <figure class="shot"><img src="../../shots/11-04-count.png" alt="Результат count() — 10324592; справа над таблицей: Read 1 rows, 16.00 B"><figcaption>Play UI · 1 — число строк; 2 — сервер прочитал одну служебную строку в 16 байт</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p><code>count()</code> — функция «посчитай строки». Ответ <code>10324592</code> (рамка 1) пришёл за миллисекунды, а справа в полосе (рамка 2) — <code>Read 1 rows, 16.00 B</code>. Сервер не перебирал 10 миллионов строк: он записывает их число, когда строки вставляют, и при запросе берёт готовое.</p>
-
-        <details class="simple">
-          <summary>почему count() мгновенный — на примере коробок на складе</summary>
-          <div class="vsteps">
-            <div class="vcard"><i>📦</i><h5>вставка</h5><b>Коробку заклеивают</b><small>и пишут на ней маркером: «внутри 120 штук».</small></div>
-            <div class="varr">вопрос</div>
-            <div class="vcard is-hot"><i>🔎</i><h5>count()</h5><b>«Сколько всего?»</b><small>Кладовщик не вскрывает коробки — читает надписи и складывает.</small></div>
-            <div class="varr">ответ</div>
-            <div class="vcard is-dark"><i>⚡</i><h5>результат</h5><b>Через секунду</b><small>Хоть коробок сотня, хоть миллион штук внутри.</small></div>
+          <div class="catalog-map__arrow" aria-hidden="true">→</div>
+          <div class="catalog-map__box">
+            <span class="catalog-map__label">база</span>
+            <b><code>shop</code></b>
+            <div class="catalog-map__items">
+              <div class="catalog-map__item">customers, orders, …</div>
+              <div class="catalog-map__item">products</div>
+            </div>
           </div>
-          <p class="simple__map"><b>Что есть что:</b> коробка — порция строк, которую сервер записал на диск за одну вставку. Надпись — число строк в описании порции. Кладовщик — сервер. «Read 1 rows, 16 B» — прочитаны только надписи.</p>
-        </details>
-
-        <p class="check">ответ — <code>10324592</code>, прочитана одна строка.</p>
-        <details class="more">
-          <summary>когда count() перестаёт быть мгновенным</summary>
-          <p>Готовое число годится, только пока вопрос — «сколько строк всего». Как только появится условие («сколько покупок 10 октября»), серверу придётся читать столбцы и проверять каждую строку. Это всё равно быстро — ClickHouse для этого и сделан, — но в полосе уже будут миллионы прочитанных строк. Условия — глава <a href="../16-chtenie/index.html">1.6</a>, порции строк на диске — глава 3.2.</p>
-          <p>Функцию можно писать и заглавными: <code>COUNT()</code> тоже сработает. А вот имена баз, таблиц и столбцов чувствительны к регистру: <code>shop.Products</code> — ошибка.</p>
-        </details>
-
-        <h2 id="s9"><span class="sec">§9</span>Все таблицы одним запросом</h2>
-        <p class="purpose"><b>Зачем это знать</b>Сервер ведёт справочник о самом себе — служебную базу <code>system</code>. Из неё одним запросом видно все таблицы с числом строк и размером.</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>готовый запрос: как он устроен — в главе 1.6</span></figcaption>
-<pre>SELECT database, name, total_rows, formatReadableSize(total_bytes) AS size
-FROM system.tables
-WHERE database IN ('shop', 'web', 'iot')</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌─database─┬─name────────┬─total_rows─┬─size───────┐
-1. │ iot      │ readings    │    3174480 │ 22.97 MiB  │
-2. │ shop     │ customers   │         20 │ 3.97 KiB   │
-3. │ shop     │ order_items │        271 │ 10.41 KiB  │
-4. │ shop     │ orders      │        120 │ 12.16 KiB  │
-5. │ shop     │ products    │         21 │ 5.19 KiB   │
-6. │ shop     │ stock       │         42 │ 1.67 KiB   │
-7. │ web      │ events      │   10324592 │ 353.60 MiB │
-   └──────────┴─────────────┴────────────┴────────────┘</pre></figure>
-        <p class="tech"><code>formatReadableSize</code> переводит байты в КиБ и МиБ. Размер — на диске, в сжатом виде. Сжатие — глава 3.1.</p>
-        <p class="check">у <code>web.events</code> 353 МиБ, у всего магазина вместе — меньше 35 КиБ.</p>
-
-        <h2 id="s10"><span class="sec">§10</span>Если вы знаете MongoDB</h2>
-        <p class="purpose"><b>Зачем это знать</b>Если вы прошли справочник по MongoDB, каждой команде главы там есть пара. Магазин <code>shop</code> — тот же.</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Вопрос</th><th>MongoDB</th><th>ClickHouse</th></tr></thead>
-            <tbody>
-              <tr><td>какие базы</td><td><code>show dbs</code></td><td><code>SHOW DATABASES</code></td></tr>
-              <tr><td>перейти в базу</td><td><code>use shop</code></td><td><code>USE shop</code></td></tr>
-              <tr><td>что в базе</td><td><code>show collections</code></td><td><code>SHOW TABLES FROM shop</code></td></tr>
-              <tr><td>из чего состоит</td><td>— смотрят на документы</td><td><code>DESCRIBE shop.products</code></td></tr>
-              <tr><td>первые записи</td><td><code>db.products.find().limit(5)</code></td><td><code>SELECT * FROM shop.products LIMIT 5</code></td></tr>
-              <tr><td>сколько записей</td><td><code>db.products.countDocuments()</code></td><td><code>SELECT count() FROM shop.products</code></td></tr>
-            </tbody>
-          </table>
+          <div class="catalog-map__arrow" aria-hidden="true">→</div>
+          <div class="catalog-map__box catalog-map__box--table">
+            <span class="catalog-map__label">таблица</span>
+            <b><code>shop.products</code></b>
+            <div class="catalog-map__items">
+              <div class="catalog-map__item">product_id · код товара</div>
+              <div class="catalog-map__item">title · название</div>
+              <div class="catalog-map__item">price · цена</div>
+              <div class="catalog-map__item">строки — товары</div>
+            </div>
+          </div>
+          <p class="catalog-map__note">Стрелки ведут от содержащего объекта к выбранному объекту внутри него. На схеме показана часть баз, таблиц и столбцов.</p>
         </div>
-        <p>Отличие — в строке «из чего состоит». У документов MongoDB поля могут быть любыми, и у двух товаров они бывают разными. В ClickHouse столбцы и типы заданы у таблицы заранее, одни на все строки. Поэтому <code>DESCRIBE</code> отвечает на вопрос точно.</p>
+        <p>Стрелка от сервера ведёт к базе <code>shop</code>, следующая — к её таблице <code>products</code>. При подключении к другому серверу таблицы с таким именем может не быть. <b>Полное имя</b> <code>shop.products</code> называет базу и таблицу в пределах подключённого сервера: до точки — база, после — таблица.</p>
+        <p>У каждого столбца есть имя и <b>тип</b> — правило допустимых значений. Например, цена <code>price</code> хранится как целое неотрицательное число. Чтобы найти эту структуру на сервере, начнём со списка баз.</p>
 
-        <h2 id="s11"><span class="sec">§11</span>Если не получилось</h2>
-        <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
-        <details class="err"><summary>Не указана база<small>Code: 60. DB::Exception: Unknown table expression identifier 'products' in scope SELECT * FROM products LIMIT 1. Maybe you meant shop.products?. (UNKNOWN_TABLE)</small></summary><p>Сервер искал таблицу в текущей базе <code>default</code>. Пишите полное имя: <code>shop.products</code>. Подсказку <code>Maybe you meant</code> сервер даёт сам — прочитайте её.</p></details>
-        <details class="err"><summary>Заглавная буква в имени<small>Code: 60. DB::Exception: Unknown table expression identifier 'shop.Products' … Maybe you meant shop.products?. (UNKNOWN_TABLE)</small></summary><p>Имена баз, таблиц и столбцов чувствительны к регистру. Ключевые слова (<code>select</code>, <code>SELECT</code>) и большинство функций — нет.</p></details>
-        <details class="err"><summary>Опечатка в имени таблицы<small>Code: 60. DB::Exception: Unknown table expression identifier 'shop.order' … Maybe you meant shop.orders?. (UNKNOWN_TABLE)</small></summary><p>Таблица называется <code>orders</code>, во множественном числе. Точный список даст <code>SHOW TABLES FROM shop</code>.</p></details>
-        <details class="err"><summary>Опечатка в имени базы<small>Code: 81. DB::Exception: Database shops does not exist. Maybe you meant shop?. (UNKNOWN_DATABASE)</small></summary><p>Базы стенда: <code>shop</code>, <code>web</code>, <code>iot</code>, <code>sandbox</code>. Код ошибки другой — 81, база не найдена.</p></details>
-        <details class="err"><summary>Два запроса сразу в Play UI<small>Code: 62. DB::Exception: Syntax error (Multi-statements are not allowed): failed at position 9 (end of query): ; SELECT 2. . (SYNTAX_ERROR)</small></summary><p>Play UI выполняет за раз один запрос. Точка с запятой в конце допустима, но после неё ничего быть не должно. Второй запрос откройте в новой вкладке — кнопка <b>+</b> над полем — или выполняйте по очереди. clickhouse-client принимает несколько запросов через <code>;</code>.</p></details>
-        <details class="err"><summary>Опечатка в ключевом слове<small>Code: 62. DB::Exception: Syntax error: failed at position 15 (shop): shop.products. Expected alias cannot be here. (SYNTAX_ERROR)</small></summary><p>Запрос был <code>SELECT * FORM shop.products</code>. Позиция 15 — номер символа, на котором остановился разбор запроса. <code>FORM</code> разобрано как имя, и <code>shop.products</code> после него оказалось лишним. Ошибку ищите в слове <i>перед</i> указанной позицией.</p></details>
-        <details class="err"><summary>Терминал печатает строки без конца<small>SELECT * FROM web.events — без LIMIT, в clickhouse-client</small></summary><p>Сервер отправляет все 10 миллионов строк. Нажмите <kbd>Ctrl</kbd> + <kbd>C</kbd> — клиент отменит запрос. Допишите <code>LIMIT</code> — <a href="#s6">§6</a>. Play UI в таком случае сам остановится на тысяче строк.</p></details>
+        <h2 id="s3"><span class="sec">§3</span>Шаг 1. Найти базу</h2>
+        <p>В <code>clickhouse-client</code> точка с запятой завершает команду и отправляет её на выполнение. В Play UI запрос выполняется кнопкой <b>Run</b>.</p>
+        <p><b>Назначение команды.</b> <code>SHOW DATABASES</code> просит сервер перечислить доступные базы. Так мы проверяем, что база магазина называется <code>shop</code>.</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>список баз</span></figcaption>
+<pre>SHOW DATABASES;</pre></figure>
+        <p>В Play UI также можно выполнить запрос сочетанием <kbd>Ctrl</kbd> + <kbd>Enter</kbd> в Windows и Linux; на macOS — <kbd>⌘</kbd> + <kbd>Enter</kbd>. При проверке стенда версии <code>26.8.36.3</code> получен список баз <code>INFORMATION_SCHEMA</code>, <code>default</code>, <code>information_schema</code>, <code>iot</code>, <code>sandbox</code>, <code>shop</code>, <code>system</code> и <code>web</code>.</p>
+        <figure class="shot"><img src="assets/01-databases.png" alt="Результат команды SHOW DATABASES в Play UI"><figcaption>Список баз, который вернул сервер</figcaption></figure>
+        <p>В ответе есть <code>shop</code> — теперь можно запросить её таблицы. Базы <code>INFORMATION_SCHEMA</code>, <code>information_schema</code> и <code>system</code> служебные: они предоставляют сведения о сервере и данных. Содержимое <code>sandbox</code> меняется во время практики; эта база может уже содержать таблицы.</p>
 
-        <h2 id="s12"><span class="sec">§12</span>Проверьте себя</h2>
-        <details>
-          <summary>Сколько строк в таблице <code>iot.readings</code> и сколько у неё столбцов?</summary>
-          <p><code>SELECT count() FROM iot.readings</code> вернёт <code>3174480</code>. <code>DESCRIBE iot.readings</code> покажет 6 столбцов: <code>ts</code>, <code>sensor_id</code>, <code>warehouse</code>, <code>zone</code>, <code>temperature</code>, <code>humidity</code>.</p>
-        </details>
-        <details>
-          <summary>В Play UI выполнили <code>USE web</code>, потом <code>SELECT count() FROM events</code> — и получили ошибку. Почему?</summary>
-          <p>Play UI шлёт каждый запрос отдельно, сервер не помнит прошлый <code>USE</code>. Второй запрос искал <code>events</code> в базе <code>default</code>. Нужно полное имя <code>web.events</code>.</p>
-        </details>
-        <details>
-          <summary>Почему <code>count()</code> по 10 миллионам строк отвечает быстрее, чем <code>SELECT * … LIMIT 5</code>?</summary>
-          <p>Число строк сервер записывает при вставке и при <code>count()</code> берёт готовое — читает одну служебную строку. А <code>LIMIT 5</code> всё-таки читает настоящие строки со всеми двенадцатью столбцами.</p>
-        </details>
-        <details>
-          <summary>В выводе стоит <code>NULL</code> в столбце <code>discount</code>. Скидка у товара нулевая?</summary>
-          <p>Нет. <code>NULL</code> — значения нет вовсе: скидку не назначали. Нулевая скидка была бы числом <code>0</code>. Тип <code>Nullable(UInt8)</code> в <code>DESCRIBE</code> как раз разрешает столбцу быть пустым — глава 1.3.</p>
+        <h2 id="s4"><span class="sec">§4</span>Шаг 2. Найти таблицу</h2>
+        <p><b>Назначение команды.</b> <code>SHOW TABLES FROM shop</code> перечисляет таблицы в базе <code>shop</code>. Слово <code>FROM</code> здесь указывает, в какой базе искать.</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>таблицы магазина</span></figcaption>
+<pre>SHOW TABLES FROM shop;</pre></figure>
+        <figure class="shot"><img src="assets/02-tables.png" alt="Результат команды SHOW TABLES FROM shop с таблицами магазина"><figcaption>Таблицы базы <code>shop</code></figcaption></figure>
+        <p>Сервер вернёт пять имён: <code>customers</code>, <code>order_items</code>, <code>orders</code>, <code>products</code> и <code>stock</code>. Для каталога выбираем <code>products</code>. Следующий шаг — узнать столбцы этой таблицы.</p>
+
+        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Прочитать устройство таблицы</h2>
+        <p><b>Назначение команды.</b> <code>DESCRIBE TABLE</code> показывает структуру таблицы: по одной строке на столбец, с его именем и типом. Строки такого ответа описывают структуру; значения товаров прочитаем отдельным запросом.</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>столбцы таблицы товаров</span></figcaption>
+<pre>DESCRIBE TABLE shop.products;</pre></figure>
+        <figure class="shot"><img src="assets/03-describe.png" alt="Результат DESCRIBE TABLE shop.products со столбцами и их типами"><figcaption>Столбцы и типы таблицы <code>shop.products</code></figcaption></figure>
+        <p>В ответе десять строк: каждая соответствует одному столбцу исходной таблицы. В колонке <code>name</code> записано имя, в <code>type</code> — тип. Например, пара <code>title String</code> означает текстовое название, <code>price UInt32</code> — целую неотрицательную цену. Другие колонки описывают дополнительные свойства структуры; для чтения достаточно первых двух.</p>
+        <p>Для первой проверки каталога достаточно трёх столбцов: идентификатора товара <code>product_id</code>, названия <code>title</code> и цены <code>price</code>. Их и прочитаем в следующем запросе.</p>
+
+        <h2 id="s6"><span class="sec">§6</span>Шаг 4. Прочитать несколько строк</h2>
+        <p><b>Выборка</b> — результат чтения выбранных данных. Получим три свойства для нескольких товаров. Сначала разберём части запроса. <code>SELECT</code> задаёт, что вернуть; после него идёт список нужных столбцов. <code>FROM</code> указывает таблицу-источник. <code>LIMIT</code> ограничивает число строк в результате.</p>
+        <p>Имена столбцов разделяем запятыми: <code>product_id, title, price</code>. После <code>FROM</code> пишем полное имя, после <code>LIMIT</code> — максимальное число строк ответа.</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>пять строк каталога</span></figcaption>
+<pre>SELECT product_id, title, price
+FROM shop.products
+LIMIT 5;</pre></figure>
+        <figure class="shot"><img src="assets/04-read.png" alt="Результат SELECT из трёх столбцов таблицы shop.products с пятью строками"><figcaption>Небольшая выборка из таблицы товаров</figcaption></figure>
+        <p>На кадре стенд вернул товары <code>p-001</code> «Ноутбук Lenovo IdeaPad 3» за <code>42990</code>, <code>p-002</code> «Ноутбук ASUS VivoBook 15» за <code>51490</code> и другие строки. Другой запуск может вернуть другие товары или расположить их иначе.</p>
+        <p><code>LIMIT 5</code> ограничивает только число строк <em>результата</em>. Он не задаёт число прочитанных байтов, время выполнения или число строк, которые серверу придётся просмотреть. В этом запросе порядок не задан, поэтому фиксированный набор и порядок пяти строк не гарантируются. Здесь достаточно проверить три столбца и пять строк результата.</p>
+        <p>На кадре в строке состояния видно <code>5 rows in result</code> и <code>Read 21 rows</code>: вернулось пять строк, прочитана 21. Сервер обрабатывает данные порциями, поэтому число прочитанных строк может превысить <code>LIMIT</code>.</p>
+        <details class="more">
+          <summary>Если нужны все столбцы одной строки</summary>
+          <p>Звёздочка <code>*</code> означает «все столбцы таблицы». Для беглой проверки можно выполнить <code>SELECT * FROM shop.products LIMIT 1</code>. В рабочих запросах лучше перечислять нужные столбцы: так видно, какие данные вы читаете.</p>
         </details>
 
-        <h2 id="s13"><span class="sec">§13</span>Шпаргалка и глоссарий</h2>
+        <h2 id="s7"><span class="sec">§7</span>Текущая база и команда USE</h2>
+        <p>При обращении к таблице мы указывали базу в её имени. Если оставить короткое имя <code>products</code>, сервер дополнит его <b>текущей базой</b> — базой, выбранной для запроса. Это настройка запроса: таблицы остаются на своих местах, другие клиенты продолжают работу со своими настройками.</p>
+        <p>Узнать текущую базу позволяет <code>currentDatabase()</code>. Это <b>функция</b> — операция, возвращающая значение; круглые скобки обозначают её вызов. Здесь <code>SELECT</code> вычисляет значение без чтения таблицы, поэтому <code>FROM</code> не нужен:</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>текущая база</span></figcaption>
+<pre>SELECT currentDatabase();</pre></figure>
+        <p>На стенде при подключении без выбора базы запрос выше вернул <code>default</code>. Команда <code>SHOW TABLES</code> без <code>FROM</code> перечисляет таблицы текущей базы. Её пустой ответ в этом контексте означает, что в <code>default</code> нет таблиц. Список баз и таблицы <code>shop</code> по-прежнему доступны.</p>
+        <p>Команда <code>USE shop</code> выбирает <code>shop</code> текущей базой. В <code>clickhouse-client</code> выполняйте команды по очереди; заканчивайте каждую точкой с запятой:</p>
+        <figure class="code"><figcaption><span>только clickhouse-client</span><span>смена базы в одном сеансе</span></figcaption>
+<pre>USE shop;
+SELECT currentDatabase();
+SHOW TABLES;</pre></figure>
+        <p>Второй запрос вернул <code>shop</code>, третий — пять таблиц магазина. Короткое имя <code>products</code> теперь означает <code>shop.products</code>. Выбор сохраняется в этом сеансе до следующего <code>USE</code> или выхода.</p>
+        <p>Проверим одинаковые действия в двух клиентах. В таблице показаны ответы на запросы, отправленные по очереди:</p>
+        <div class="table-scroll"><table class="client-context">
+          <caption>Контекст базы после USE в двух клиентах</caption>
+          <thead><tr><th>Действие</th><th>clickhouse-client: один сеанс</th><th>Play UI: отдельные запросы</th></tr></thead>
+          <tbody>
+            <tr><td><code>USE shop</code></td><td>Команда выполнена</td><td>Успешный пустой ответ</td></tr>
+            <tr><td><code>SELECT currentDatabase()</code></td><td><code>shop</code></td><td><code>default</code></td></tr>
+            <tr><td><code>SHOW TABLES</code></td><td>Пять таблиц магазина</td><td>Пустой список в <code>default</code></td></tr>
+          </tbody>
+        </table></div>
+        <p>Play UI отправляет запросы по HTTP — протоколу обмена с сервером. В проверенном режиме каждый запрос независим, поэтому выбор из <code>USE</code> не переносится на следующий. Полное имя таблицы работает в обоих клиентах без такого переключения.</p>
+        <details class="more"><summary>Сеанс HTTP и выбор базы при подключении</summary><p>Это поведение проверено в Play UI на стенде версии <code>26.8.36.3</code>. Другие HTTP-клиенты могут сохранять сеанс с параметром <code>session_id</code>. Клиент также может задавать базу при подключении или отправке запроса, поэтому <code>default</code> не является обязательным начальным значением для всех подключений.</p></details>
+
+        <h2 id="s8"><span class="sec">§8</span>Справка: сколько строк в таблице</h2>
+        <p>После просмотра нескольких товаров иногда нужно узнать их общее число. Для этого служит <code>count()</code>: функция подсчёта строк. Вызов с пустыми скобками считает все строки таблицы, указанной после <code>FROM</code>:</p>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>число товаров</span></figcaption>
+<pre>SELECT count() FROM shop.products;</pre></figure>
+        <div class="table-scroll"><table><caption>Результат подсчёта товаров на стенде</caption><thead><tr><th>count()</th></tr></thead><tbody><tr><td>21</td></tr></tbody></table></div>
+        <p>Получена одна строка с числом <code>21</code> — общим количеством товаров. Добавление <code>LIMIT 5</code> сохранит тот же ответ: результат подсчёта уже состоит из одной строки.</p>
+        <details class="more">
+          <summary>Почему для этого count() не понадобилось читать все товары</summary>
+          <p><b>Метаданные</b> — сведения о хранимых данных, в том числе о количестве строк. Таблица <code>shop.products</code> использует <b>движок</b> <code>MergeTree</code> — механизм хранения и чтения таблицы. Он сохраняет число строк в описаниях частей таблицы.</p>
+          <p>Запрос выше считает все строки без дополнительных условий. На проверенном стенде включена настройка <code>optimize_trivial_count_query=1</code>. Для этого запроса сервер получил количество из метаданных. Проверка плана — описания операций выполнения — показала <code>ReadFromPreparedSource (Optimized trivial count)</code>.</p>
+          <p>Возможность такой оптимизации зависит от движка, запроса и настроек. Этот опыт не подтверждает скорость других подсчётов и не означает, что любое чтение обходится без обращения к данным.</p>
+        </details>
+
+        <h2 id="s9"><span class="sec">§9</span>Частые ошибки</h2>
+        <details class="err">
+          <summary>Написали <code>products</code> вместо <code>shop.products</code><small>Code: 60. … Unknown table expression identifier 'products' … (UNKNOWN_TABLE)</small></summary>
+          <p>Сервер ищет короткое имя в текущей базе, а нужная таблица находится в <code>shop</code>. Напишите полное имя: <code>shop.products</code>.</p>
+        </details>
+        <details class="err">
+          <summary>Написали <code>shop.Products</code> с заглавной буквой<small>Code: 60. … Unknown table expression identifier 'shop.Products' … (UNKNOWN_TABLE)</small></summary>
+          <p>Имя таблицы записано строчными буквами: <code>products</code>. Имена баз, таблиц и столбцов в ClickHouse чувствительны к регистру, поэтому копируйте их из результата <code>SHOW TABLES</code>.</p>
+        </details>
+        <details class="err">
+          <summary>Ошиблись в имени базы<small>Code: 81. … Database shops does not exist. (UNKNOWN_DATABASE)</small></summary>
+          <p>Проверьте имя командой <code>SHOW DATABASES</code>. В маршруте нужна база <code>shop</code>. Например, опечатка <code>shops</code> даст эту ошибку.</p>
+        </details>
+
+        <h2 id="s10"><span class="sec">§10</span>Проверьте себя</h2>
+        <details>
+          <summary>После подключения к другой базе запрос к <code>products</code> перестал работать. Как обратиться к каталогу магазина без переключения базы?</summary>
+          <p>Используйте <code>shop.products</code>. Полное имя явно называет базу и таблицу на подключённом сервере. Оно не зависит от текущей базы клиента и одинаково подходит для Play UI и <code>clickhouse-client</code>.</p>
+        </details>
+        <details>
+          <summary>Нужно узнать имя столбца с ценой, не читая товары. Какой запрос выполнить и где искать ответ?</summary>
+          <p><code>DESCRIBE TABLE shop.products</code>. В колонке <code>name</code> будет <code>price</code>, рядом в <code>type</code> — <code>UInt32</code>. Эти сведения описывают столбец, а значения цен возвращает <code>SELECT</code>.</p>
+        </details>
+        <details>
+          <summary>Запрос с <code>LIMIT 5</code> вернул пять строк. Значит ли это, что сервер прочитал ровно пять строк?</summary>
+          <p>Нет. <code>LIMIT</code> ограничивает число строк ответа. Сервер обрабатывает данные порциями и может прочитать больше строк, чем вернёт.</p>
+        </details>
+        <details>
+          <summary>В Play UI выполнили <code>USE shop</code>, затем отдельным запросом — <code>SELECT currentDatabase()</code>. Почему ответ снова <code>default</code>?</summary>
+          <p>Play UI отправил независимый запрос без сохранённого контекста предыдущего. Команда <code>USE</code> не перемещает таблицы и не меняет базу для всех клиентов. Для чтения каталога здесь достаточно имени <code>shop.products</code>.</p>
+        </details>
+
+        <h2 id="s11"><span class="sec">§11</span>Самостоятельная задача</h2>
+        <p>Изучите таблицу заказов, не меняя данные.</p>
+        <ol class="steps">
+          <li>Убедитесь через <code>SHOW TABLES FROM shop</code>, что таблица называется <code>orders</code>.</li>
+          <li>Выполните <code>DESCRIBE TABLE shop.orders</code> и запишите, сколько столбцов вернул сервер, как называется столбец со статусом и какой у него тип.</li>
+          <li>Составьте запрос с полным именем <code>shop.orders</code>, который вернёт не больше трёх строк и только те столбцы, смысл которых вы уже поняли из <code>DESCRIBE</code>.</li>
+        </ol>
+        <p>Проверьте результат: в заголовках только выбранные столбцы, в ответе — до трёх строк. Запишите полное имя источника рядом с результатом.</p>
+
+        <h2 id="s12"><span class="sec">§12</span>Шпаргалка</h2>
         <div class="cheat">
-          <div>
-            <b>Осмотреться</b>
-            <code>SHOW DATABASES</code>
-            <code>SHOW TABLES FROM shop</code>
-            <code>SELECT currentDatabase()</code>
-          </div>
-          <div>
-            <b>Таблица</b>
-            <code>DESCRIBE shop.products</code>
-            <code>SHOW CREATE TABLE shop.products</code>
-          </div>
-          <div>
-            <b>Строки</b>
-            <code>SELECT * FROM shop.products LIMIT 5</code>
-            <code>SELECT count() FROM web.events</code>
-          </div>
-          <div>
-            <b>Удобства</b>
-            <code>USE shop        # только в clickhouse-client</code>
-            <code>… LIMIT 1\G     # столбиком, clickhouse-client</code>
-            <code>… FORMAT Vertical  # столбиком везде</code>
-          </div>
+          <div><b>Базы</b><code>SHOW DATABASES</code></div>
+          <div><b>Таблицы базы</b><code>SHOW TABLES FROM shop</code></div>
+          <div><b>Структура таблицы</b><code>DESCRIBE TABLE shop.products</code></div>
+          <div><b>Небольшая выборка</b><code>SELECT product_id, title, price FROM shop.products LIMIT 5</code></div>
+          <div><b>Текущая база</b><code>SELECT currentDatabase()</code></div>
+          <div><b>Число строк</b><code>SELECT count() FROM shop.products</code></div>
         </div>
-        <details class="more">
-          <summary>6 терминов главы с картинками</summary>
-        <div class="glossary">
-          <article class="gl" id="g-baza">
-            <div class="gl__text">
-              <h3>База данных<i>database</i></h3>
-              <p class="gl__def">Именованная группа таблиц на сервере. Нужна, чтобы таблицы разных задач не смешивались и могли называться одинаково.</p>
-              <p class="gl__ex"><b>Пример</b><code>shop</code>, <code>web</code>, <code>iot</code>, <code>sandbox</code>; служебная — <code>system</code>.</p>
-              <p class="gl__where"><b>Где</b>§1, §3</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="База shop с пятью таблицами"><rect class="sc-acc" x="20" y="12" width="220" height="106" rx="8"/><text class="tb" x="34" y="34">shop</text><rect class="sc-box" x="34" y="46" width="60" height="26" rx="4"/><rect class="sc-box" x="100" y="46" width="60" height="26" rx="4"/><rect class="sc-box" x="166" y="46" width="60" height="26" rx="4"/><rect class="sc-box" x="34" y="80" width="60" height="26" rx="4"/><rect class="sc-box" x="100" y="80" width="60" height="26" rx="4"/></svg></figure>
-          </article>
-          <article class="gl" id="g-tablica">
-            <div class="gl__text">
-              <h3>Таблица<i>table</i></h3>
-              <p class="gl__def">Набор строк одинакового устройства: у всех строк одни и те же столбцы с одними и теми же типами.</p>
-              <p class="gl__ex"><b>Пример</b><code>shop.products</code> — 21 строка, 10 столбцов.</p>
-              <p class="gl__where"><b>Где</b>§1, §4</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Таблица: шапка со столбцами и строки"><rect class="sc-warm" x="20" y="14" width="220" height="24" rx="3"/><text class="tm" x="28" y="31">id · title · price</text><rect class="sc-box" x="20" y="44" width="220" height="20" rx="2"/><rect class="sc-box" x="20" y="70" width="220" height="20" rx="2"/><rect class="sc-box" x="20" y="96" width="220" height="20" rx="2"/></svg></figure>
-          </article>
-          <article class="gl" id="g-tip">
-            <div class="gl__text">
-              <h3>Тип столбца<i>data type</i></h3>
-              <p class="gl__def">Правило, какие значения может хранить столбец: текст, целое, дробное, дата. Задаётся при создании таблицы и одинаков для всех строк.</p>
-              <p class="gl__ex"><b>Пример</b><code>price UInt32</code>, <code>title String</code>, <code>discount Nullable(UInt8)</code>.</p>
-              <p class="gl__where"><b>Где</b>§4, глава 1.2</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Столбец price типа UInt32 принимает число и не принимает текст"><rect class="sc-acc" x="20" y="14" width="220" height="30" rx="4"/><text class="tm tc" x="130" y="34">price · UInt32</text><rect class="sc-box" x="20" y="56" width="104" height="30" rx="4"/><text class="tm tc" x="72" y="76">42990 ✓</text><rect class="sc-soft" x="136" y="56" width="104" height="30" rx="4"/><text class="tm tc" x="188" y="76">«дорого» ✗</text></svg></figure>
-          </article>
-          <article class="gl" id="g-null">
-            <div class="gl__text">
-              <h3>NULL</h3>
-              <p class="gl__def">Отметка «значения нет». Возможна только в столбце типа <code>Nullable(…)</code>. Отличается от нуля и от пустой строки: те — значения.</p>
-              <p class="gl__ex"><b>Пример</b>у ноутбука <code>p-001</code> <code>discount</code> = <code>NULL</code> — скидку не назначали.</p>
-              <p class="gl__where"><b>Где</b>§5, глава 1.3</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Три разных значения: 0, пустая строка и NULL"><rect class="sc-box" x="14" y="40" width="70" height="44" rx="4"/><text class="tm tc" x="49" y="67">0</text><rect class="sc-box" x="95" y="40" width="70" height="44" rx="4"/><text class="tm tc" x="130" y="67">''</text><rect class="sc-warm" x="176" y="40" width="70" height="44" rx="4"/><text class="tb tc" x="211" y="67">NULL</text><text class="t tc" x="130" y="112">три разных значения</text></svg></figure>
-          </article>
-          <article class="gl" id="g-limit">
-            <div class="gl__text">
-              <h3>LIMIT</h3>
-              <p class="gl__def">Часть запроса, которая ограничивает число строк в ответе. Сервер прекращает чтение, как только набрал нужное число.</p>
-              <p class="gl__ex"><b>Пример</b><code>SELECT * FROM web.events LIMIT 5</code> — прочитано 10 строк вместо 10 миллионов.</p>
-              <p class="gl__where"><b>Где</b>§5, §6</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Из длинной таблицы взяты только первые строки"><rect class="sc-acc" x="20" y="14" width="100" height="16" rx="2"/><rect class="sc-acc" x="20" y="34" width="100" height="16" rx="2"/><rect class="sc-soft" x="20" y="54" width="100" height="16" rx="2"/><rect class="sc-soft" x="20" y="74" width="100" height="16" rx="2"/><rect class="sc-soft" x="20" y="94" width="100" height="16" rx="2"/><text class="tm" x="134" y="38">LIMIT 2</text><text class="t" x="134" y="90">остальное</text><text class="t" x="134" y="106">не читается</text></svg></figure>
-          </article>
-          <article class="gl" id="g-count">
-            <div class="gl__text">
-              <h3>count()</h3>
-              <p class="gl__def">Функция, которая считает строки. Без условий отвечает по готовому числу строк, не читая сами строки.</p>
-              <p class="gl__ex"><b>Пример</b><code>SELECT count() FROM web.events</code> → <code>10324592</code>, прочитано 16 байт.</p>
-              <p class="gl__where"><b>Где</b>§8</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Коробки с надписями о числе строк складываются в итог"><rect class="sc-warm" x="14" y="20" width="66" height="50" rx="4"/><text class="tm tc" x="47" y="50">N₁</text><rect class="sc-warm" x="96" y="20" width="66" height="50" rx="4"/><text class="tm tc" x="129" y="50">N₂</text><rect class="sc-warm" x="178" y="20" width="66" height="50" rx="4"/><text class="tm tc" x="211" y="50">N₃</text><text class="tb tc" x="130" y="104">N₁ + N₂ + N₃</text></svg></figure>
-          </article>
-        </div>
-        </details>
 
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>На сервере — базы, в базах — таблицы, в таблицах — столбцы с типами. Таблицу называют полным именем <code>база.таблица</code>.</li>
-          <li><code>SHOW TABLES FROM база</code> — что в базе; <code>DESCRIBE</code> — столбцы и их типы.</li>
-          <li><code>SELECT * FROM … LIMIT 5</code> — первые строки. Без <code>LIMIT</code> большую таблицу не открывайте.</li>
-          <li><code>count()</code> без условий отвечает мгновенно: число строк записано заранее.</li>
-          <li><code>USE</code> в Play UI не действует. В книге и в Play UI — полные имена.</li>
-        </ul>
-        <p>Дальше — глава <a href="../12-tipy/index.html">1.2</a>: какие ещё бывают типы и как выбрать тип для столбца.</p>
+        <h2 id="s13"><span class="sec">§13</span>Итог</h2>
+        <p>Маршрут завершён, если вы можете назвать источник результата, найти нужные столбцы в описании и прочитать несколько строк без изменения данных.</p>
 
         <div class="pager"><a href="../../index.html">К содержанию справочника</a><a href="../12-tipy/index.html">1.2 Типы данных →</a></div>
 
