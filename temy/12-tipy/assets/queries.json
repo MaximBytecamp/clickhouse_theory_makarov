@@ -1,0 +1,68 @@
+[
+  {
+    "id": "integers",
+    "query": "SELECT toUInt8(255) AS fits, toUInt8(256) AS wrapped, toUInt8(-1) AS negative, toInt8(128) AS signed, toUInt16(50000) AS qty"
+  },
+  {
+    "id": "strict-error",
+    "error": "CANNOT_CONVERT_TYPE",
+    "query": "SELECT accurateCast(256, 'UInt8')"
+  },
+  {
+    "id": "float",
+    "query": "SELECT 0.1 + 0.2 AS total, 0.1 + 0.2 = 0.3 AS equal, toFloat32(16777217) AS rounded"
+  },
+  {
+    "id": "decimal",
+    "query": "SELECT toDecimal32('0.10', 2) + toDecimal32('0.20', 2) AS total, toTypeName(toDecimal32('0.10', 2)) AS type, toDecimal32('19.999', 2) AS reduced_scale"
+  },
+  {
+    "id": "decimal-input",
+    "query": "SELECT toDecimal64(1.15, 2) AS from_float, toDecimal64('1.15', 2) AS from_text"
+  },
+  {
+    "id": "decimal-error",
+    "error": "ARGUMENT_OUT_OF_BOUND",
+    "query": "SELECT toDecimal32('10000000.00', 2)"
+  },
+  {
+    "id": "strings",
+    "query": "SELECT length('Ноутбук') AS bytes, lengthUTF8('Ноутбук') AS code_points, length('Laptop') AS ascii_bytes, lengthUTF8('е́') AS combined"
+  },
+  {
+    "id": "dates",
+    "query": "SELECT toDate('2026-10-10') AS delivery_date, toDateTime('2026-10-10 14:30:00', 'UTC') AS ordered_at, toDateTime64('2026-10-10 14:30:00.123', 3, 'UTC') AS precise"
+  },
+  {
+    "id": "timezone",
+    "query": "SELECT toDateTime('2026-10-10 14:30:00', 'UTC') AS utc, toTimeZone(utc, 'Europe/Moscow') AS moscow, toUnixTimestamp(utc) = toUnixTimestamp(moscow) AS same_instant"
+  },
+  {
+    "id": "identifier",
+    "query": "SELECT '00127' AS product_code, toUInt32('00127') AS as_number, toString(toUInt32('00127')) AS back_to_text"
+  },
+  {
+    "id": "typename",
+    "query": "SELECT toTypeName(42) AS literal_type, toTypeName(toUInt16(42)) AS chosen_type"
+  },
+  {
+    "id": "bounds",
+    "query": "SELECT toDate('1970-01-01'), toDate('2149-06-06'), toDateTime('2106-02-07 06:28:15', 'UTC'), toDecimal32('9999999.99', 2)"
+  },
+  {
+    "id": "selfcheck",
+    "query": "SELECT toTypeName(70000), toUInt8(300), toDecimal32('7.999', 2), toUInt32('00042')"
+  },
+  {
+    "id": "final",
+    "query": "SELECT toUInt16(3) AS qty, toDecimal32('1499.70', 2) AS amount, 'Ноутбук' AS product_name, toDate('2026-10-12') AS delivery_date, toDateTime('2026-10-10 14:30:00', 'UTC') AS ordered_at, '00127' AS product_code"
+  },
+  {
+    "id": "assignment",
+    "query": "SELECT toInt32(-50000), toInt32(50000), toTypeName(toInt32(-50000)), toDecimal64('20000000.00', 2), toTypeName(toDecimal64('20000000.00', 2)), '00A42', toDateTime64('2026-10-10 14:30:00.123', 3, 'UTC')"
+  },
+  {
+    "id": "integer-boundaries",
+    "query": "SELECT accurateCast(255, 'UInt8'), accurateCast(-128, 'Int8'), accurateCast(127, 'Int8'), accurateCast(65535, 'UInt16'), accurateCast(-32768, 'Int16'), accurateCast(32767, 'Int16'), accurateCast(4294967295, 'UInt32'), accurateCast(-2147483648, 'Int32'), accurateCast(2147483647, 'Int32')"
+  }
+]
