@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../styles.css">
   <script>
-    /* Система проставляется до отрисовки: без сохранённого выбора определяется по браузеру. */
     (function () {
       var os = null;
       try { os = localStorage.getItem('clickhouse-book-os'); } catch (e) {}
@@ -21,271 +20,170 @@
       document.documentElement.dataset.os = os;
     })();
   </script>
+  <style>
+    .stand-flow { margin: 22px 0; padding: 18px; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+    .stand-flow ol { margin: 0; padding: 0; list-style: none; }
+    .stand-flow li { padding: 12px 14px; border: 2px solid var(--rule); background: var(--leaf-pale); }
+    .stand-flow li + li::before { content: "↓"; display: block; margin: -8px 0 6px; color: var(--leaf); font-size: 24px; }
+    .stand-flow li + li { margin-top: 12px; }
+    .stand-flow li b, .stand-flow li small { display: block; }
+    .stand-flow li small { font-size: 14px; }
+    .stand-flow figcaption { margin-top: 12px; font-size: 14px; color: var(--ink-soft); }
+    .stand-danger { padding: 14px 16px; border: 3px solid var(--clay); background: var(--clay-pale); margin: 20px 0; }
+    .stand-danger > :first-child { margin-top: 0; }
+    .stand-danger > :last-child { margin-bottom: 0; }
+    .stand-result { padding: 12px 16px; border-left: 4px solid var(--leaf); }
+    .stand-result code, .stand-flow code { overflow-wrap: anywhere; }
+    .stand-glossary dt { margin-top: 12px; font-weight: 700; }
+    .stand-glossary dd { margin-left: 0; }
+    @media (max-width: 600px) {
+      .stand-flow { padding: 12px; }
+      .stand-flow li { padding: 10px; }
+      .leaf .gist__cards { grid-template-columns: 1fr; }
+      .leaf .cheat { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
 </head>
 <body>
-  <div class="book">
-    <div class="book__body">
-      <div class="spine"><span>Модуль 0 · Рабочее место</span></div>
-
-      <main class="leaf">
-        <div class="running">
-          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 0 · рабочее место</p>
-          <p class="running__folio">Глава 0.1</p>
+  <div class="book"><div class="book__body">
+    <div class="spine"><span>Модуль 0 · Рабочее место</span></div>
+    <main class="leaf">
+      <div class="running">
+        <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 0 · рабочее место</p>
+        <p class="running__folio">Глава 0.1</p>
+      </div>
+      <header class="chapter-head">
+        <span class="chapter-num">0.1</span>
+        <h1>Стенд:<br>Docker и базы</h1>
+        <p class="lead">Чтобы выполнять примеры книги, нужен работающий сервер с таблицами для упражнений. Подготовим его на вашем компьютере и проверим ответ сервера отдельно от результата загрузки данных.</p>
+      </header>
+      <dl class="passport">
+        <div><dt>Категория</dt><dd>Подготовка рабочего места</dd></div>
+        <div><dt>Уровень</dt><dd>Первое знакомство со стендом</dd></div>
+        <div><dt>Результат</dt><dd>Сервер отвечает, семь таблиц стенда проверены</dd></div>
+        <div><dt>Понадобится</dt><dd>Интернет, Docker с Compose, браузер и терминал</dd></div>
+      </dl>
+      <section class="gist" aria-label="Маршрут подготовки">
+        <p class="gist__head">Суть за две минуты</p>
+        <div class="gist__cards">
+          <div><b data-n="1">Подготовить</b><p>Проверить Docker и скачать описание стенда. Сам сервер Docker получит при запуске.</p></div>
+          <div><b data-n="2">Дождаться</b><p>Запущенный сервер ещё не означает загруженные таблицы. Для них есть отдельный загрузчик.</p></div>
+          <div><b data-n="3">Подтвердить</b><p>Сопоставить журнал, состояние контейнеров и результат запроса. Эти признаки определяют следующий шаг.</p></div>
         </div>
-
-        <header class="chapter-head">
-          <span class="chapter-num">0.1</span>
-          <h1>Стенд:<br>Docker и базы</h1>
-          <p class="lead">Поднимем у вас тот же сервер ClickHouse с готовыми базами, на котором сняты все примеры книги. Пять шагов, около 15 минут, и дальше запросы из глав будут давать у вас те же числа, что в книге.</p>
-        </header>
-
-        <dl class="passport">
-          <div><dt>Категория</dt><dd>Подготовка рабочего места</dd></div>
-          <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>0.1а Windows: Docker Desktop и WSL 2 · 0.2 Клиенты</dd></div>
-          <div><dt>Понадобится</dt><dd>3 ГБ на диске, интернет, 15 минут</dd></div>
-        </dl>
-
-        <p><a class="repo" href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice — стенд и базы</a></p>
-
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Docker — коробка с Linux</b><p>Для Windows сервер ClickHouse не выпускают. Docker даёт ему маленький Linux в коробке, и коробка одинаково запускается на Windows, macOS и Linux.</p><p>Коробку называют контейнером.</p></div>
-            <div><b data-n="2">Одна команда — весь стенд</b><p><code>docker compose up -d</code> поднимает сервер и сама загружает в него базы.</p><p>Данные лежат отдельно от коробки и не пропадают при перезапуске.</p></div>
-            <div><b data-n="3">Проверка — два числа</b><p>В <code>web.events</code> должно быть <b>10&nbsp;324&nbsp;592</b> строки, в <code>iot.readings</code> — <b>3&nbsp;174&nbsp;480</b>.</p><p>Совпали — у вас стенд как у всех.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s3"><b>Docker</b><small>поставить</small></a></li>
-            <li><a href="#s4"><b>Репозиторий</b><small>скачать</small></a></li>
-            <li><a href="#s5"><b>Запуск</b><small>одна команда</small></a></li>
-            <li><a href="#s7"><b>Браузер</b><small>увидеть базы</small></a></li>
-            <li><a href="#s8"><b>Терминал</b><small>второй способ</small></a></li>
-          </ol>
-        </section>
-
-        <nav class="contents">
-          <b>В этой главе</b>
-          <ol>
-            <li><a href="#s1">Что такое стенд и при чём тут Docker</a></li>
-            <li><a href="#s2">Что окажется на компьютере</a></li>
-            <li><a href="#s3">Шаг 1. Docker</a></li>
-            <li><a href="#s4">Шаг 2. Скачать репозиторий</a></li>
-            <li><a href="#s5">Шаг 3. Поднять стенд</a></li>
-            <li><a href="#s6">Какие базы загрузились</a></li>
-            <li><a href="#s7">Шаг 4. Базы в браузере</a></li>
-            <li><a href="#s8">Шаг 5. Клиент в терминале</a></li>
-            <li><a href="#s9">Как запрос попадает в контейнер</a></li>
-            <li><a href="#s10">Сбросить, остановить, удалить</a></li>
-            <li><a href="#s11">Сколько места нужно</a></li>
-            <li><a href="#s12">Если не получилось</a></li>
-            <li><a href="#s13">Проверьте себя</a></li>
-            <li><a href="#s14">Шпаргалка и глоссарий</a></li>
-          </ol>
-        </nav>
-
-        <h2 id="s1"><span class="sec">§1</span>Что такое стенд и при чём тут Docker</h2>
-        <p class="purpose"><b>Зачем это знать</b>Чтобы понимать, что вы запускаете и почему ваши числа совпадут с книгой.</p>
-        <p><b>Стенд</b> — это сервер ClickHouse с уже загруженными данными. У всех студентов он одинаковый: та же версия, те же таблицы, те же строки. Если ваш ответ не сходится с книгой, ищите ошибку в запросе — данные точно те же.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 230" role="img" aria-label="Docker на Windows, macOS и Linux запускает один и тот же контейнер из образа">
-            <rect class="sc-box" x="10" y="20" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="45">Windows</text>
-            <rect class="sc-box" x="10" y="80" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="105">macOS</text>
-            <rect class="sc-box" x="10" y="140" width="150" height="40" rx="6"/><text class="tb tc" x="85" y="165">Linux</text>
-            <path class="sc-arrow" d="M164 40 L240 92 M164 100 L240 100 M164 160 L240 108 M233 95 L240 100 L233 105"/>
-            <rect class="sc-acc" x="246" y="62" width="150" height="76" rx="8"/><text class="tb tc" x="321" y="92">Docker</text><text class="t tc" x="321" y="114">даёт Linux</text>
-            <rect class="sc-warm" x="450" y="20" width="160" height="56" rx="6"/><text class="tb tc" x="530" y="44">образ</text><text class="tm tc" x="530" y="64">clickhouse-server</text>
-            <path class="sc-arrow" d="M530 80 L530 112 M524 105 L530 112 L536 105"/>
-            <rect class="sc-ink" x="440" y="118" width="180" height="62" rx="6"/><text class="tw tc" x="530" y="144" style="font:700 13px var(--mono)">контейнер</text><text class="tw tc" x="530" y="164" style="font:500 12px var(--mono)">course-clickhouse</text>
-            <path class="sc-arrow" d="M400 100 L434 140 M427 137 L434 140 L433 132"/>
-            <text class="t" x="650" y="44">установочный диск:</text><text class="t" x="650" y="62">лежит, не меняется</text>
-            <text class="t" x="650" y="142">запущенная программа:</text><text class="t" x="650" y="160">работает, хранит состояние</text>
-            <text class="t tc" x="440" y="215">одна и та же коробка с Linux внутри — на любой системе</text>
-          </svg>
-          <figcaption>Docker, образ и контейнер</figcaption>
-        </figure>
-        <p>Docker запускает программу в <b>контейнере</b> — отдельной коробке со своим Linux. Контейнер делают по <b>образу</b> — готовому шаблону. Образ лежит на диске и не меняется, контейнер работает. Поэтому сервер у всех один и тот же, на любой системе.</p>
-
-        <details class="simple">
-          <summary>образ, контейнер и том на примере диска и флешки</summary>
-          <div class="vsteps">
-            <div class="vcard"><i>💿</i><h5>образ</h5><b>Установочный диск</b><small>Лежит на полке, не меняется. С него можно ставить программу снова и снова.</small></div>
-            <div class="varr">запуск</div>
-            <div class="vcard is-dark"><i>🖥️</i><h5>контейнер</h5><b>Установленная программа</b><small>Работает. Её можно закрыть, удалить и поставить с диска заново.</small></div>
-            <div class="varr">хранит в</div>
-            <div class="vcard is-hot"><i>💾</i><h5>том</h5><b>Флешка с файлами</b><small>Программу переустановили — файлы на флешке остались.</small></div>
-          </div>
-          <p class="simple__map"><b>Что есть что:</b> диск — образ <code>clickhouse/clickhouse-server:26.8.36.3</code>; программа — контейнер <code>course-clickhouse</code>; флешка — том <code>clickhouse-data</code> с файлами баз.</p>
-        </details>
-
-        <h2 id="s2"><span class="sec">§2</span>Что окажется на компьютере</h2>
-        <p class="purpose"><b>Зачем это знать</b>Чтобы видеть картину целиком: что запустит Docker и чем вы будете с ним работать.</p>
-        <p>Весь стенд описан в одном файле <code>compose.yaml</code>. Docker читает его и поднимает всё, что там перечислено:</p>
-        <div class="dock">
-          <div class="dock__host"><span>ваш компьютер</span><b>Windows · macOS · Linux</b></div>
-          <div class="dock__clients">
-            <div class="dock__client"><b>браузер</b>Play UI — запросы и таблицы<br><i>localhost:8123/play</i></div>
-            <div class="dock__client"><b>терминал</b>команды <code>docker compose</code> и clickhouse-client<br><i>из папки репозитория</i></div>
-            <div class="dock__client"><b>программы</b>ваш код на Python, Go, C++, Ruby<br><i>localhost:8123 · localhost:9000</i></div>
-          </div>
-          <div class="dock__engine">
-            <p>Docker · проект clickhouse-practice</p>
-            <div class="dock__boxes">
-              <div class="dock__box dock__box--main"><b>course-clickhouse</b><span>сервер ClickHouse 26.8 — тот, к которому идут все запросы книги</span><em>работает всё время</em></div>
-              <div class="dock__box dock__box--done"><b>seed</b><span>загружает базы shop, web и iot, если сервер пустой</span><em>завершается сам</em></div>
-            </div>
-            <p class="dock__vol">том clickhouse-data — файлы баз; переживает остановку и удаление контейнеров</p>
-          </div>
-        </div>
-        <ul class="short">
-          <li><code>course-clickhouse</code> — сам сервер. Работает всё время, пока стенд поднят.</li>
-          <li><code>seed</code> — загрузчик. Заполняет пустой сервер базами и выключается.</li>
-          <li><b>Том</b> внизу — папка с файлами баз. Переживает перезапуск и удаление контейнеров.</li>
-        </ul>
-
-        <h2 id="s3"><span class="sec">§3</span>Шаг 1. Docker</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Без Docker коробку с сервером запустить нечем. Ставим его один раз и проверяем, что он отвечает.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps" data-os="win">
-          <li><b>Скачайте Docker Desktop для Windows</b>На странице <a href="https://docs.docker.com/desktop/setup/install/windows-install/">docs.docker.com → Install Docker Desktop on Windows</a> скачайте установщик для процессоров x86_64 — так обозначают обычные процессоры Intel и AMD. Файл весит около 600 МБ.</li>
-          <li><b>Запустите установщик и оставьте настройки по умолчанию</b>Первое окно — <b>Configuration</b>. Выбрана установка для текущего пользователя (<b>Per-user installation</b>): ей не нужны права администратора. Движок — <b>WSL 2</b>, встроенная в Windows подсистема, в которой Docker держит свой Linux. Нажмите <b>OK</b>.
-            <figure class="shot"><img src="../../shots/w-dd-01-config.png" alt="Окно Configuration установщика Docker Desktop: выбраны Per-user installation и WSL 2"><figcaption>Установщик Docker Desktop · Configuration · снято на Windows</figcaption></figure>
-          </li>
-          <li><b>Запустите Docker Desktop</b>После установки откройте Docker Desktop из меню «Пуск». При первом запуске он предложит войти в учётную запись — для стенда она не нужна, нажмите <b>Skip</b>.
-            <figure class="shot"><img src="../../shots/w-dd-04-welcome.png" alt="Окно Welcome to Docker, выделена ссылка Skip"><figcaption>Docker Desktop · первый запуск · 1 — Skip · снято на Windows</figcaption></figure>
-            Команды работают, только пока Docker Desktop запущен и внизу слева его окна написано <b>Engine running</b> — «движок запущен».</li>
-          <li><b>Откройте PowerShell</b>Нажмите <kbd>Win</kbd> + <kbd>X</kbd> и выберите «Терминал» (в Windows 10 — «Windows PowerShell»). Все команды главы набираются в нём.</li>
+        <ol class="route" aria-label="Шаги главы">
+          <li><a href="#s3"><b>Docker</b><small>проверить</small></a></li>
+          <li><a href="#s4"><b>Файлы</b><small>скачать</small></a></li>
+          <li><a href="#s5"><b>Запуск</b><small>дождаться данных</small></a></li>
+          <li><a href="#s7"><b>Ответ</b><small>проверить</small></a></li>
+          <li><a href="#s10"><b>Остановка</b><small>сохранить работу</small></a></li>
         </ol>
-        <ol class="steps" data-os="mac">
-          <li><b>Узнайте процессор Mac</b>Меню  → «Об этом Mac», строка «Чип» или «Процессор». Apple M1 и новее — это Apple Silicon, остальные — Intel. Сборки Docker Desktop для них разные.</li>
-          <li><b>Скачайте и установите Docker Desktop</b>На странице <a href="https://docs.docker.com/desktop/setup/install/mac-install/">docs.docker.com → Install Docker Desktop on Mac</a> выберите сборку под свой процессор, откройте скачанный <code>Docker.dmg</code> и перетащите Docker в «Программы».</li>
-          <li><b>Запустите Docker Desktop</b>Откройте его из «Программ». На предложение войти в учётную запись нажмите <b>Skip</b> — для стенда она не нужна. Команды работают, пока Docker Desktop запущен и внизу слева его окна написано <b>Engine running</b>.</li>
-          <li><b>Откройте Терминал</b><kbd>Cmd</kbd> + <kbd>Пробел</kbd>, наберите «Терминал». Все команды главы набираются в нём.</li>
-        </ol>
-        <ol class="steps" data-os="linux">
-          <li><b>Поставьте Docker Engine</b>На Linux Docker Desktop не нужен: ставится сам движок вместе с плагином Compose. Его устанавливает официальный скрипт:
-            <figure class="code"><figcaption><span>Терминал</span><span>установка Docker Engine</span></figcaption>
-<pre>curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER</pre></figure>
-          </li>
-          <li><b>Выйдите из системы и войдите снова</b>Последняя команда добавила вас в группу <code>docker</code>. Без нового входа она не действует, и каждую команду пришлось бы начинать с <code>sudo</code>.</li>
-          <li><b>Откройте терминал</b>В большинстве дистрибутивов — <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>.</li>
-        </ol>
-        <figure class="shot" data-os="win mac"><img src="../../shots/05-docker-engine-running.png" alt="Строка Engine running внизу окна Docker Desktop"><figcaption>Docker Desktop · внизу слева — Engine running · кадр с macOS, в Windows строка на том же месте</figcaption></figure>
-        <p>Проверьте, что Docker отвечает:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>проверка Docker</span></figcaption>
-<pre>docker version</pre></figure>
-        <div class="vsteps" aria-label="Две части ответа docker version">
-          <div class="vcard"><h5>блок Client</h5><b>команда docker</b><small>то, что вы набираете в терминале</small></div>
-          <div class="varr">просит</div>
-          <div class="vcard is-hot"><h5>блок Server</h5><b>движок Docker</b><small>запускает контейнеры, внутри у него Linux</small></div>
-        </div>
-        <p class="check">в ответе есть оба блока: <code>Client</code> и <code>Server</code>. Если вместо <code>Server</code> ошибка подключения — Docker Desktop не запущен: запустите его и дождитесь <b>Engine running</b>.</p>
-        <details class="more">
-          <summary>полный ответ docker version и как его читать</summary>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>снято на macOS; у вас отличаются OS/Arch и номера версий</span></figcaption>
-<pre>Client:
- Version:           29.7.2
- API version:       1.55
- Go version:        go1.26.5
- Git commit:        a7dcaa6
- Built:             Wed Aug  5 18:27:50 2026
- OS/Arch:           darwin/arm64
- Context:           desktop-linux
+      </section>
+      <nav class="contents"><b>В этой главе</b><ol>
+        <li><a href="#s1">Что готовим и что скачиваем</a></li>
+        <li><a href="#s2">Что запускает стенд</a></li>
+        <li><a href="#s3">Проверка Docker</a></li>
+        <li><a href="#s4">Папка для команд</a></li>
+        <li><a href="#s5">Запуск и ожидание загрузки</a></li>
+        <li><a href="#s7">Проверка сервера и таблиц</a></li>
+        <li><a href="#s10">Остановка, сброс и удаление данных</a></li>
+        <li><a href="#s12">Частые ошибки</a></li>
+        <li><a href="#s13">Самопроверка и самостоятельная задача</a></li>
+        <li><a href="#s14">Шпаргалка</a></li>
+      </ol></nav>
 
-Server: Docker Desktop 4.89.0 (238018)
- Engine:
-  Version:          29.7.2
-  API version:      1.55 (minimum version 1.40)
-  Go version:       go1.26.5
-  Git commit:       6a43e3d
-  Built:            Wed Aug  5 18:28:35 2026
-  OS/Arch:          linux/arm64
-  Experimental:     false
- containerd:
-  Version:          v2.3.3
- …</pre></figure>
-          <p>Посмотрите на строки <code>OS/Arch</code>. У клиента <code>darwin/arm64</code> — это macOS. У движка <code>linux/arm64</code> — это тот самый Linux, который Docker даёт контейнерам на любой системе. На Windows у клиента будет <code>windows/amd64</code>, а у движка всё равно <code>linux/…</code>.</p>
-        </details>
+      <h2 id="s1"><span class="sec">§1</span>Что готовим и что скачиваем</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Разделим программы, которые должны быть установлены, и файлы, которые достаточно распаковать.</p>
+      <p><b>Стенд</b> — сервер определённой версии, настройки его запуска и набор данных для упражнений. Здесь используется ClickHouse <code>26.8.36.3</code>. Исходные числа книги относятся к этому набору до изменений, внесённых упражнениями.</p>
+      <p>До запуска нужны <b>Docker</b> — средство запуска программ в контейнерах — и <b>Docker Compose</b> — его компонент, который собирает стенд по файлу <code>compose.yaml</code>. На Windows и macOS они входят в Docker Desktop; на Linux устанавливаются Docker Engine и плагин Compose. Установка ClickHouse непосредственно в систему не требуется.</p>
+      <p>Скачивать будем <a href="https://github.com/MaximBytecamp/clickhouse-practice">репозиторий clickhouse-practice</a>: папку проекта с <code>compose.yaml</code>, настройками и скриптами наполнения. В архиве нет готового сервера и миллионов строк: Docker скачает сервер отдельно, а скрипты создадут данные. Git нужен только для способа скачивания через <code>git clone</code>; для ZIP он не требуется.</p>
+      <details class="more" id="s11"><summary>Место на диске и время первого запуска</summary>
+        <p>Нужен запас места не только для архива: Docker хранит скачанные файлы сервера, файлы таблиц и временные файлы загрузки. Если свободного места мало, освободите его до запуска; маленький ZIP не показывает будущий размер стенда.</p>
+        <p>Первый запуск включает скачивание образа и вычисление данных. Его длительность зависит от сети, процессора, диска и ресурсов Docker. Если загрузка завершается ошибкой нехватки памяти или места, увеличение времени ожидания её не исправит: сначала устраните причину из журнала.</p>
+      </details>
 
-        <h2 id="s4"><span class="sec">§4</span>Шаг 2. Скачать репозиторий</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>В репозитории лежит описание стенда — <code>compose.yaml</code> — и скрипты загрузки баз. Без него Docker нечего поднимать.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps">
-          <li><b>Откройте страницу репозитория</b><a href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice</a>. Зелёная кнопка <b>Code</b> (рамка 1) открывает меню скачивания.
-            <figure class="shot"><img src="../../shots/06-github-repo.png" alt="Страница репозитория clickhouse-practice на GitHub, выделена кнопка Code"><figcaption>GitHub · MaximBytecamp/clickhouse-practice</figcaption></figure>
-          </li>
-          <li><b>Скачайте одним из двух способов</b>Если установлен Git — скопируйте адрес из поля 1 и выполните <code>git clone</code>. Если Git нет — нажмите <b>Download ZIP</b> (рамка 2) и распакуйте архив.
-            <figure class="shot"><img src="../../shots/07-github-code-zip.png" alt="Меню Code: адрес для git clone и пункт Download ZIP"><figcaption>GitHub · меню Code: 1 — адрес для git clone, 2 — архив</figcaption></figure>
-          </li>
-          <li><b>Перейдите в папку репозитория</b>Все команды дальше выполняются из неё — там, где лежит <code>compose.yaml</code>.</li>
+      <h2 id="s2"><span class="sec">§2</span>Что запускает стенд</h2>
+      <p class="purpose"><b>Зачем это знать</b>После запуска один контейнер должен работать постоянно, а другой — завершиться. Завершение загрузчика с кодом 0 подтверждает выполнение его задачи.</p>
+      <p><b>Образ</b> — готовый шаблон с программой и необходимыми ей файлами. Из него Docker создаёт <b>контейнер</b> — отдельную среду выполнения программы. Контейнеры этого стенда рассчитаны на Linux. На Windows и macOS нужную среду обеспечивает Docker Desktop.</p>
+      <p>В <code>compose.yaml</code> постоянный сервер назван <code>clickhouse</code>, а загрузчик — <code>seed</code>. Это имена <b>сервисов</b>, по которым Compose выбирает часть стенда в командах. Контейнер сервера имеет другое имя — <code>course-clickhouse</code>. Файлы баз хранятся в <b>томе</b>: отдельном хранилище Docker, которое не исчезает при удалении контейнера.</p>
+      <p>Для проверки сервер выполняет <code>SELECT 1</code> — запрос, который возвращает число 1 без чтения таблиц. На схеме проследите две связи: когда загрузчику разрешено начать работу и где остаются записанные им данные.</p>
+      <figure class="pic stand-flow" aria-label="Зависимость загрузчика от сервера и путь данных в том">
+        <ol>
+          <li><b>Образ ClickHouse 26.8.36.3 → сервер <code>clickhouse</code></b><small>Контейнер <code>course-clickhouse</code> начинает принимать запросы. Проверка <code>SELECT 1</code> возвращает <code>1</code> → статус <code>healthy</code>.</small></li>
+          <li><b><code>healthy</code> → загрузчик <code>seed</code></b><small>Из того же образа запускается отдельный контейнер. Он передаёт серверу команды создания баз и заполнения таблиц.</small></li>
+          <li><b>Сервер → том <code>clickhouse-data</code></b><small>Файлы таблиц записаны отдельно от контейнеров. Загрузчик завершает работу, сервер остаётся запущенным.</small></li>
         </ol>
-        <figure class="code"><figcaption><span>Терминал</span><span>через Git</span></figcaption>
-<pre>git clone https://github.com/MaximBytecamp/clickhouse-practice.git
+        <figcaption>Условие запуска seed и путь записи данных. Имя тома Docker дополняет именем проекта: обычно <code>clickhouse-practice_clickhouse-data</code>.</figcaption>
+      </figure>
+      <p>Стрелка от <code>healthy</code> к <code>seed</code> показывает условие запуска загрузчика. Последняя стрелка показывает, куда сервер записывает файлы. Статус <code>healthy</code> подтверждает только способность сервера выполнить короткий запрос. Данные в этот момент могут ещё вычисляться. Их готовность проверим по завершению <code>seed</code> и содержимому таблиц.</p>
+      <details class="simple"><summary>По-простому: оборудование и рабочие записи</summary>
+        <p>В мастерской оборудование устанавливают по инструкции, а рабочие записи держат в отдельном шкафу. Замена оборудования сама по себе не уничтожает записи; выбросить шкаф — другое действие.</p>
+        <p class="simple__map"><b>Что есть что:</b> инструкция с комплектом оборудования — образ; подготовленное рабочее место — контейнер; шкаф с записями — том. Граница аналогии: том не является резервной копией. Команды сервера могут менять его содержимое, а явное удаление тома уничтожает файлы.</p>
+      </details>
+      <p>Описание стенда определяет порядок запуска. Чтобы выполнить его на компьютере, сначала проверим Docker.</p>
+
+      <h2 id="s3"><span class="sec">§3</span>Проверка Docker</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>До скачивания стенда убедимся, что команда Docker доступна и её движок работает.</p>
+      <p data-os="win">Если Docker ещё не установлен, пройдите <a href="../01a-windows-wsl/index.html">главу 0.1а: Windows, Docker Desktop и WSL 2</a>. Затем запустите Docker Desktop и откройте PowerShell. Установку и исправление WSL здесь не повторяем.</p>
+      <p data-os="mac">Если Docker ещё не установлен, выберите сборку для своего процессора в <a href="https://docs.docker.com/desktop/setup/install/mac-install/">официальной инструкции Docker Desktop для Mac</a>: Apple Silicon или Intel. После установки запустите Docker Desktop и откройте приложение «Терминал».</p>
+      <p data-os="linux">Если Docker ещё не установлен, выберите свой дистрибутив в <a href="https://docs.docker.com/engine/install/">официальной инструкции Docker Engine</a> и установите также плагин Compose. Движок должен быть запущен, а у вашей учётной записи должно быть право выполнять команды Docker.</p>
+      <figure class="shot" data-os="win mac"><img src="../../shots/05-docker-engine-running.png" alt="Нижняя строка окна Docker Desktop: Engine running"><figcaption>Признак работающего движка — Engine running. Кадр с macOS; установку и окна Windows см. в 0.1а.</figcaption></figure>
+      <p>В терминале компьютера выполните две команды. Пока их можно выполнять из любой папки:</p>
+      <figure class="code"><figcaption><span>PowerShell / терминал</span><span>проверка установки</span></figcaption><pre>docker version
+docker compose version</pre></figure>
+      <p>У <code>docker version</code> должны быть блоки <code>Client</code> и <code>Server</code>: первый подтверждает наличие команды, второй — связь с движком. Вторая команда должна напечатать версию Compose. Номера версий Docker могут отличаться от показанных в книге.</p>
+      <ul class="short">
+        <li><b>Команда не найдена:</b> проверьте установку; после установки откройте новое окно терминала.</li>
+        <li><b>Есть Client, но вместо Server ошибка подключения:</b> запустите Docker Desktop или службу Docker Engine. Не переходите к запуску стенда, пока Server не появился.</li>
+        <li><b>Docker отвечает, а Compose не найден:</b> установите плагин Compose; наличие одной команды Docker недостаточно.</li>
+      </ul>
+      <p class="check">показаны Client, Server и версия Compose. Терминал остаётся открытым для следующих шагов.</p>
+
+      <h2 id="s4"><span class="sec">§4</span>Скачать файлы и выбрать папку для команд</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Перед запуском проверим, что текущая папка содержит описание стенда.</p>
+      <ol class="steps">
+        <li><b>Откройте репозиторий</b><a href="https://github.com/MaximBytecamp/clickhouse-practice">github.com/MaximBytecamp/clickhouse-practice</a>. Кнопка <b>Code</b> открывает меню скачивания.
+          <figure class="shot"><img src="../../shots/06-github-repo.png" alt="Репозиторий clickhouse-practice на GitHub, рамкой 1 выделена кнопка Code"><figcaption>GitHub · кнопка Code над файлами стенда.</figcaption></figure>
+        </li>
+        <li><b>Выберите один способ скачивания</b>Без Git нажмите <b>Download ZIP</b> и полностью распакуйте архив. Не запускайте команды из окна просмотра ZIP. Прямая ссылка на тот же архив: <a href="https://github.com/MaximBytecamp/clickhouse-practice/archive/refs/heads/main.zip">скачать main.zip</a>.
+          <figure class="shot"><img src="../../shots/07-github-code-zip.png" alt="Меню Code: 1 — адрес репозитория, 2 — пункт Download ZIP"><figcaption>GitHub · способ 1 требует установленного Git, способ 2 — нет.</figcaption></figure>
+          <p>Если Git установлен, вместо ZIP выполните в папке, где хотите разместить проект: <code>git clone</code> скачает его в новую подпапку, <code>cd</code> сделает её текущей.</p>
+          <figure class="code"><figcaption><span>PowerShell / терминал</span><span>только для способа через Git</span></figcaption><pre>git clone https://github.com/MaximBytecamp/clickhouse-practice.git
 cd clickhouse-practice</pre></figure>
-        <figure class="code" data-os="win"><figcaption><span>PowerShell</span><span>архив распакован командой «Извлечь всё» в «Загрузках»</span></figcaption>
-<pre>cd $HOME\Downloads\clickhouse-practice-main\clickhouse-practice-main</pre></figure>
-        <figure class="code" data-os="mac linux"><figcaption><span>Терминал</span><span>архив распакован в «Загрузках»</span></figcaption>
-<pre>cd ~/Downloads/clickhouse-practice-main</pre></figure>
-        <p class="check">команда <code>ls</code> (на Windows можно <code>dir</code>) показывает <code>compose.yaml</code>, <code>README.md</code> и папку <code>stend</code>.</p>
-        <details class="more">
-          <summary>почему у папки из архива странное имя</summary>
-          <p>GitHub добавляет к имени папки название ветки — <code>-main</code>. А «Извлечь всё» на Windows ещё и кладёт папку в папку с тем же именем, поэтому в пути она встречается дважды. Нужно оказаться в той папке, где лежит <code>compose.yaml</code>.</p>
-        </details>
+        </li>
+        <li><b>Для ZIP перейдите в распакованную папку</b>Найдите в ней <code>compose.yaml</code> и используйте <code>cd</code> с путём к этой папке. Ниже примеры для стандартных «Загрузок»; если распаковали в другое место, замените путь.
+          <figure class="code" data-os="win"><figcaption><span>PowerShell</span><span>если «Извлечь всё» создало вложенную папку</span></figcaption><pre>cd "$HOME\Downloads\clickhouse-practice-main\clickhouse-practice-main"</pre></figure>
+          <figure class="code" data-os="mac linux"><figcaption><span>Терминал</span><span>если архив распакован прямо в Downloads</span></figcaption><pre>cd ~/Downloads/clickhouse-practice-main</pre></figure>
+          <p>В Windows одинаковое имя папки иногда встречается в пути дважды: внешнюю создаёт распаковщик, внутренняя уже есть в архиве. Выберите папку, в которой находится файл <code>compose.yaml</code>.</p>
+        </li>
+      </ol>
+      <p>Проверьте текущую папку: <code>pwd</code> показывает её путь, <code>ls</code> — содержимое. В PowerShell работают обе команды; вместо <code>ls</code> можно использовать <code>dir</code>.</p>
+      <figure class="code"><figcaption><span>PowerShell / терминал</span><span>проверка папки</span></figcaption><pre>pwd
+ls
+docker compose config --quiet</pre></figure>
+      <p>Последняя команда проверяет, что Compose нашёл и смог прочитать конфигурацию; при успехе она ничего не печатает. Она ещё не запускает контейнеры.</p>
+      <p class="check">в списке есть <code>compose.yaml</code>, <code>README.md</code> и <code>stend</code>, а проверка конфигурации завершилась без ошибки. Все дальнейшие команды <code>docker compose</code> выполняйте здесь.</p>
 
-        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Поднять стенд</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Одна команда скачивает сервер, запускает его и загружает базы. После неё стенд работает в фоне.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
-<pre>docker compose up -d</pre></figure>
-        <p class="tech"><b>По словам:</b> <code>up</code> — «поднять всё из compose.yaml», <code>-d</code> — «в фоне», чтобы терминал освободился. Первый раз дольше: Docker скачивает образ, около 270 МБ.</p>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>образ уже скачан; при первом запуске выше — строки скачивания</span></figcaption>
-<pre> ✔ Volume clickhouse-practice_clickhouse-data Created                       0.0s
- ✔ Network clickhouse-practice_default        Created                       0.0s
- ✔ Container course-clickhouse                Created                       0.2s
- ✔ Container clickhouse-practice-seed-1       Created                       0.2s
- ✔ Container course-clickhouse                Healthy                      10.9s
- ✔ Container clickhouse-practice-seed-1       Started                      10.9s</pre></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>За шестью строками — четыре события. Каждое начинается, только когда закончилось предыдущее:</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 300" role="img" aria-label="Четыре шага docker compose up: образ, том и сеть, сервер до Healthy, загрузчик">
-            <rect class="sc-acc" x="10" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="110" y="35">1 · образ</text>
-            <rect class="sc-acc" x="230" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="330" y="35">2 · том и сеть</text>
-            <rect class="sc-acc" x="450" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="550" y="35">3 · сервер</text>
-            <rect class="sc-acc" x="670" y="10" width="200" height="40" rx="6"/><text class="tb tc" x="770" y="35">4 · загрузчик</text>
-            <!-- 1 -->
-            <rect class="sc-box" x="40" y="80" width="140" height="70" rx="6"/><text class="tm tc" x="110" y="108">clickhouse-server</text><text class="tm tc" x="110" y="128">26.8.36.3</text>
-            <path class="sc-arrow" d="M110 160 L110 200 M104 193 L110 200 L116 193"/>
-            <text class="t tc" x="110" y="225">скачан из Docker Hub</text><text class="t tc" x="110" y="243">один раз, ≈ 270 МБ</text>
-            <!-- 2 -->
-            <rect class="sc-warm" x="250" y="80" width="160" height="34" rx="6"/><text class="tm tc" x="330" y="102">том clickhouse-data</text>
-            <rect class="sc-soft" x="250" y="126" width="160" height="34" rx="6"/><text class="tm tc" x="330" y="148">сеть default</text>
-            <text class="t tc" x="330" y="190">папка для файлов баз</text><text class="t tc" x="330" y="208">и сеть, в которой</text><text class="t tc" x="330" y="226">контейнеры видят друг друга</text>
-            <!-- 3 -->
-            <rect class="sc-box" x="470" y="80" width="160" height="70" rx="6"/><text class="tm tc" x="550" y="104">course-clickhouse</text><text class="t tc" x="550" y="126">SELECT 1 → 1 ?</text>
-            <rect class="sc-acc" x="490" y="160" width="120" height="28" rx="14"/><text class="tb tc" x="550" y="179">Healthy</text>
-            <text class="t tc" x="550" y="215">раз в 3 секунды Docker</text><text class="t tc" x="550" y="233">выполняет в контейнере</text><text class="t tc" x="550" y="251">SELECT 1</text>
-            <!-- 4 -->
-            <rect class="sc-box" x="690" y="80" width="160" height="40" rx="6"/><text class="tm tc" x="770" y="105">seed</text>
-            <path class="sc-arrow" d="M770 125 L770 150 M764 143 L770 150 L776 143"/>
-            <text class="tm tc" x="770" y="170">shop · web · iot</text>
-            <text class="t tc" x="770" y="205">стартует после Healthy,</text><text class="t tc" x="770" y="223">загружает базы, завершается</text>
-            <path class="sc-line" d="M215 30 L225 30 M435 30 L445 30 M655 30 L665 30"/>
-            <text class="t tc" x="440" y="290">порядок задан в compose.yaml: загрузчик не стартует, пока сервер не ответил на проверку</text>
-          </svg>
-          <figcaption>docker compose up -d · четыре шага по порядку</figcaption>
-        </figure>
-        <p>Порядок держится на третьем шаге. Docker каждые 3 секунды спрашивает сервер «ты жив?» (<code>SELECT 1</code>). Первый ответ — статус <code>Healthy</code>, «здоров». Только после этого стартует загрузчик: грузить данные в неготовый сервер бессмысленно.</p>
-        <p>Строка <code>Started</code> значит «загрузчик начал». Сама загрузка идёт ещё 20–30 секунд. Дождитесь её конца:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>журнал загрузки</span></figcaption>
-<pre>docker compose logs seed</pre></figure>
-        <p class="check">последняя строка журнала — <code>Готово: базы shop, web, iot и пустая sandbox</code>. Нет её — подождите полминуты и повторите команду.</p>
-        <details class="more">
-          <summary>весь журнал загрузки, docker compose ps и повторный запуск</summary>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>после окончания загрузки</span></figcaption>
-<pre>seed-1  | shop.products           21 строк
+      <h2 id="s5"><span class="sec">§5</span>Запустить и дождаться загрузки</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Отделим успешный запуск программы от окончания наполнения таблиц стенда.</p>
+      <p>Команда <code>up</code> создаёт и запускает сервисы из <code>compose.yaml</code>; <code>-d</code> оставляет их работать в фоне и возвращает приглашение терминала.</p>
+      <figure class="code"><figcaption><span>PowerShell / терминал</span><span>из папки стенда</span></figcaption><pre>docker compose up -d</pre></figure>
+      <p>При первом запуске видны строки скачивания образа. Затем Compose создаёт контейнеры. Запуск <code>seed</code> разрешён после успешной проверки сервера. Возврат приглашения терминала или строка <code>Started</code> у загрузчика не означают, что таблицы уже заполнены.</p>
+      <p>Посмотрите журнал загрузчика и состояния всех контейнеров. <code>logs</code> печатает журнал, <code>ps</code> показывает состояния, а <code>-a</code> добавляет уже завершившиеся контейнеры:</p>
+      <figure class="code"><figcaption><span>PowerShell / терминал</span><span>проверка процесса загрузки</span></figcaption><pre>docker compose logs seed
+docker compose ps -a</pre></figure>
+      <p>Это снимок состояния, не непрерывное наблюдение. Если загрузка ещё идёт, повторяйте обе команды. Указание «около минуты» в журнале — приблизительная оценка загрузчика. На вашем компьютере генерация может занять больше времени.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Что видно</th><th>Что означает</th><th>Что делать</th></tr></thead>
+        <tbody>
+          <tr><td>Сервер <code>starting</code>, в журнале seed пока пусто</td><td>Сервер ещё не прошёл проверку; запуск загрузчика отложен</td><td>Повторить проверку. Если сервер стал <code>unhealthy</code> или завершился, читать его журнал, см. §8</td></tr>
+          <tr><td>Сервер <code>healthy</code>, seed <code>Up</code>; в журнале генерация <code>web.events</code> или <code>iot.readings</code></td><td>Сервер отвечает, данные ещё загружаются</td><td>Ждать, повторять журнал и состояния; не запускать reset параллельно</td></tr>
+          <tr><td>В журнале «Готово: базы shop, web, iot и пустая sandbox», seed <code>Exited (0)</code></td><td>Загрузчик завершился без ошибки</td><td>Перейти к проверке таблиц</td></tr>
+          <tr><td>«Базы уже загружены…», seed <code>Exited (0)</code></td><td>Загрузчик пропустил наполнение</td><td>Тоже проверить таблицы: это не проверка их полноты</td></tr>
+          <tr><td>Seed <code>Exited</code> с ненулевым кодом</td><td>Загрузка прервалась</td><td>Прочитать ошибку в журнале seed; завершённый процесс самостоятельно не продолжится</td></tr>
+        </tbody>
+      </table></div>
+      <details class="more"><summary>Журнал успешного первого наполнения</summary>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>префикс Compose может отличаться</span></figcaption><pre>seed-1  | shop.products           21 строк
 seed-1  | shop.stock              42 строк
 seed-1  | shop.customers          20 строк
 seed-1  | shop.orders            120 строк
@@ -295,425 +193,126 @@ seed-1  | web.events        10324592 строк
 seed-1  | iot.readings: генерация…
 seed-1  | iot.readings       3174480 строк
 seed-1  | Готово: базы shop, web, iot и пустая sandbox</pre></figure>
-          <p>Какие контейнеры работают, показывает <code>docker compose ps</code>:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>какие контейнеры работают</span></figcaption>
-<pre>docker compose ps</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>после загрузки; столбцы IMAGE и COMMAND опущены</span></figcaption>
-<pre>NAME                SERVICE      CREATED          STATUS                    PORTS
-course-clickhouse   clickhouse   53 seconds ago   Up 52 seconds (healthy)   0.0.0.0:8123-&gt;8123/tcp, 0.0.0.0:9000-&gt;9000/tcp</pre></figure>
-          <p>Контейнер в списке один — сервер. Загрузчик сделал своё дело и выключился. В столбце <code>STATUS</code> — <code>healthy</code>, в <code>PORTS</code> — два открытых порта, 8123 и 9000. Запись <code>0.0.0.0:8123-&gt;8123</code> читается так: «порт 8123 компьютера ведёт в порт 8123 контейнера».</p>
-          <p>При следующем <code>docker compose up -d</code> загрузчик увидит, что заказы в <code>shop.orders</code> уже есть, напишет «Базы уже загружены» и ничего не тронет. Ваши упражнения переживают перезапуск.</p>
-        </details>
+      </details>
+      <p><b>Ограничение повторного запуска.</b> Загрузчик пропускает наполнение, если в <code>shop.orders</code> уже есть хотя бы одна строка. Если первый запуск прервался после загрузки магазина, повторный запуск может сообщить «Базы уже загружены», хотя <code>web</code> или <code>iot</code> неполны. Для перехода к упражнениям дополнительно проверьте таблицы.</p>
+      <p class="check">сервер имеет статус <code>healthy</code>, загрузчик — <code>Exited (0)</code>. Теперь проверяем содержимое баз.</p>
 
-        <h2 id="s6"><span class="sec">§6</span>Какие базы загрузились</h2>
-        <p class="purpose"><b>Зачем это знать</b>На этих базах построены все примеры книги. Полезно сразу понимать, где маленькие таблицы, а где миллионы строк.</p>
-        <div class="dbs">
-          <div class="db"><code>shop</code><p>Магазин электроники: товары, склады, покупатели, заказы. Первые запросы, модули 1–2.</p><div class="db__n">474 <small>строки в 5 таблицах</small></div><div class="db__bar"><span style="width:1%"></span></div></div>
-          <div class="db"><code>web</code><p>Действия посетителей сайта того же магазина за август–октябрь 2026: просмотры, поиск, корзина, покупки.</p><div class="db__n">10,3 млн <small>строк в events</small></div><div class="db__bar"><span style="width:100%"></span></div></div>
-          <div class="db"><code>iot</code><p>Температура и влажность на четырёх складах, замер раз в минуту за те же три месяца.</p><div class="db__n">3,2 млн <small>строк в readings</small></div><div class="db__bar"><span style="width:31%"></span></div></div>
-          <div class="db db--empty"><code>sandbox</code><p>Пустая песочница для упражнений: создавайте, вставляйте, удаляйте — эталонные базы не пострадают.</p><div class="db__n">0 <small>пока пусто</small></div><div class="db__bar"></div></div>
-        </div>
-        <p class="tech">Полоски — в одном масштабе: <code>web.events</code> почти в 22 тысячи раз больше всего магазина. На таких объёмах и видна скорость ClickHouse.</p>
-        <details class="more">
-          <summary>все таблицы и откуда берутся миллионы строк</summary>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>База</th><th>Таблица</th><th>Строк</th></tr></thead>
-              <tbody>
-                <tr><td rowspan="5"><code>shop</code></td><td><code>products</code> — товары</td><td>21</td></tr>
-                <tr><td><code>stock</code> — остатки на складах</td><td>42</td></tr>
-                <tr><td><code>customers</code> — покупатели</td><td>20</td></tr>
-                <tr><td><code>orders</code> — заказы</td><td>120</td></tr>
-                <tr><td><code>order_items</code> — позиции заказов</td><td>271</td></tr>
-                <tr><td><code>web</code></td><td><code>events</code> — действия на сайте</td><td>10 324 592</td></tr>
-                <tr><td><code>iot</code></td><td><code>readings</code> — замеры датчиков</td><td>3 174 480</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>Магазин тот же, что в справочнике по MongoDB, только каждый заказ разложен на строку заказа и строки позиций. Таблиц <code>web.events</code> и <code>iot.readings</code> нет в репозитории готовыми файлами — это сотни мегабайт. Загрузчик вычисляет их прямо на сервере: каждое значение получается из номера строки по формуле, поэтому у всех выходит одинаково до последней цифры.</p>
-        </details>
-
-        <h2 id="s7"><span class="sec">§7</span>Шаг 4. Базы в браузере</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Убедиться своими глазами, что всё загрузилось. Сервер сам отдаёт страницу для запросов — <b>Play UI</b>, ставить ничего не нужно.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps">
-          <li><b>Откройте <a href="http://localhost:8123/play">localhost:8123/play</a></b>Вверху — поле адреса сервера (1), поля пользователя (2) и пароля (3). Адрес уже заполнен: <code>http://localhost:8123</code>. Впишите пользователя <code>student</code> и пароль <code>student</code>.
-            <figure class="shot"><img src="../../shots/01-play-login.png" alt="Play UI: поле адреса, пользователя, пароля и кнопка Run"><figcaption>Play UI · 1 — адрес сервера, 2 — пользователь, 3 — пароль, 4 — запуск запроса</figcaption></figure>
-          </li>
-          <li><b>Выполните первый запрос</b>В большое поле впишите <code>SHOW DATABASES</code> и нажмите <b>Run</b> (4) или <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (на Mac — <kbd>Cmd</kbd> + <kbd>Enter</kbd>). Значок с базами слева открывает их список; щелчок по базе показывает её таблицы.
-            <figure class="shot"><img src="../../shots/02-play-databases.png" alt="Результат SHOW DATABASES и список баз слева, раскрыта база shop"><figcaption>Play UI · SHOW DATABASES · слева раскрыта база shop</figcaption></figure>
-          </li>
-          <li><b>Проверьте число строк</b>Замените запрос на этот и выполните его:
-            <figure class="code"><figcaption><span>Play UI</span><span>проверка загрузки</span></figcaption>
-<pre>SELECT database, name AS table, total_rows
+      <h2 id="s7"><span class="sec">§6</span>Проверить сервер и таблицы</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Ответ на короткий запрос проверяет соединение, а сопоставление числа строк — результат наполнения.</p>
+      <p id="s9">Откройте <a href="http://localhost:8123/play">http://localhost:8123/play</a>. <b>Play UI</b> — встроенная в сервер страница для запросов. <code>localhost</code> означает ваш компьютер; <b>порт</b> <code>8123</code> — номер точки подключения. Compose настроен передавать соединения с этого порта компьютера серверу в контейнере. Если страница не открылась, проверьте состояние сервера и занятость порта в §8. Проверка пароля возможна только после соединения с сервером.</p>
+      <ol class="steps">
+        <li><b>Заполните поля входа</b>Адрес сервера — <code>http://localhost:8123</code> (1), пользователь — <code>student</code> (2), пароль — <code>student</code> (3). Здесь не нужна учётная запись GitHub или Docker.
+          <figure class="shot"><img src="../../shots/01-play-login.png" alt="Play UI: 1 — адрес сервера, 2 — пользователь, 3 — пароль, 4 — кнопка Run"><figcaption>Play UI · поля подключения и кнопка запуска. Если поля скрыты, откройте их значком ключа справа вверху.</figcaption></figure>
+        </li>
+        <li><b>Проверьте ответ сервера</b>В большое поле вставьте уже знакомый проверочный запрос <code>SELECT 1</code>. Нажмите <b>Run</b> (4). Ожидается одна строка со значением <code>1</code>. Такой ответ подтверждает, что адрес и вход работают, но ничего не говорит о наполнении таблиц.</li>
+        <li><b>Проверьте наличие баз</b>Замените текст на <code>SHOW DATABASES</code> — «показать базы» — и снова нажмите Run.
+          <figure class="shot"><img src="../../shots/02-play-databases.png" alt="SHOW DATABASES возвращает в том числе iot, sandbox, shop и web"><figcaption>Ответ сервера · среди служебных баз должны быть iot, sandbox, shop и web. Открытая боковая панель не обязательна для проверки.</figcaption></figure>
+        </li>
+        <li><b>Проверьте все семь таблиц стенда</b>Следующий диагностический запрос читает <code>system.tables</code>, служебный список таблиц сервера. Он выбирает три базы стенда и показывает их имена, таблицы и число строк <code>total_rows</code>. Для этой проверки достаточно выполнить запрос целиком и сравнить результат с образцом.
+          <figure class="code"><figcaption><span>Play UI</span><span>заменить предыдущий запрос целиком</span></figcaption><pre>SELECT database, name AS table, total_rows
 FROM system.tables
 WHERE database IN ('shop', 'web', 'iot')
 ORDER BY database, table</pre></figure>
-            <figure class="shot"><img src="../../shots/03-play-check.png" alt="Таблица баз и таблиц с числом строк: iot.readings 3174480, web.events 10324592"><figcaption>Play UI · число строк во всех таблицах стенда</figcaption></figure>
-          </li>
-        </ol>
-        <p class="check">в рамках 1 и 2 те же числа: <code>3174480</code> у <code>iot.readings</code> и <code>10324592</code> у <code>web.events</code>. Значит, стенд готов.</p>
-        <details class="more">
-          <summary>что за лишние базы в списке и откуда жёлтые полосы</summary>
-          <p><code>SHOW DATABASES</code> вернул восемь баз. Четыре — наши: <code>iot</code>, <code>sandbox</code>, <code>shop</code>, <code>web</code>. Остальные четыре есть на любом сервере ClickHouse:</p>
-          <ul class="short"><li><code>system</code> — сведения о самом сервере;</li><li><code>default</code> — база по умолчанию;</li><li><code>INFORMATION_SCHEMA</code> и <code>information_schema</code> — стандартное описание таблиц, как в других SQL-базах.</li></ul>
-          <p>Проверочный запрос берёт список таблиц из служебной базы <code>system</code> и для каждой показывает число строк. Сейчас нужен только его результат. Полосы в столбце с числами Play UI рисует сам: чем больше число, тем длиннее полоса. Над результатом он пишет, сколько строк вернулось и за сколько секунд.</p>
-        </details>
+          <figure class="shot"><img src="../../shots/03-play-check.png" alt="Семь таблиц: readings 3174480, customers 20, order_items 271, orders 120, products 21, stock 42, events 10324592"><figcaption>Play UI · контрольные числа после полного наполнения. Рамка 1 — iot.readings, рамка 2 — web.events.</figcaption></figure>
+        </li>
+      </ol>
+      <div class="table-scroll" id="s6"><table>
+        <thead><tr><th>База и таблица</th><th>Что хранится</th><th>Ожидается строк</th></tr></thead>
+        <tbody>
+          <tr><td><code>iot.readings</code></td><td>Замеры датчиков на складах</td><td>3 174 480</td></tr>
+          <tr><td><code>shop.customers</code></td><td>Покупатели</td><td>20</td></tr>
+          <tr><td><code>shop.order_items</code></td><td>Позиции заказов</td><td>271</td></tr>
+          <tr><td><code>shop.orders</code></td><td>Заказы</td><td>120</td></tr>
+          <tr><td><code>shop.products</code></td><td>Товары</td><td>21</td></tr>
+          <tr><td><code>shop.stock</code></td><td>Остатки на складах</td><td>42</td></tr>
+          <tr><td><code>web.events</code></td><td>Действия посетителей сайта</td><td>10 324 592</td></tr>
+        </tbody>
+      </table></div>
+      <p>База <code>sandbox</code> предназначена для ваших упражнений и после первого наполнения пуста, поэтому строк в этом списке для неё нет. Остальные базы, например <code>system</code> и <code>default</code>, созданы самим сервером.</p>
+      <p class="check">короткий запрос вернул 1, присутствуют четыре базы стенда, а все семь строк проверки совпали с таблицей выше. Проверены состав и количество строк; содержимое каждой строки такой запрос не сравнивает. Если вы уже меняли данные упражнениями, исходные числа могут отличаться.</p>
+      <details class="more" id="s8"><summary>Проверка без браузера и переход к клиентам</summary>
+        <p>В контейнере уже установлен <b>clickhouse-client</b> — программа для запросов из терминала. <code>exec</code> запускает её в работающем сервисе <code>clickhouse</code>. Флаг <code>-q</code> передаёт один запрос. После ответа клиент завершится. Настройки входа уже записаны в стенде.</p>
+        <figure class="code"><figcaption><span>PowerShell / терминал</span><span>из папки стенда</span></figcaption><pre>docker compose exec clickhouse clickhouse-client -q "SELECT 1"</pre></figure>
+        <p>Ожидается <code>1</code>. Если команда работает, а Play UI недоступен, сам сервер отвечает: проверяйте адрес и порт браузера. Запуск интерактивного клиента, редактирование запросов и другие способы подключения — в <a href="../02-klienty/index.html">главе 0.2 «Клиенты»</a>.</p>
+      </details>
 
-        <h2 id="s8"><span class="sec">§8</span>Шаг 5. Клиент в терминале</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Второй способ задавать запросы — из терминала, программой <b>clickhouse-client</b>. Она уже лежит в контейнере сервера, Docker запускает её там.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
-<pre>docker compose exec clickhouse clickhouse-client</pre></figure>
-        <p>Появится приглашение <code>course :)</code>. Наберите по очереди, каждый раз нажимая <kbd>Enter</kbd>:</p>
-        <ol class="short">
-          <li><code>SHOW DATABASES</code></li>
-          <li><code>SELECT count() FROM web.events</code> — посчитать строки</li>
-          <li><code>exit</code> — выйти</li>
-        </ol>
-        <figure class="pic">
-          <svg viewBox="0 0 880 200" role="img" aria-label="Терминал, Docker, контейнер: clickhouse-client рядом с сервером, порт 9000 внутри контейнера">
-            <rect class="sc-box" x="10" y="60" width="170" height="70" rx="6"/><text class="tb tc" x="95" y="88">терминал</text><text class="tm tc" x="95" y="110">docker compose exec</text>
-            <path class="sc-arrow" d="M184 95 L244 95 M237 89 L244 95 L237 101"/>
-            <rect class="sc-acc" x="250" y="66" width="120" height="58" rx="8"/><text class="tb tc" x="310" y="92">Docker</text><text class="t tc" x="310" y="112">запусти внутри</text>
-            <path class="sc-arrow" d="M374 95 L434 95 M427 89 L434 95 L427 101"/>
-            <rect class="sc-ink" x="440" y="14" width="430" height="172" rx="8"/>
-            <text class="tw" x="456" y="36" style="font:600 12px var(--mono)">контейнер course-clickhouse</text>
-            <rect class="sc-box" x="460" y="60" width="160" height="70" rx="6"/><text class="tb tc" x="540" y="90">clickhouse-client</text><text class="tm tc" x="540" y="112">student / student</text>
-            <path class="sc-arrow" d="M624 95 L684 95 M677 89 L684 95 L677 101"/>
-            <rect class="sc-acc" x="636" y="132" width="60" height="28" rx="14"/><text class="tb tc" x="666" y="151">9000</text>
-            <rect class="sc-box" x="690" y="60" width="160" height="70" rx="6"/><text class="tb tc" x="770" y="90">сервер</text><text class="tm tc" x="770" y="112">course :)</text>
-            <text class="tw" x="456" y="176" style="font:500 12px var(--body)">клиент рядом с сервером: localhost:9000 — это он сам</text>
-          </svg>
-          <figcaption>docker compose exec: клиент запускается внутри контейнера сервера</figcaption>
-        </figure>
-        <p>Клиент запускается в той же коробке, что и сервер, поэтому адрес сервера для него — <code>localhost</code>, «этот же компьютер». Пароль вводить не нужно: стенд заранее записал его в настройки клиента.</p>
-        <p class="check">после второго запроса клиент напечатал <code>10324592</code>. Ответ пришёл за 0,014 секунды.</p>
-        <details class="more">
-          <summary>весь сеанс и что значит каждая строка</summary>
-        <figure class="code code--out"><figcaption><span>Терминал</span><span>сеанс clickhouse-client целиком</span></figcaption>
-<pre>ClickHouse client version 26.8.36.3 (official build).
-Connecting to localhost:9000 as user student.
-Connected to ClickHouse server version 26.8.36.
+      <h2 id="s10"><span class="sec">§7</span>Остановить, сбросить или удалить</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>В конце занятия нужно остановить сервер, не стирая выполненные упражнения.</p>
+      <p>Сравните два объекта: контейнер с программой и том с файлами. Таблица показывает, какие из них меняет каждая команда.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Действие</th><th>Контейнер сервера</th><th>Данные на томе</th></tr></thead>
+        <tbody>
+          <tr><td><code>stop</code></td><td>Остановлен, сохранён</td><td>Сохранены</td></tr>
+          <tr><td><code>down</code></td><td>Удалён</td><td>Сохранены</td></tr>
+          <tr><td><code>run --rm reset</code></td><td>Работает</td><td>Четыре базы пересозданы</td></tr>
+          <tr><td><code>down -v</code></td><td>Удалён</td><td>Том удалён целиком</td></tr>
+        </tbody>
+      </table></div>
+      <p>При stop и down меняется состояние программы; файлы доступны при следующем запуске. Reset меняет содержимое тома, а down -v удаляет само хранилище. Команду выбирают по тому, что требуется сохранить.</p>
+      <p>Для обычной остановки используйте <code>stop</code>. Контейнеры и том остаются. Проверьте состояние с <code>ps -a</code>: сервер должен перейти в <code>Exited</code>.</p>
+      <figure class="code"><figcaption><span>PowerShell / терминал</span><span>обычная остановка</span></figcaption><pre>docker compose stop
+docker compose ps -a</pre></figure>
+      <p>Чтобы продолжить работу, выполните уже знакомую <code>docker compose up -d</code>. После появления <code>healthy</code> повторите запрос проверки. Команда <code>docker compose down</code> тоже сохраняет данные, но удаляет контейнеры и сеть проекта. После неё <code>ps -a</code> не показывает контейнеров стенда; следующий <code>up -d</code> создаст их заново и подключит прежний том.</p>
+      <div class="stand-danger">
+        <p><b>Сброс уничтожает изменения в четырёх базах стенда.</b> Следующая команда перезаписывает базы <code>shop</code>, <code>web</code>, <code>iot</code> исходными данными и удаляет с пересозданием <code>sandbox</code>. Таблицы и результаты упражнений в этих четырёх базах будут потеряны. Сохраните нужные результаты до запуска. Базы с другими именами этот скрипт не пересоздаёт.</p>
+        <figure class="code"><figcaption><span>PowerShell / терминал</span><span>только когда намеренно восстанавливаете исходные данные</span></figcaption><pre>docker compose run --rm reset</pre></figure>
+        <p><code>run</code> запускает разовую задачу, <code>--rm</code> удаляет только её контейнер после завершения. Перезапись данных выполняется командами внутри скрипта <code>reset</code>. Ждите завершения команды и строки «Готово», затем повторите проверку семи таблиц. Не запускайте reset одновременно с seed или другой загрузкой.</p>
+      </div>
+      <div class="stand-danger">
+        <p><b>Удаление тома уничтожает все базы в нём, в том числе созданные вами.</b> Флаг <code>-v</code> у <code>down</code> удаляет хранилище стенда. Данные потребуется сохранить отдельно до удаления тома.</p>
+        <figure class="code"><figcaption><span>PowerShell / терминал</span><span>только когда данные больше не нужны</span></figcaption><pre>docker compose down -v</pre></figure>
+        <p>Признак удаления — строка <code>Volume … Removed</code>. Следующий <code>up -d</code> создаст пустой том, и seed загрузит исходные данные заново; ваши собственные данные из удалённого тома не восстановятся. Скачанный образ сервера эта команда не удаляет.</p>
+      </div>
+      <p class="check">после обычной остановки сервер не работает; при возобновлении подключается тот же том. Если требовалось только закончить занятие, команды reset и down -v не нужны.</p>
 
-Warnings:
- * Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 &gt; /proc/sys/kernel/task_delayacct'` or by using sysctl.
- * Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+      <h2 id="s12"><span class="sec">§8</span>Частые ошибки</h2>
+      <p>Выбирайте действие по наблюдаемому признаку. Не исправляйте ошибку подключения удалением данных.</p>
+      <details class="err"><summary>Compose не находит конфигурацию</summary><p>Выполните <code>pwd</code> и <code>ls</code>. Если нет <code>compose.yaml</code>, перейдите в распакованную папку по <a href="#s4">§4</a>. Не создавайте новый файл с таким именем: нужен тот, который пришёл со стендом.</p></details>
+      <details class="err"><summary>Сервер unhealthy, завершился или постоянно перезапускается</summary><p>Причину остановки сервера ищите в его журнале:</p><figure class="code"><figcaption><span>PowerShell / терминал</span><span>диагностика сервера</span></figcaption><pre>docker compose logs clickhouse</pre></figure><p>Если журнал указывает на нехватку места или памяти, устраните эту причину, затем повторите запуск. Если причина неясна, сохраните текст ошибки и вывод <code>docker compose ps -a</code> для преподавателя. Не выполняйте сброс наугад.</p></details>
+      <details class="err"><summary>Порт 8123 или 9000 уже занят</summary><p>В сообщении Docker есть занятый порт и указание на невозможность его привязать. Создайте рядом с <code>compose.yaml</code> текстовый файл <code>.env</code> (не <code>.env.txt</code>). Для смены порта браузера добавьте <code>HTTP_PORT=8124</code>, для второго порта — <code>NATIVE_PORT=9001</code>; нужны только строки для занятых портов.</p><p>Снова выполните <code>docker compose up -d</code>. При <code>HTTP_PORT=8124</code> открывайте <code>http://localhost:8124/play</code> и указывайте <code>http://localhost:8124</code> в поле адреса Play UI. Внутри контейнера порты не меняются; команда проверки через <code>exec</code> остаётся прежней.</p></details>
+      <details class="err"><summary>Имя course-clickhouse уже занято</summary><p>Сообщение о конфликте имени контейнера означает, что такой контейнер уже существует. Используйте прежнюю папку стенда. Не удаляйте контейнер, если не знаете, кому он принадлежит: передайте сообщение преподавателю. В конфигурации задано фиксированное имя, поэтому скачивание второй копии или другое имя проекта не создаёт независимый стенд.</p></details>
+      <details class="err"><summary>Seed завершился с ошибкой, а повторный запуск сообщает «Базы уже загружены»</summary><p>Заказы уже записаны, поэтому повторное наполнение пропущено. Посмотрите журнал первоначальной ошибки и контрольные числа. После устранения причины вернуть исходные четыре базы можно сбросом из <a href="#s10">§7</a>, только если вы согласны потерять изменения в них. Если результаты упражнений нужно сохранить, сначала сохраните их с преподавателем. Само повторение <code>up -d</code> неполную загрузку не исправляет.</p></details>
+      <details class="err"><summary>Таблицы нет или строк меньше ожидаемого</summary><p>Пока seed имеет состояние <code>Up</code>, это может быть незавершённая загрузка — смотрите его журнал. Если seed уже завершился, бесконечное ожидание не поможет: проверьте код завершения и предыдущую ошибку. При успешном завершении причиной могут быть ваши изменения или неполный прошлый запуск, пропущенный по наличию заказов.</p></details>
+      <details class="err"><summary>Play UI показывает AUTHENTICATION_FAILED, код 516</summary><p>Ответ получен от сервера, но вход отклонён. Откройте поля значком ключа и проверьте оба значения: <code>student</code> и <code>student</code> строчными латинскими буквами.</p><figure class="shot"><img src="../../shots/04-play-wrong-password.png" alt="Ошибка входа в Play UI: Code 516, AUTHENTICATION_FAILED"><figcaption>Настоящий ответ сервера при неверном пароле. Перезапуск загрузчика пароль не исправляет.</figcaption></figure></details>
+      <details class="err"><summary>Проверка через exec не запускается: сервис не работает</summary><p>Посмотрите <code>docker compose ps -a</code>. После обычной остановки нужен <code>docker compose up -d</code>; если сервер завершился из-за ошибки, сначала читайте его журнал. Не вводите SQL непосредственно в PowerShell: запрос выполняется в Play UI или передаётся программе clickhouse-client.</p></details>
 
-course :) SHOW DATABASES
+      <h2 id="s13"><span class="sec">§9</span>Самопроверка</h2>
+      <details><summary>Сервер healthy, а seed ещё Up. Можно начинать упражнение по web.events?</summary><p>Нет. Healthy подтверждает короткий ответ сервера, но не окончание загрузки. Нужно дождаться успешного завершения seed и проверить число строк: таблица может существовать уже во время наполнения.</p></details>
+      <details><summary>Журнал пишет «Базы уже загружены», но проверка вернула только пять таблиц shop. Как объяснить результат?</summary><p>Загрузчик увидел строки в shop.orders и пропустил наполнение. Это возможно после прерывания первого запуска до создания web и iot. Нужно найти и устранить причину прерывания; повторять запуск без диагностики недостаточно. Сброс допустим только с учётом потери изменений.</p></details>
+      <details><summary>После down вы снова выполнили up -d из той же папки. Почему упражнение в sandbox осталось?</summary><p>Контейнер был создан заново, но подключён прежний том. В нём лежат файлы sandbox. Загрузчик при наличии заказов пропускает наполнение и не пересоздаёт песочницу.</p></details>
+      <details><summary>Вы сменили HTTP_PORT на 8124. Проверка через exec возвращает 1, а старый адрес браузера не открывается. Что исправить?</summary><p>Поменять адрес страницы на localhost:8124/play и поле адреса сервера на http://localhost:8124. Exec запускает клиент внутри контейнера и не использует изменённый внешний HTTP-порт, поэтому его успех не подтверждает правильность адреса в браузере.</p></details>
+      <h3>Самостоятельная задача: закончить занятие и продолжить</h3>
+      <p>На готовом стенде сохраните результат проверки семи таблиц — снимком области результата или текстом. Остановите стенд без сброса. Убедитесь по состоянию контейнеров, что сервер не работает. Затем возобновите работу и повторите тот же запрос.</p>
+      <p class="stand-result"><b>Что предъявить:</b> путь папки с compose.yaml; состояния сервера до остановки, после неё и после запуска; два совпавших результата проверки. Объясните, почему совпадение результатов ожидаемо и какая из команд §7, напротив, уничтожила бы собственные базы. Если результаты не совпали, приложите журнал — не скрывайте расхождение сбросом.</p>
 
-SHOW DATABASES
-
-Query id: 2110de2e-e6f7-42e6-b51b-2b11fa513ab4
-
-   ┌─name───────────────┐
-1. │ INFORMATION_SCHEMA │
-2. │ default            │
-3. │ information_schema │
-4. │ iot                │
-5. │ sandbox            │
-6. │ shop               │
-7. │ system             │
-8. │ web                │
-   └────────────────────┘
-
-8 rows in set. Elapsed: 0.006 sec.
-
-course :) SELECT count() FROM web.events
-
-SELECT count()
-FROM web.events
-
-Query id: d045ac73-50b0-4b58-9a24-47974f87a685
-
-   ┌──count()─┐
-1. │ 10324592 │ -- 10.32 million
-   └──────────┘
-
-1 row in set. Elapsed: 0.014 sec.
-
-course :) exit
-Bye.</pre></figure>
-          <ul class="short">
-            <li><b>Первые три строки</b> — версии клиента и сервера и под каким пользователем вы вошли (<code>student</code>).</li>
-            <li><b>Warnings</b> — два предупреждения о настройках Linux внутри Docker. На стенд не влияют, появляются при каждом входе.</li>
-            <li><b><code>course :)</code></b> — имя сервера и смайлик. После него набирают запрос.</li>
-            <li><b><code>Query id</code></b> — номер запроса, по нему его потом можно найти в журнале сервера.</li>
-            <li><b>Таблица в рамке</b>, число строк и время. Пометку <code>-- 10.32 million</code> клиент добавляет к большим числам сам.</li>
-          </ul>
-          <p>Команда <code>docker compose exec clickhouse clickhouse-client</code> читается так: «выполни внутри работающего контейнера сервиса <code>clickhouse</code> программу <code>clickhouse-client</code>». Пользователя и пароль стенд заранее положил в настройки клиента. <code>exit</code> закрывает только клиент, сервер продолжает работать.</p>
-        </details>
-
-        <h2 id="s9"><span class="sec">§9</span>Как запрос попадает в контейнер</h2>
-        <p class="purpose"><b>Зачем это знать</b>Браузер работает на вашем компьютере, а сервер — внутри коробки. Разберёмся, как запрос проходит внутрь: так же будут ходить запросы ваших программ.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 290" role="img" aria-label="Путь запроса: браузер, порт 8123 компьютера, проброс в контейнер, сервер, том с файлами">
-            <rect class="sc-soft" x="10" y="10" width="860" height="270" rx="10"/>
-            <text class="t" x="24" y="32">ваш компьютер</text>
-            <rect class="sc-box" x="30" y="70" width="150" height="60" rx="6"/><text class="tb tc" x="105" y="96">браузер</text><text class="tm tc" x="105" y="116">Play UI</text>
-            <rect class="sc-acc" x="250" y="76" width="120" height="48" rx="24"/><text class="tm tc" x="310" y="96">порт</text><text class="tb tc" x="310" y="114">8123</text>
-            <rect class="sc-ink" x="430" y="44" width="420" height="190" rx="8"/>
-            <text class="tw" x="446" y="66" style="font:600 12px var(--mono)">контейнер course-clickhouse</text>
-            <rect class="sc-acc" x="450" y="80" width="110" height="40" rx="20"/><text class="tb tc" x="505" y="105">8123</text>
-            <rect class="sc-box" x="610" y="76" width="220" height="48" rx="6"/><text class="tb tc" x="720" y="98">сервер ClickHouse</text><text class="t tc" x="720" y="116">выполняет SQL</text>
-            <rect class="sc-warm" x="610" y="160" width="220" height="60" rx="6"/><text class="tm tc" x="720" y="186">том clickhouse-data</text><text class="t tc" x="720" y="206">файлы таблиц shop, web, iot</text>
-            <path class="sc-arrow" d="M184 92 L244 92 M237 86 L244 92 L237 98"/>
-            <path class="sc-arrow" d="M374 92 L444 92 M437 86 L444 92 L437 98"/>
-            <path class="sc-arrow" d="M564 92 L604 92 M597 86 L604 92 L597 98"/>
-            <path class="sc-arrow" d="M700 128 L700 154 M694 147 L700 154 L706 147"/>
-            <path class="sc-arrow-w" d="M740 154 L740 128 M734 135 L740 128 L746 135"/>
-            <path class="sc-arrow-w" d="M640 128 L640 142 L105 142 L105 136 M99 141 L105 134 L111 141"/>
-            <text class="tb tc" x="214" y="84">1</text><text class="tb tc" x="409" y="84">2</text><text class="tw tc" x="584" y="84" style="font-weight:700">3</text><text class="tw" x="680" y="146" style="font-weight:700">4</text>
-            <text class="t" x="30" y="166">5 · результат идёт обратно (пунктир)</text>
-            <text class="t" x="30" y="264">проброс порта «8123 компьютера → 8123 контейнера» задан в compose.yaml</text>
-          </svg>
-          <figcaption>запрос из браузера: компьютер → проброс порта → контейнер → сервер → файлы на томе</figcaption>
-        </figure>
-        <ol class="short">
-          <li>Браузер стучится на <code>localhost:8123</code> — на порт 8123 вашего же компьютера.</li>
-          <li>Docker передаёт всё, что пришло на этот порт, в порт 8123 контейнера. Это <b>проброс порта</b>.</li>
-          <li>Там его слушает сервер ClickHouse.</li>
-          <li>Сервер читает нужные столбцы из файлов на томе.</li>
-          <li>Ответ идёт обратно тем же путём.</li>
-        </ol>
-
-        <details class="simple">
-          <summary>порт и проброс на примере офиса с добавочными номерами</summary>
-          <div class="vsteps">
-            <div class="vcard"><i>📞</i><h5>браузер</h5><b>Вы звоните в офис</b><small>На общий номер с добавочным 8123.</small></div>
-            <div class="varr">8123</div>
-            <div class="vcard is-hot"><i>🧑‍💼</i><h5>Docker</h5><b>Секретарь переводит</b><small>«8123? Соединяю с сотрудником внутри».</small></div>
-            <div class="varr">внутрь</div>
-            <div class="vcard is-dark"><i>👩‍💻</i><h5>сервер</h5><b>Сотрудник отвечает</b><small>Достаёт папку из шкафа и диктует ответ.</small></div>
-          </div>
-          <p class="simple__map"><b>Что есть что:</b> офис — компьютер; добавочный номер — порт; секретарь — проброс порта в Docker; сотрудник — сервер ClickHouse; шкаф с папками — том с файлами баз.</p>
-        </details>
-
-        <div class="vsteps" aria-label="Два порта сервера">
-          <div class="vcard is-hot"><h5>порт 8123 · HTTP</h5><b>как у веб-страниц</b><small>Play UI в браузере, драйверы Python и Ruby</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>порт 9000 · свой протокол</h5><b>родной язык ClickHouse</b><small>clickhouse-client, драйверы Go и C++</small></div>
-        </div>
-        <p class="tech">Портов два, а сервер и данные одни. Различается только способ доставки запроса.</p>
-
-        <h2 id="s10"><span class="sec">§10</span>Сбросить, остановить, удалить</h2>
-        <p class="purpose"><b>Зачем это знать</b>Испортили базы упражнением или нужно освободить место — четыре команды на все случаи. Под каждой видно, что после неё останется.</p>
-        <div class="life">
-          <div><code>docker compose run --rm reset</code><p>Вернуть базы как в первый раз. Около 25 секунд.</p><div class="life__keep"><span class="y">эталонные базы</span><span class="n">sandbox</span></div></div>
-          <div><code>docker compose stop</code><p>Остановить сервер на время. Запуск — <code>up -d</code>.</p><div class="life__keep"><span class="y">контейнер</span><span class="y">данные</span></div></div>
-          <div><code>docker compose down</code><p>Убрать контейнеры и сеть.</p><div class="life__keep"><span class="n">контейнер</span><span class="y">данные</span></div></div>
-          <div class="is-danger"><code>docker compose down -v</code><p>Убрать всё вместе с томом. Следующий <code>up -d</code> загрузит базы заново.</p><div class="life__keep"><span class="n">контейнер</span><span class="n">данные</span></div></div>
-        </div>
-        <p class="tech">Сбрасывать базы стоит, если после упражнения числа перестали сходиться с книгой.</p>
-        <details class="more">
-          <summary>что значат run, --rm и -v и как выглядит удаление</summary>
-          <p>В <code>reset</code> слово <code>run</code> — «запустить разовую задачу», <code>--rm</code> — «удалить её контейнер сразу после окончания», чтобы они не копились. Флаг <code>-v</code> у <code>down</code> — от volume, «том»: он стирает файлы баз. Том удаляется последним:</p>
-        <figure class="code code--out"><figcaption><span>Вывод docker compose down -v</span><span>том удаляется последним</span></figcaption>
-<pre> Container course-clickhouse Stopping
- Container course-clickhouse Stopped
- Container course-clickhouse Removing
- Container course-clickhouse Removed
- Volume clickhouse-practice_clickhouse-data Removing
- Network clickhouse-practice_default Removing
- Network clickhouse-practice_default Removed
- Volume clickhouse-practice_clickhouse-data Removed</pre></figure>
-        </details>
-
-        <h2 id="s11"><span class="sec">§11</span>Сколько места нужно</h2>
-        <figure class="pic">
-          <svg viewBox="0 0 880 220" role="img" aria-label="Размеры: образ 1,1 ГБ, том сразу после загрузки 1,2 ГБ, через несколько минут 0,55 ГБ, web.events 353 МБ сжатая и 1,37 ГБ без сжатия">
-            <text class="t" x="10" y="34">образ сервера</text><rect class="sc-acc" x="250" y="18" width="480" height="24" rx="3"/><text class="tm" x="740" y="35">1,1 ГБ</text>
-            <text class="t" x="10" y="74">том сразу после загрузки</text><rect class="sc-warm" x="250" y="58" width="524" height="24" rx="3"/><text class="tm" x="784" y="75">1,2 ГБ</text>
-            <text class="t" x="10" y="114">том через несколько минут</text><rect class="sc-warm" x="250" y="98" width="240" height="24" rx="3"/><text class="tm" x="500" y="115">550 МБ</text>
-            <text class="t" x="10" y="154">web.events на диске</text><rect class="sc-ink" x="250" y="138" width="154" height="24" rx="3"/><text class="tm" x="414" y="155">353 МБ</text>
-            <text class="t" x="10" y="194">web.events без сжатия</text><rect class="sc-soft" x="250" y="178" width="598" height="24" rx="3"/><text class="tm" x="760" y="195">1,37 ГБ</text>
-          </svg>
-          <figcaption>место на диске · одна шкала для всех полос</figcaption>
-        </figure>
-        <p class="check">свободно 3 ГБ на диске и Docker выделено 2 ГБ памяти. Этого хватает с запасом.</p>
-        <details class="more">
-          <summary>почему том сначала большой и сколько памяти берёт сервер</summary>
-          <p>Сразу после загрузки том почти вдвое больше: сервер удаляет промежуточные файлы через несколько минут. Две нижние полосы — одна таблица <code>web.events</code>: на диске 353 МБ, без сжатия было бы 1,37 ГБ. Сжатие уменьшает её почти вчетверо.</p>
-          <p>Памяти сервер в покое берёт около 700 МБ, загрузка баз добавляет до 460 МБ. Сколько он занимает прямо сейчас, покажет <code>docker stats course-clickhouse</code>, выход — <kbd>Ctrl</kbd> + <kbd>C</kbd>.</p>
-        </details>
-
-        <h2 id="s12"><span class="sec">§12</span>Если не получилось</h2>
-        <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
-        <details class="err" data-os="win"><summary>Docker Desktop не запущен<small>failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.</small></summary><p>Команда <code>docker</code> есть, а движка нет. Запустите Docker Desktop и дождитесь <b>Engine running</b>. Не запускается — глава <a href="../01a-windows-wsl/index.html">0.1а</a>.</p></details>
-        <details class="err" data-os="mac"><summary>Docker Desktop не запущен<small>failed to connect to the docker API at unix:///Users/…/.docker/run/docker.sock; check if the path is correct and if the daemon is running</small></summary><p>Команда <code>docker</code> есть, а движка нет. Запустите Docker Desktop из «Программ» и дождитесь <b>Engine running</b>.</p></details>
-        <details class="err" data-os="linux"><summary>Служба Docker не запущена<small>failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running</small></summary><p><code>sudo systemctl start docker</code>. Чтобы стартовала вместе с системой — <code>sudo systemctl enable docker</code>.</p></details>
-        <details class="err" data-os="win"><summary>Терминал открыт до установки Docker<small>docker : The term 'docker' is not recognized as the name of a cmdlet…</small></summary><p>Закройте PowerShell и откройте заново: новое окно узнает про установленную программу.</p></details>
-        <details class="err" data-os="mac"><summary>Docker Desktop ни разу не запускался<small>zsh: command not found: docker</small></summary><p>Команду <code>docker</code> добавляет в систему первый запуск Docker Desktop. Запустите его и откройте новое окно терминала.</p></details>
-        <details class="err" data-os="linux"><summary>Вы не в группе docker<small>permission denied while trying to connect to the docker API at unix:///var/run/docker.sock</small></summary><p><code>sudo usermod -aG docker $USER</code>, затем выйдите из системы и войдите снова.</p></details>
-        <details class="err"><summary>Команда набрана не в той папке<small>no configuration file provided: not found</small></summary><p>Docker ищет <code>compose.yaml</code> в текущей папке. Перейдите в папку репозитория — <a href="#s4">шаг 2</a>.</p></details>
-        <details class="err"><summary>Стенд поднят второй раз из другой папки<small>Conflict. The container name "/course-clickhouse" is already in use by container "201c6972…"</small></summary><p>Репозиторий скачан дважды, и первый стенд ещё работает. Остановите его из его папки (<code>docker compose down</code>) или работайте в прежней папке.</p></details>
-        <details class="err"><summary>Порт 8123 или 9000 занят другой программой<small>ports are not available: exposing port TCP 0.0.0.0:8123 -&gt; 127.0.0.1:0: listen tcp 0.0.0.0:8123: bind: address already in use</small></summary><p>Порт 9000 занимают, например, PHP-FPM и MinIO. Создайте рядом с <code>compose.yaml</code> файл <code>.env</code> со строкой <code>NATIVE_PORT=9001</code> (или <code>HTTP_PORT=8124</code>) и снова выполните <code>docker compose up -d</code>. Адреса из книги тогда меняйте на свой порт. На Windows сообщение заканчивается словами <code>Only one usage of each socket address … is normally permitted</code>.</p></details>
-        <details class="err"><summary>Строк меньше, чем в книге<small>SELECT count() FROM web.events → 0 или меньше 10324592</small></summary><p>Таблица уже создана, а строки ещё вычисляются. Дождитесь «Готово» в <code>docker compose logs seed</code>.</p></details>
-        <details class="err"><summary>Неверный пароль в Play UI<small>Code: 516. DB::Exception: student: Authentication failed … (AUTHENTICATION_FAILED)</small></summary><p>Пароль <code>student</code> — строчными латинскими буквами. Ключик справа вверху Play UI снова открывает поля входа. Так выглядит ошибка — красная рамка вместо таблицы:</p>
-        <figure class="shot"><img src="../../shots/04-play-wrong-password.png" alt="Play UI: ошибка AUTHENTICATION_FAILED при неверном пароле"><figcaption>Play UI · пароль набран с ошибкой: сервер отвечает кодом 516</figcaption></figure>
-          <p>У каждой ошибки ClickHouse есть номер (<code>Code: 516</code>) и имя (<code>AUTHENTICATION_FAILED</code>). По имени её легко найти в документации.</p></details>
-        <details class="err"><summary>Клиент не запускается<small>service "clickhouse" is not running</small></summary><p>Стенд остановлен — командой <code>stop</code> или перезагрузкой компьютера. Выполните <code>docker compose up -d</code>.</p></details>
-
-        <h2 id="s13"><span class="sec">§13</span>Проверьте себя</h2>
-        <details>
-          <summary>Чем образ отличается от контейнера?</summary>
-          <p>Образ — неизменный шаблон с программой, его скачивают один раз. Контейнер — запущенная копия, созданная из образа; у него своё состояние, его можно остановить и удалить. Из образа <code>clickhouse/clickhouse-server:26.8.36.3</code> стенд создаёт контейнер <code>course-clickhouse</code>, а загрузчик <code>seed</code> — второй контейнер из того же образа.</p>
-        </details>
-        <details>
-          <summary>После <code>docker compose down</code> и снова <code>up -d</code> упражнения в <code>sandbox</code> пропадут?</summary>
-          <p>Нет. <code>down</code> удаляет контейнеры, том остаётся, а данные лежат в нём. Новый контейнер подключит тот же том, а загрузчик увидит, что базы уже есть, и ничего не тронет. Данные стирают только <code>down -v</code> и <code>reset</code>.</p>
-        </details>
-        <details>
-          <summary>Почему загрузчик <code>seed</code> не стартует одновременно с сервером?</summary>
-          <p>В <code>compose.yaml</code> загрузчик запускается только после статуса <code>Healthy</code> — когда сервер ответил на проверочный запрос. Сразу после запуска контейнера сервер ещё не принимает запросы, и загрузка упала бы с ошибкой подключения.</p>
-        </details>
-        <details>
-          <summary>Play UI и clickhouse-client показали одни и те же базы. Это один сервер или два?</summary>
-          <p>Один. Play UI приходит к нему через порт 8123 по протоколу HTTP, clickhouse-client — через порт 9000 по собственному протоколу ClickHouse. Сервер, базы и данные те же.</p>
-        </details>
-
-        <h2 id="s14"><span class="sec">§14</span>Шпаргалка и глоссарий</h2>
-        <div class="cheat">
-          <div>
-            <b>Скачать</b>
-            <code>git clone https://github.com/</code>
-            <code>  MaximBytecamp/clickhouse-practice.git</code>
-            <code>cd clickhouse-practice</code>
-          </div>
-          <div>
-            <b>Поднять и проверить</b>
-            <code>docker compose up -d</code>
-            <code>docker compose logs seed   # «Готово»</code>
-            <code>docker compose ps          # healthy</code>
-          </div>
-          <div>
-            <b>Клиенты</b>
-            <code>http://localhost:8123/play</code>
-            <code>  student / student</code>
-            <code>docker compose exec clickhouse clickhouse-client</code>
-          </div>
-          <div>
-            <b>Сброс и остановка</b>
-            <code>docker compose run --rm reset</code>
-            <code>docker compose down       # данные остаются</code>
-            <code>docker compose down -v    # и данные удаляются</code>
-          </div>
-        </div>
-        <details class="more">
-          <summary>10 терминов главы с картинками</summary>
-        <div class="glossary">
-          <article class="gl" id="g-stend">
-            <div class="gl__text">
-              <h3>Стенд</h3>
-              <p class="gl__def">Сервер ClickHouse с заранее загруженными данными, одинаковый у всех. На нём выполняются примеры книги.</p>
-              <p class="gl__ex"><b>Пример</b>контейнер <code>course-clickhouse</code> с базами <code>shop</code>, <code>web</code>, <code>iot</code> и <code>sandbox</code>.</p>
-              <p class="gl__where"><b>Где</b>глава 0.1</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Стенд: сервер и четыре базы"><rect class="sc-ink" x="20" y="14" width="220" height="36" rx="6"/><text class="tw tc" x="130" y="37" style="font:600 13px var(--mono)">ClickHouse 26.8</text><rect class="sc-acc" x="20" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="44" y="91">shop</text><rect class="sc-acc" x="77" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="101" y="91">web</text><rect class="sc-acc" x="134" y="64" width="48" height="44" rx="4"/><text class="tm tc" x="158" y="91">iot</text><rect class="sc-soft" x="191" y="64" width="50" height="44" rx="4"/><text class="t tc" x="216" y="91" style="font-size:10px">sandbox</text></svg></figure>
-          </article>
-          <article class="gl" id="g-docker">
-            <div class="gl__text">
-              <h3>Docker</h3>
-              <p class="gl__def">Программа, которая запускает другие программы в изолированных контейнерах со своей системой Linux внутри. Работает на Windows, macOS и Linux одинаково.</p>
-              <p class="gl__ex"><b>Пример</b><code>docker version</code> показывает клиента (<code>darwin/arm64</code>) и движок (<code>linux/arm64</code>).</p>
-              <p class="gl__where"><b>Где</b>§1, §3</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Docker: на любой системе даёт контейнерам Linux"><rect class="sc-box" x="14" y="12" width="232" height="106" rx="8"/><text class="t" x="26" y="32">Windows · macOS · Linux</text><rect class="sc-acc" x="30" y="44" width="200" height="62" rx="6"/><text class="tb tc" x="130" y="66">Docker</text><text class="tm tc" x="130" y="90">Linux для контейнеров</text></svg></figure>
-          </article>
-          <article class="gl" id="g-obraz">
-            <div class="gl__text">
-              <h3>Образ<i>image</i></h3>
-              <p class="gl__def">Неизменный шаблон, в котором лежит программа со всем нужным для её работы. Скачивается один раз, из него создаются контейнеры.</p>
-              <p class="gl__ex"><b>Пример</b><code>clickhouse/clickhouse-server:26.8.36.3</code>, около 270 МБ при скачивании.</p>
-              <p class="gl__where"><b>Где</b>§1, §5</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Из одного образа создаются два контейнера"><rect class="sc-acc" x="14" y="44" width="90" height="44" rx="6"/><text class="tb tc" x="59" y="71">образ</text><path class="sc-arrow" d="M108 60 L150 34 M142 34 L150 34 L146 41"/><path class="sc-arrow" d="M108 74 L150 100 M146 93 L150 100 L142 100"/><rect class="sc-box" x="154" y="14" width="94" height="38" rx="6"/><text class="tm tc" x="201" y="37">контейнер</text><rect class="sc-box" x="154" y="82" width="94" height="38" rx="6"/><text class="tm tc" x="201" y="105">контейнер</text></svg></figure>
-          </article>
-          <article class="gl" id="g-konteyner">
-            <div class="gl__text">
-              <h3>Контейнер<i>container</i></h3>
-              <p class="gl__def">Запущенная копия программы из образа, отделённая от остальной системы. Его можно остановить, удалить и создать заново.</p>
-              <p class="gl__ex"><b>Пример</b><code>course-clickhouse</code> — сервер, работает всё время; <code>seed</code> — загрузчик, завершается сам.</p>
-              <p class="gl__where"><b>Где</b>§1, §2, §5</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Контейнер: работает или завершён"><rect class="sc-box" x="14" y="24" width="110" height="60" rx="6"/><text class="tm tc" x="69" y="50">course-</text><text class="tm tc" x="69" y="68">clickhouse</text><rect class="sc-acc" x="34" y="92" width="70" height="22" rx="11"/><text class="t tc" x="69" y="108" style="font-size:11px">работает</text><rect class="sc-soft" x="140" y="24" width="106" height="60" rx="6"/><text class="tm tc" x="193" y="59">seed</text><rect class="sc-soft" x="158" y="92" width="70" height="22" rx="11"/><text class="t tc" x="193" y="108" style="font-size:11px">завершён</text></svg></figure>
-          </article>
-          <article class="gl" id="g-tom">
-            <div class="gl__text">
-              <h3>Том<i>volume</i></h3>
-              <p class="gl__def">Папка с данными, которую Docker хранит отдельно от контейнера. Переживает остановку и удаление контейнера; стирается только явно.</p>
-              <p class="gl__ex"><b>Пример</b><code>clickhouse-practice_clickhouse-data</code> — файлы всех баз стенда; удаляется командой <code>docker compose down -v</code>.</p>
-              <p class="gl__where"><b>Где</b>§2, §10</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Контейнер удалён, том остался"><rect class="sc-soft" x="30" y="14" width="200" height="40" rx="6"/><text class="t tc" x="130" y="39">контейнер — удалён и создан заново</text><path class="sc-line" d="M130 58 L130 72"/><rect class="sc-warm" x="50" y="76" width="160" height="40" rx="6"/><text class="tm tc" x="130" y="101">том: данные на месте</text></svg></figure>
-          </article>
-          <article class="gl" id="g-compose">
-            <div class="gl__text">
-              <h3>Docker Compose</h3>
-              <p class="gl__def">Часть Docker, которая поднимает несколько контейнеров по описанию из файла <code>compose.yaml</code>: какие образы, порты, тома и в каком порядке.</p>
-              <p class="gl__ex"><b>Пример</b><code>docker compose up -d</code> — поднять стенд, <code>docker compose ps</code> — что работает.</p>
-              <p class="gl__where"><b>Где</b>§2, §5, §10</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="compose.yaml превращается в контейнеры, том и сеть"><rect class="sc-acc" x="14" y="40" width="96" height="50" rx="6"/><text class="tm tc" x="62" y="70">compose.yaml</text><path class="sc-arrow" d="M114 65 L140 65 M133 59 L140 65 L133 71"/><rect class="sc-box" x="146" y="12" width="100" height="30" rx="5"/><text class="t tc" x="196" y="32">2 контейнера</text><rect class="sc-warm" x="146" y="50" width="100" height="30" rx="5"/><text class="t tc" x="196" y="70">том</text><rect class="sc-soft" x="146" y="88" width="100" height="30" rx="5"/><text class="t tc" x="196" y="108">сеть</text></svg></figure>
-          </article>
-          <article class="gl" id="g-healthy">
-            <div class="gl__text">
-              <h3>Проверка готовности<i>healthcheck</i></h3>
-              <p class="gl__def">Команда, которую Docker регулярно выполняет в контейнере, чтобы узнать, готова ли программа работать. Первый успешный ответ даёт статус <code>healthy</code>.</p>
-              <p class="gl__ex"><b>Пример</b>раз в 3 секунды <code>SELECT 1</code>; у нас <code>Healthy</code> пришёл через 10,9 секунды.</p>
-              <p class="gl__where"><b>Где</b>§5</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Три проверки: две без ответа, третья даёт healthy"><line class="sc-line" x1="20" y1="70" x2="240" y2="70"/><circle class="sc-soft" cx="50" cy="70" r="14"/><circle class="sc-soft" cx="120" cy="70" r="14"/><circle class="sc-acc" cx="190" cy="70" r="14"/><text class="t tc" x="50" y="104">нет</text><text class="t tc" x="120" y="104">нет</text><text class="ta tc" x="190" y="104">healthy</text><text class="t tc" x="130" y="30">SELECT 1 каждые 3 секунды</text></svg></figure>
-          </article>
-          <article class="gl" id="g-port">
-            <div class="gl__text">
-              <h3>Порт и проброс порта</h3>
-              <p class="gl__def">Порт — номер, по которому программа принимает соединения. Проброс — правило Docker: соединения на порт компьютера передаются в порт контейнера.</p>
-              <p class="gl__ex"><b>Пример</b><code>0.0.0.0:8123-&gt;8123/tcp</code> — порт 8123 компьютера ведёт в порт 8123 контейнера.</p>
-              <p class="gl__where"><b>Где</b>§5, §9</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Порт 8123 компьютера ведёт в порт 8123 контейнера"><rect class="sc-acc" x="14" y="46" width="80" height="38" rx="19"/><text class="tb tc" x="54" y="70">8123</text><path class="sc-arrow" d="M98 65 L158 65 M151 59 L158 65 L151 71"/><rect class="sc-ink" x="162" y="26" width="86" height="78" rx="6"/><rect class="sc-acc" x="172" y="46" width="66" height="38" rx="19"/><text class="tb tc" x="205" y="70">8123</text><text class="t tc" x="54" y="108">компьютер</text><text class="tw tc" x="205" y="118" style="font-size:11px">контейнер</text></svg></figure>
-          </article>
-          <article class="gl" id="g-play">
-            <div class="gl__text">
-              <h3>Play UI</h3>
-              <p class="gl__def">Веб-страница для SQL-запросов, встроенная в сервер ClickHouse. Работает в браузере, ставить ничего не нужно.</p>
-              <p class="gl__ex"><b>Пример</b><code>http://localhost:8123/play</code>, вход <code>student</code> / <code>student</code>.</p>
-              <p class="gl__where"><b>Где</b>§7</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Окно браузера: поле запроса, кнопка Run, таблица результата"><rect class="sc-box" x="14" y="10" width="232" height="110" rx="6"/><rect class="sc-soft" x="24" y="20" width="212" height="30" rx="3"/><text class="tm" x="32" y="40">SHOW DATABASES</text><rect class="sc-acc" x="24" y="56" width="40" height="18" rx="2"/><text class="t tc" x="44" y="69" style="font-size:11px">Run</text><line class="sc-line" x1="24" y1="84" x2="236" y2="84"/><line class="sc-line" x1="24" y1="98" x2="236" y2="98"/><line class="sc-line" x1="24" y1="112" x2="236" y2="112"/></svg></figure>
-          </article>
-          <article class="gl" id="g-client">
-            <div class="gl__text">
-              <h3>clickhouse-client</h3>
-              <p class="gl__def">Программа для SQL-запросов в терминале. Подключается к серверу по порту 9000 и печатает результат таблицей в рамке.</p>
-              <p class="gl__ex"><b>Пример</b><code>docker compose exec clickhouse clickhouse-client</code>, приглашение <code>course :)</code>, выход — <code>exit</code>.</p>
-              <p class="gl__where"><b>Где</b>§8</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Терминал с приглашением course и результатом count"><rect class="sc-ink" x="14" y="12" width="232" height="106" rx="6"/><text class="tw" x="26" y="38" style="font:500 12px var(--mono)">course :) SELECT count()</text><text class="tw" x="26" y="58" style="font:500 12px var(--mono)">FROM web.events</text><text style="font:700 13px var(--mono);fill:var(--leaf-bright)" x="26" y="88">│ 10324592 │</text><text class="tw" x="26" y="108" style="font:500 11px var(--mono)">Elapsed: 0.014 sec.</text></svg></figure>
-          </article>
-        </div>
-        </details>
-
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>Стенд — сервер ClickHouse 26.8 в контейнере Docker с базами <code>shop</code>, <code>web</code>, <code>iot</code> и песочницей <code>sandbox</code>.</li>
-          <li>Поднимается командой <code>docker compose up -d</code> из папки репозитория; базы загружает разовый контейнер <code>seed</code>.</li>
-          <li>Данные лежат в томе и переживают перезапуск. Стирают их только <code>reset</code> и <code>down -v</code>.</li>
-          <li>Запросы: браузер — Play UI на порту 8123, терминал — clickhouse-client на порту 9000.</li>
-          <li>Стенд готов, если в <code>web.events</code> 10 324 592 строки, а в <code>iot.readings</code> — 3 174 480.</li>
-        </ul>
-        <p>Docker Desktop на Windows не запускается — следующая глава <a href="../01a-windows-wsl/index.html">0.1а</a>. Всё работает — переходите к 0.2 о клиентах.</p>
-
-        <div class="pager"><a href="../01a-windows-wsl/index.html">0.1а Windows: если Docker Desktop не запускается</a><a href="../02-klienty/index.html">0.2 Клиенты →</a></div>
-
-        <div class="colophon">
-          <span>Глава 0.1 · Стенд: Docker и базы · Справочник по ClickHouse</span>
-          <span class="author-line">Автор: Макаров Максим Николаевич</span>
-        </div>
-      </main>
-    </div>
-  </div>
+      <h2 id="s14"><span class="sec">§10</span>Краткая шпаргалка</h2>
+      <p>Все команды ниже — из папки с <code>compose.yaml</code>. Здесь намеренно нет разрушающих команд: их последствия и условия применения находятся в §7.</p>
+      <div class="cheat">
+        <div><b>Начать и проверить состояния</b><code>docker compose up -d</code><code>docker compose logs seed</code><code>docker compose ps -a</code></div>
+        <div><b>Проверить соединение</b><code>http://localhost:8123/play</code><code>пользователь: student</code><code>пароль: student</code><code>SELECT 1</code></div>
+        <div><b>Остановить без потери данных</b><code>docker compose stop</code><code>docker compose ps -a</code><p>Продолжить — снова <code>up -d</code>.</p></div>
+      </div>
+      <details class="more"><summary>Термины для поиска по главе</summary><dl class="stand-glossary">
+        <dt id="g-stend">Стенд</dt><dd>Сервер, настройки запуска и данные для упражнений — <a href="#s1">§1</a>.</dd>
+        <dt id="g-docker">Docker</dt><dd>Средство запуска контейнеров — <a href="#s1">§1</a>.</dd>
+        <dt id="g-compose">Docker Compose</dt><dd>Управление сервисами по compose.yaml — <a href="#s1">§1</a>.</dd>
+        <dt id="g-obraz">Образ</dt><dd>Шаблон с программой и нужными для неё файлами — <a href="#s2">§2</a>.</dd>
+        <dt id="g-konteyner">Контейнер</dt><dd>Отдельная среда выполнения программы — <a href="#s2">§2</a>.</dd>
+        <dt id="g-tom">Том</dt><dd>Хранилище вне контейнера — <a href="#s2">§2</a>.</dd>
+        <dt id="g-healthy">Healthy</dt><dd>Успешная проверка сервера; не подтверждает наполнение баз — <a href="#s5">§5</a>.</dd>
+        <dt id="g-port">Порт</dt><dd>Номер точки подключения — <a href="#s7">§6</a>.</dd>
+        <dt id="g-play">Play UI</dt><dd>Страница для запросов в браузере — <a href="#s7">§6</a>.</dd>
+        <dt id="g-client">Clickhouse-client</dt><dd>Программа для запросов из терминала — <a href="#s8">проверка без браузера</a>.</dd>
+      </dl></details>
+      <h3>Итог главы</h3>
+      <ul class="short">
+        <li>Если сервер и данные проверены, переходите к <a href="../02-klienty/index.html">0.2 «Клиенты»</a>: там подробно разбираются средства выполнения запросов.</li>
+        <li>Если Docker на Windows не проходит подготовительную проверку, вернитесь к <a href="../01a-windows-wsl/index.html">0.1а</a>; ошибки WSL не исправляются командами очистки баз.</li>
+      </ul>
+      <div class="pager"><a href="../01a-windows-wsl/index.html">0.1а Windows: Docker Desktop и WSL 2</a><a href="../02-klienty/index.html">0.2 Клиенты →</a></div>
+      <div class="colophon"><span>Глава 0.1 · Стенд: Docker и базы · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
+    </main>
+  </div></div>
   <script src="../../book.js"></script>
 </body>
 </html>
