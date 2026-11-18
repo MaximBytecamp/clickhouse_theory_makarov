@@ -21,6 +21,29 @@
       document.documentElement.dataset.os = os;
     })();
   </script>
+  <style>
+    .client-flow { display:grid; grid-template-columns:1fr 100px 1fr; align-items:center; gap:12px; padding:18px; }
+    .client-flow > div:not(.client-flow__arrow) { border:1px solid currentColor; border-radius:8px; padding:18px; min-width:0; }
+    .client-flow b,.client-flow span { display:block; }
+    .client-flow b { margin-bottom:8px; }
+    .client-flow__arrow { text-align:center; line-height:2; font-weight:700; }
+    .table-scroll table { table-layout:fixed; min-width:0; width:100%; }
+    .table-scroll th,.table-scroll td { overflow-wrap:anywhere; }
+    figure.code figcaption { flex-wrap:wrap; }
+    figure.code figcaption span { min-width:0; overflow-wrap:anywhere; }
+    figure.code .copy { margin:0; padding:5px 8px; border:1px solid currentColor; }
+    .client-reference { border-left:3px solid currentColor; padding-left:18px; }
+    .client-reference pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.85em; }
+    .client-reference code { overflow-wrap:anywhere; }
+    @media(max-width:600px) {
+      .client-flow { grid-template-columns:1fr; padding:10px; gap:8px; }
+      .client-flow__arrow { display:flex; justify-content:center; gap:20px; }
+      .client-flow__arrow span:first-child { font-size:0; }
+      .client-flow__arrow span:first-child::after { content:'SQL ↓'; font-size:14px; }
+      .client-flow__arrow span:last-child { font-size:0; }
+      .client-flow__arrow span:last-child::after { content:'ответ ↑'; font-size:14px; }
+    }
+  </style>
 </head>
 <body>
   <div class="book">
@@ -36,334 +59,199 @@
         <header class="chapter-head">
           <span class="chapter-num">0.2</span>
           <h1>Клиенты:<br>Play UI и clickhouse-client</h1>
-          <p class="lead">Запросы к серверу можно отправлять тремя способами: из редактора в браузере, из терминала в том же браузере и из обычного терминала. Разберём, чем они отличаются и где каждый удобнее.</p>
+          <p class="lead">Сервер уже запущен. Теперь отправим ему один запрос из браузера и из терминала, проверим ответ и сохраним результат в файл.</p>
         </header>
 
         <dl class="passport">
-          <div><dt>Категория</dt><dd>Подготовка рабочего места</dd></div>
-          <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>0.1 Стенд · 1.1 Сервер, база, таблица</dd></div>
-          <div><dt>Понадобится</dt><dd>поднятый стенд из главы 0.1</dd></div>
+          <div><dt>Категория</dt><dd>Работа с клиентами</dd></div>
+          <div><dt>Уровень</dt><dd>Первое знакомство</dd></div>
+          <div><dt>Понадобится</dt><dd>работающий стенд из <a href="../01-stend/index.html">главы 0.1</a></dd></div>
+          <div><dt>Проверено</dt><dd>ClickHouse 26.8.36.3, пользователь student</dd></div>
         </dl>
 
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Сервер один, окон три</b><p>Play UI, веб-терминал и clickhouse-client — разные окна к одному серверу и одним данным.</p><p>Ответ на запрос везде одинаковый.</p></div>
-            <div><b data-n="2">Play UI — для чтения</b><p>Таблица с полосками, вкладки, скачивание результата. Показывает до 1000 строк.</p><p>Запуск — <kbd>Ctrl</kbd> + <kbd>Enter</kbd>, на Mac <kbd>Cmd</kbd> + <kbd>Enter</kbd>.</p></div>
-            <div><b data-n="3">Терминал — Enter сразу отправляет</b><p>Каждая строка уходит на сервер отдельным запросом.</p><p>Длинный запрос пишут в одну строку или включают режим <code>-m</code>.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s2"><b>Play UI</b><small>карта экрана</small></a></li>
-            <li><a href="#s4"><b>Несколько запросов</b><small>Run all, вкладки</small></a></li>
-            <li><a href="#s5"><b>Забрать результат</b><small>скачать файл</small></a></li>
-            <li><a href="#s6"><b>Веб-терминал</b><small>в браузере</small></a></li>
-            <li><a href="#s7"><b>clickhouse-client</b><small>в терминале</small></a></li>
-          </ol>
-        </section>
-
-        <nav class="contents">
+        <nav class="contents" aria-label="В этой главе">
           <b>В этой главе</b>
           <ol>
-            <li><a href="#s1">Три окна к одному серверу</a></li>
-            <li><a href="#s2">Карта Play UI</a></li>
-            <li><a href="#s3">Большие таблицы: 1000 строк</a></li>
-            <li><a href="#s4">Несколько запросов сразу</a></li>
-            <li><a href="#s5">Забрать результат файлом</a></li>
-            <li><a href="#s6">Веб-терминал в Play UI</a></li>
-            <li><a href="#s7">clickhouse-client: Enter отправляет</a></li>
-            <li><a href="#s8">Запрос без входа в клиент</a></li>
-            <li><a href="#s9">Что когда выбирать</a></li>
-            <li><a href="#s10">Если не получилось</a></li>
-            <li><a href="#s11">Проверьте себя</a></li>
+            <li><a href="#s1">Кто выполняет запрос</a></li>
+            <li><a href="#s2">Первый ответ в Play UI</a></li>
+            <li><a href="#s3">Тот же запрос в clickhouse-client</a></li>
+            <li><a href="#s4">Когда ввод превращается в запрос</a></li>
+            <li><a href="#s5">Результат, ошибка и статистика</a></li>
+            <li><a href="#s6">Почему контекст USE различается</a></li>
+            <li><a href="#s7">Ограничение числа строк на экране</a></li>
+            <li><a href="#s8">Экспорт без потери строк</a></li>
+            <li><a href="#s9">Как выбрать клиент</a></li>
+            <li><a href="#s10">Частые ошибки</a></li>
+            <li><a href="#s11">Самопроверка и самостоятельная задача</a></li>
             <li><a href="#s12">Шпаргалка</a></li>
           </ol>
         </nav>
 
-        <h2 id="s1"><span class="sec">§1</span>Три окна к одному серверу</h2>
-        <p class="purpose"><b>Зачем это знать</b>Чтобы не путаться: окна разные, а сервер и данные одни. Запрос, который сработал в одном окне, сработает и в другом.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 250" role="img" aria-label="Три клиента — Play UI, веб-терминал и clickhouse-client — обращаются к одному серверу course-clickhouse">
-            <rect class="sc-soft" x="10" y="10" width="380" height="150" rx="10"/>
-            <text class="t" x="24" y="32">браузер · localhost:8123/play</text>
-            <rect class="sc-acc" x="30" y="46" width="160" height="96" rx="6"/><text class="tb tc" x="110" y="80">Play UI</text><text class="t tc" x="110" y="102">редактор</text><text class="t tc" x="110" y="120">и таблица</text>
-            <rect class="sc-ink" x="210" y="46" width="160" height="96" rx="6"/><text class="tw tc" x="290" y="80" style="font:700 14px var(--body)">веб-терминал</text><text class="tw tc" x="290" y="102" style="font:500 12px var(--mono)">course :)</text><text class="tw tc" x="290" y="120" style="font:500 12px var(--body)">в той же странице</text>
-            <rect class="sc-ink" x="30" y="184" width="340" height="56" rx="6"/><text class="tw tc" x="200" y="208" style="font:700 14px var(--body)">clickhouse-client</text><text class="tw tc" x="200" y="228" style="font:500 12px var(--mono)">docker compose exec … · терминал</text>
-            <path class="sc-arrow" d="M394 85 L560 120 M552 113 L560 120 L551 125"/>
-            <path class="sc-arrow" d="M374 212 L560 150 M550 149 L560 150 L553 158"/>
-            <rect class="sc-acc" x="440" y="74" width="70" height="26" rx="13"/><text class="tb tc" x="475" y="92">8123</text>
-            <rect class="sc-acc" x="440" y="178" width="70" height="26" rx="13"/><text class="tb tc" x="475" y="196">9000</text>
-            <rect class="sc-box" x="566" y="90" width="300" height="90" rx="8"/><text class="tb tc" x="716" y="122">сервер course-clickhouse</text><text class="tm tc" x="716" y="146">shop · web · iot · sandbox</text><text class="t tc" x="716" y="166">одни и те же данные</text>
-          </svg>
-          <figcaption>Три клиента и один сервер</figcaption>
-        </figure>
-        <p>Браузер ходит к серверу через порт 8123, клиент в терминале — через 9000. Оба порта ведут в один контейнер, это видно в главе <a href="../01-stend/index.html#s9">0.1</a>.</p>
-
-        <details class="simple">
-          <summary>три окна на примере библиотеки</summary>
-          <div class="vsteps">
-            <div class="vcard is-hot"><i>📖</i><h5>Play UI</h5><b>Читальный зал</b><small>Большой стол: разложить ответ, сравнить, выписать в файл.</small></div>
-            <div class="varr">или</div>
-            <div class="vcard is-dark"><i>🪟</i><h5>терминал</h5><b>Окно выдачи</b><small>Назвали книгу — получили. Быстро, но без стола.</small></div>
-            <div class="varr">а за ними</div>
-            <div class="vcard"><i>🗄️</i><h5>сервер</h5><b>Одно хранилище</b><small>Книги одни и те же, через какое окно ни проси.</small></div>
+        <h2 id="s1"><span class="sec">§1</span>Кто выполняет запрос</h2>
+        <p>Нужно проверить, что запрос дошёл до работающего сервера и ответ вернулся обратно. <b>Клиент</b> — программа, через которую мы отправляем запрос и читаем ответ. <b>Запрос</b> — инструкция серверу на SQL, языке работы с данными. В этой главе достаточно одной инструкции: <code>SELECT 42;</code> просит вернуть число 42. Слово <code>SELECT</code> задаёт получение результата, а точка с запятой обозначает конец инструкции.</p>
+        <p>Посмотрим на весь путь: где находится набранный текст, кто его выполняет и что возвращается при успехе или ошибке.</p>
+        <figure class="pic client-mechanism">
+          <div class="client-flow" role="img" aria-label="Play UI или clickhouse-client передаёт SQL серверу. Сервер возвращает результат либо ошибку тому же клиенту.">
+            <div><b>Клиент</b><span>Play UI в браузере<br>или clickhouse-client в терминале</span></div>
+            <div class="client-flow__arrow"><span>SQL →</span><span>← ответ</span></div>
+            <div><b>Сервер ClickHouse</b><span>Разбирает и выполняет запрос.<br>Возвращает данные либо ошибку.</span></div>
           </div>
-          <p class="simple__map"><b>Что есть что:</b> читальный зал — Play UI с таблицей и скачиванием; окно выдачи — веб-терминал и clickhouse-client; хранилище — сервер со стендовыми базами.</p>
+          <figcaption>Два способа отправки. Выполнение запроса остаётся на сервере.</figcaption>
+        </figure>
+        <p>Пока текст находится только в редакторе, он ещё не передан серверу. После отправки клиент получает ответ и оформляет его по-своему: Play UI строит таблицу на странице, а clickhouse-client печатает её в терминале. Вид таблицы может различаться, хотя значение в ней одно.</p>
+        <details class="simple">
+          <summary>По-простому: заявка в копировальный центр</summary>
+          <p>Заявку можно отправить через сайт или передать сотруднику у стойки. Каналы разные, но работу выполняет тот же центр. В нашей схеме сайт и стойка соответствуют клиентам, текст заявки — SQL, центр — сервер, выданные листы — результат.</p>
+          <p><b>Граница аналогии:</b> в программе ответ может быть показан лишь частично. У выдачи готовых листов такого ограничения нет.</p>
         </details>
 
-        <h2 id="s2"><span class="sec">§2</span>Карта Play UI</h2>
-        <p class="purpose"><b>Зачем это знать</b>Большинство запросов из глав выполняют здесь. Запомним, где что лежит.</p>
-        <p>Откройте <a href="http://localhost:8123/play">localhost:8123/play</a>, войдите как <code>student</code> / <code>student</code> и выполните запрос:</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>пять товаров</span></figcaption>
-<pre>SELECT title, brand, price
-FROM shop.products
-LIMIT 5</pre></figure>
-        <figure class="shot"><img src="../../shots/08-play-map.png" alt="Play UI после запроса: рамки на кнопке новой вкладки, редакторе, кнопке Run, строке итогов, кнопке скачивания, значке баз и значке терминала"><figcaption>Play UI · 1 — новая вкладка, 2 — редактор, 3 — Run, 4 — итог, 5 — скачать, 6 — базы и таблицы, 7 — веб-терминал</figcaption></figure>
-        <div class="vsteps" aria-label="Что где на экране Play UI">
-          <div class="vcard"><h5>пишем</h5><b>2 · редактор</b><small>Запрос можно писать в несколько строк.</small></div>
-          <div class="varr">запуск</div>
-          <div class="vcard is-hot"><h5>отправляем</h5><b>3 · Run</b><small><kbd>Ctrl</kbd> + <kbd>Enter</kbd>, на Mac <kbd>Cmd</kbd> + <kbd>Enter</kbd></small></div>
-          <div class="varr">ответ</div>
-          <div class="vcard"><h5>читаем</h5><b>4 · итог и таблица</b><small>Сколько строк вернулось и за сколько секунд.</small></div>
-        </div>
-        <p class="check">под кнопкой Run написано <code>5 rows in result</code>, а в таблице пять товаров.</p>
-        <details class="more">
-          <summary>остальные кнопки на кадре</summary>
-          <ul class="short">
-            <li><b>1 · «+»</b> — новая вкладка со своим запросом. Вкладки и их запросы браузер сохраняет: после перезагрузки страницы они на месте.</li>
-            <li><b>5 · скачать</b> — результат файлом, разбор в <a href="#s5">§5</a>.</li>
-            <li><b>6 · базы и таблицы</b> — список слева, как на кадрах главы <a href="../01-stend/index.html#s7">0.1</a>.</li>
-            <li><b>7 · веб-терминал</b> — разбор в <a href="#s6">§6</a>.</li>
-            <li><b>Logs</b> и <b>Metrics</b> рядом с итогом — журнал сервера и счётчики для запроса.</li>
-            <li><b>Read 21 rows</b> справа — сколько строк сервер прочитал. Таблица маленькая, поэтому он прочитал её целиком, а вернул пять.</li>
-            <li>Полоски в числовом столбце Play UI рисует сам: чем больше число, тем длиннее полоска.</li>
-          </ul>
-          <p>Текст запроса Play UI записывает в адрес страницы после знака <code>#</code>. Скопированный адрес откроет тот же запрос в другом окне.</p>
-        </details>
+        <h2 id="s2"><span class="sec">§2</span>Первый ответ в Play UI</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Получить короткий ответ, в котором легко проверить каждое значение.</p>
+        <p><b>Play UI</b> — встроенный браузерный клиент ClickHouse. Откройте <a href="http://localhost:8123/play">http://localhost:8123/play</a>. Если в главе 0.1 вы меняли порт HTTP (протокола обмена данными браузера с сервером), используйте свой порт вместо 8123.</p>
+        <p>Параметры подключения находятся в полях над редактором. Если поля скрыты, откройте их кнопкой с ключом справа сверху. В поле адреса должен быть адрес вашего сервера, в полях <code>user</code> и <code>password</code> — <code>student</code> и <code>student</code>. После ввода щёлкните вне панели, чтобы закрыть её.</p>
+        <figure class="shot"><img src="assets/01-connection.png" alt="Реальный Play UI: открыта панель подключения, выделены адрес сервера, пользователь student и скрытое поле пароля" loading="lazy" width="2560" height="640"><figcaption>1 — адрес сервера, 2 — user, 3 — password. На кадрах используется отдельный проверочный сервер с портом 18482; у стандартного стенда порт 8123.</figcaption></figure>
+        <p>В большом поле редактора замените текст на запрос ниже. Нажмите <b>Run</b>.</p>
+        <figure class="code"><figcaption><span>SQL · Play UI</span><span>наш проверочный запрос</span></figcaption><pre>SELECT 42;</pre></figure>
+        <figure class="shot"><img src="assets/02-first-query.png" alt="Play UI после SELECT 42: редактор, кнопка Run, строка статистики 1 rows in result и таблица с единственным значением 42" loading="lazy" width="2560" height="660"><figcaption>1 — текст запроса, 2 — отправка, 3 — статистика, 4 — результат.</figcaption></figure>
+        <p>В таблице заголовок столбца тоже называется <code>42</code>: мы не задавали отдельное имя. Под заголовком находится одна строка со значением 42. Номер строки слева добавлен Play UI для навигации.</p>
+        <p class="check">в таблице одна строка со значением <code>42</code>, а над ней указано <code>1 rows in result</code>. Теперь сравним этот ответ с выводом в терминале.</p>
 
-        <h2 id="s3"><span class="sec">§3</span>Большие таблицы: 1000 строк</h2>
-        <p class="purpose"><b>Зачем это знать</b>В <code>web.events</code> десять миллионов строк. Браузер столько не покажет — Play UI останавливается на тысяче.</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>запрос без LIMIT</span></figcaption>
-<pre>SELECT event_time, event_type
-FROM web.events</pre></figure>
-        <figure class="shot"><img src="../../shots/11-play-1000.png" alt="Play UI: под кнопкой Run надпись 1000+ rows in result, ниже таблица событий"><figcaption>Play UI · 1 — «1000+ rows in result»: показана первая тысяча строк</figcaption></figure>
-        <p>Плюс после числа значит: строк больше, чем на экране. Play UI показал первую тысячу и перестал читать ответ.</p>
-        <p class="check">для просмотра больших таблиц в конце запроса стоит <code>LIMIT 10</code> или другое небольшое число.</p>
+        <h2 id="s3"><span class="sec">§3</span>Тот же запрос в clickhouse-client</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Отделить результат запроса от способа его показа.</p>
+        <p><b>clickhouse-client</b> — клиент для терминала. Откройте терминал в папке <code>clickhouse-practice</code>, где находится <code>compose.yaml</code>. Команда запуска уже встречалась в главе 0.1:</p>
+        <figure class="code"><figcaption><span>Терминал ОС</span><span>запустить клиент в работающем контейнере</span></figcaption><pre>docker compose exec clickhouse clickhouse-client</pre></figure>
+        <p>Здесь <code>docker compose exec</code> запускает программу в уже работающем сервисе, <code>clickhouse</code> — имя сервиса, а <code>clickhouse-client</code> — программа. Новый сервер эта команда не создаёт. Настройка стенда подставляет учётные данные <code>student</code>.</p>
+        <p>Дождитесь приглашения вида <code>course :)</code>. Оно означает, что клиент готов к вводу SQL. Введите тот же <code>SELECT 42;</code> и нажмите <kbd>Enter</kbd>.</p>
+        <figure class="code code--out"><figcaption><span>clickhouse-client</span><span>фрагмент настоящего вывода; служебные строки опущены</span></figcaption><pre>SELECT 42
 
-        <h2 id="s4"><span class="sec">§4</span>Несколько запросов сразу</h2>
-        <p class="purpose"><b>Зачем это знать</b>В упражнениях часто нужно выполнить два-три запроса подряд. Не обязательно стирать и вставлять их по одному.</p>
-        <p>Напишите запросы в одном поле и закончите каждый точкой с запятой. Кнопка Run разделится на две:</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>два запроса в одном поле</span></figcaption>
-<pre>SELECT count() FROM shop.orders;
-SELECT count() FROM shop.customers;</pre></figure>
-        <figure class="shot"><img src="../../shots/09-play-run-all.png" alt="Play UI: кнопки Run one и Run all, под ними два результата: 120 и 20"><figcaption>Play UI · 1 — Run one, 2 — Run all, 3 и 4 — результат каждого запроса</figcaption></figure>
-        <div class="vsteps" aria-label="Run one и Run all">
-          <div class="vcard"><h5>1 · Run one</h5><b>один запрос</b><small>тот, где стоит курсор · <kbd>Ctrl</kbd> + <kbd>Enter</kbd></small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-hot"><h5>2 · Run all</h5><b>все по очереди</b><small>каждый результат — своя таблица · добавьте <kbd>Shift</kbd></small></div>
-        </div>
-        <p class="check">под кнопками две таблицы: 120 заказов и 20 покупателей.</p>
-        <details class="more">
-          <summary>почему USE в Play UI не работает</summary>
-          <p>Каждый запуск в Play UI — отдельное обращение к серверу. Команда <code>USE shop</code> выбирает базу только для своего обращения, а следующий запрос выполняется уже без неё:</p>
-          <figure class="code code--out"><figcaption><span>Play UI</span><span>после USE shop — запрос SELECT count() FROM products</span></figcaption>
-<pre>Code: 60. DB::Exception: Unknown table expression identifier 'products' in scope SELECT count() FROM products. Maybe you meant shop.products?. (UNKNOWN_TABLE) (version 26.8.36.3 (official build))</pre></figure>
-          <p>Поэтому в Play UI имя таблицы пишут вместе с базой: <code>shop.products</code>. Подробнее о <code>USE</code> — в главе <a href="../11-server-baza-tablica/index.html">1.1</a>.</p>
-        </details>
+   ┌─42─┐
+1. │ 42 │
+   └────┘
 
-        <h2 id="s5"><span class="sec">§5</span>Забрать результат файлом</h2>
-        <p class="purpose"><b>Зачем это знать</b>Результат бывает нужен в отчёте или в Excel. Play UI сохраняет его файлом в нужном формате.</p>
-        <span class="phase">Делаем</span>
+1 row in set. Elapsed: 0.002 sec.</pre></figure>
+        <p>Таблица теперь текстовая, но содержит то же значение. <code>1 row in set</code> — одна строка результата. <code>Elapsed</code> — время выполнения, которое сообщает клиент; у вас оно будет другим. Это не сравнение скорости клиентов.</p>
+        <p class="check">вернулось <code>42</code> и снова появилось приглашение для следующего запроса.</p>
+        <p>ОС — операционная система вашего компьютера. В этой главе понадобятся два места ввода:</p>
+        <div class="table-scroll"><table><thead><tr><th>Где вводить</th><th>Что вводить</th></tr></thead><tbody><tr><td>Терминал ОС, до запуска клиента</td><td>Команды <code>docker compose …</code></td></tr><tr><td>Приглашение <code>course :)</code> внутри клиента</td><td>SQL-запросы</td></tr></tbody></table></div>
+        <p>Чтобы вернуться в терминал ОС, введите <code>exit;</code> и нажмите <kbd>Enter</kbd>. Закрытие клиента оставляет сервер работающим. Теперь проверим, как отправлять SQL в несколько строк.</p>
+
+        <h2 id="s4"><span class="sec">§4</span>Когда ввод превращается в запрос</h2>
+        <p>Перенос строки и отправка — разные действия. В Play UI <kbd>Enter</kbd> только переносит строку; отправляет кнопка <b>Run</b>. В интерактивном режиме без дополнительных флагов clickhouse-client короткий запрос отправляется по <kbd>Enter</kbd>, даже без <code>;</code>. Поэтому текст из книги не стоит вручную вводить туда построчно без подготовки.</p>
+        <h3>Многострочный ввод в терминале</h3>
+        <p>Выйдите из клиента и запустите его с <code>-m</code>. Этот флаг включает <b>многострочный режим</b>: переносы остаются частью ввода, а законченный запрос отправляется после <code>;</code> и <kbd>Enter</kbd>.</p>
+        <figure class="code"><figcaption><span>Терминал ОС</span><span>клиент с многострочным вводом</span></figcaption><pre>docker compose exec clickhouse clickhouse-client -m</pre></figure>
+        <p>Для опыта разделите наш запрос на две строки. После первой нажмите <kbd>Enter</kbd>, но не вставляйте сразу весь блок:</p>
+        <figure class="code"><figcaption><span>Внутри clickhouse-client -m</span><span>один запрос в двух строках</span></figcaption><pre>SELECT
+42;</pre></figure>
+        <p class="check">После строки <code>SELECT</code> ответа ещё нет. После <code>42;</code> и <kbd>Enter</kbd> появляется одна таблица со значением 42. Перенос не создал второй запрос.</p>
+        <p>Это правило относится к ручному вводу в проверенной версии клиента. Вставка готового многострочного блока обрабатывается терминалом отдельно; не используйте её для опыта о поведении одиночного нажатия <kbd>Enter</kbd>.</p>
+        <h3>Несколько запросов в Play UI</h3>
+        <p>Теперь в Play UI запишите две самостоятельные инструкции. Число 7 нужно лишь для того, чтобы отличить второй ответ от первого:</p>
+        <figure class="code"><figcaption><span>SQL · Play UI</span><span>два запроса, у каждого свой конец</span></figcaption><pre>SELECT 42;
+SELECT 7;</pre></figure>
+        <p>Появятся кнопки <b>Run one</b> и <b>Run all</b>. Поставьте текстовый курсор (место следующего ввода) во второй запрос и нажмите <b>Run one</b>: появится только ответ 7. </p>
+        <figure class="shot"><img src="assets/08-run-one.png" alt="Play UI после Run one с курсором во втором SELECT: единственная таблица содержит 7" loading="lazy" width="2560" height="680"><figcaption>Run one: результат только второй инструкции — 7.</figcaption></figure>
+        <p>Затем нажмите <b>Run all</b>: клиент разделит текст по инструкциям и отправит их по очереди.</p>
+        <figure class="shot"><img src="assets/03-run-all.png" alt="Play UI: Run one и Run all, после запуска всех запросов видны отдельные результаты SELECT 42 и SELECT 7" loading="lazy" width="2560" height="940"><figcaption>1 — выполнить запрос под курсором; 2 — выполнить все. После Run all каждому запросу соответствует отдельная таблица.</figcaption></figure>
+        <p class="check">После Run all видны две таблицы: сначала 42, затем 7. Не путайте две таблицы по одной строке с одной таблицей из двух строк.</p>
+        <p>В интерактивном clickhouse-client этой версии строка <code>SELECT 42; SELECT 7;</code> тоже выполняется как две инструкции и печатает два ответа. Отправку нескольких инструкций организует клиент; это не один SQL-запрос, возвращающий две таблицы.</p>
+        <details class="more"><summary>Горячие клавиши Play UI</summary><p>Вместо Run / Run one — <kbd>Ctrl</kbd> + <kbd>Enter</kbd>, на macOS — <kbd>Cmd</kbd> + <kbd>Enter</kbd>. Для Run all добавьте <kbd>Shift</kbd>. Подсказка с сочетанием находится рядом с кнопками на кадре.</p></details>
+
+        <h2 id="s5"><span class="sec">§5</span>Результат, ошибка и статистика</h2>
+        <p>С отправкой разобрались. Теперь отправим неверный запрос и посмотрим, как отличается ошибка от успешного ответа без строк.</p>
+        <p><code>missing_column</code> — выдуманное имя, для которого в этом запросе нет значения. Сервер не сможет его определить:</p>
+        <figure class="code"><figcaption><span>SQL · в любом из двух клиентов</span><span>ожидаем ошибку</span></figcaption><pre>SELECT missing_column;</pre></figure>
+        <figure class="shot"><img src="assets/04-error.png" alt="Play UI: вместо таблицы выведена ошибка Code 47, Unknown expression identifier missing_column, UNKNOWN_IDENTIFIER" loading="lazy" width="2560" height="840"><figcaption>Сообщение сервера под редактором. Code: 47 и UNKNOWN_IDENTIFIER помогают определить причину.</figcaption></figure>
+        <p>В clickhouse-client та же причина находится в сообщении <code>Received exception from server</code>, за которым идут <code>Code: 47</code> и <code>UNKNOWN_IDENTIFIER</code>. Подключение состоялось: сервер получил SQL и сообщил причину отказа.</p>
+        <p class="check">После возврата к <code>SELECT 42;</code> ошибка исчезает и появляется таблица. Исправленный запрос нужно отправить заново.</p>
+        <h3>Какие числа сравнивать</h3>
+        <p>Вернитесь к кадру первого успешного запуска. Слева над таблицей Play UI пишет <code>rows in result</code> — число строк результата, справа — <code>Read … rows</code>, то есть сколько строк обработано при чтении. Это разные счётчики: при работе с таблицей сервер может прочитать много строк и вернуть мало. Подробные примеры будут в главе <a href="../11-server-baza-tablica/index.html">1.1</a>.</p>
+        <p>Рядом видны секунды и <code>RAM</code> — показатель использования оперативной памяти запросом. В clickhouse-client итог расположен <em>после</em> таблицы: <code>rows in set</code>, <code>Elapsed</code>, а для запросов с чтением — сведения <code>Processed</code>. Строка <code>Query id</code> — идентификатор конкретного запуска; по нему можно искать запрос при диагностике. Эти показатели описывают выполнение запроса. На результат также влияет контекст подключения — проверим его отдельно.</p>
+
+        <h2 id="s6"><span class="sec">§6</span>Почему контекст USE различается</h2>
+        <p>Кроме текста SQL, на запрос влияет <b>контекст</b> — например, выбранная по умолчанию база. Команда <code>USE shop;</code> выбирает базу <code>shop</code> для текущего сеанса — работы в рамках одного подключения. Функция <code>currentDatabase()</code> возвращает имя выбранной базы. Устройство баз и имён таблиц разберём в <a href="../11-server-baza-tablica/index.html">главе 1.1</a>; здесь проверим только, сохраняется ли выбор между отправками.</p>
+        <p>В Play UI отправьте через Run all:</p>
+        <figure class="code"><figcaption><span>SQL · Play UI</span><span>выбор базы и проверка следующей отправкой</span></figcaption><pre>USE shop;
+SELECT currentDatabase();</pre></figure>
+        <figure class="shot"><img src="assets/05-use-context.png" alt="Play UI: после Run all для USE shop и SELECT currentDatabase() результат второго запроса равен default" loading="lazy" width="2560" height="880"><figcaption>На чистом подключении второй запрос возвращает default: выбор shop из первого запроса не сохранился.</figcaption></figure>
+        <p>Play UI отправляет инструкции отдельными HTTP-запросами без общего SQL-сеанса. Поэтому один <code>USE</code> не задаёт базу для последующих отправок, в том числе внутри Run all. Результат <code>default</code> относится к чистому подключению, как в нашем опыте; при другом заранее выбранном контексте имя может быть другим.</p>
+        <p>В уже открытом clickhouse-client выполните эти же две инструкции последовательно. Там сохраняется соединение и контекст сеанса: второй ответ — <code>shop</code>. После выхода из клиента этот выбор не следует считать сохранённым для следующего запуска.</p>
+        <p class="check">В одном сеансе clickhouse-client проверка возвращает <code>shop</code>, а в Play UI после одного USE — исходную базу подключения. Поэтому в примерах книги имя <code>shop.products</code> указывает базу явно и не зависит от предыдущего USE.</p>
+
+        <h2 id="s7"><span class="sec">§7</span>Ограничение числа строк на экране</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Не сделать вывод о данных по обрезанному представлению.</p>
+        <p>Для опыта не нужна большая таблица. <code>numbers(1500)</code> создаёт при выполнении запроса 1500 строк: столбец <code>number</code> с числами от 0 до 1499. Это генератор строк, он ничего не записывает в базы. <code>FROM</code> указывает источник, из которого <code>SELECT</code> получает значения. Подробный синтаксис чтения оставим следующим главам.</p>
+        <figure class="code"><figcaption><span>SQL · Play UI</span><span>точно известные 1500 строк</span></figcaption><pre>SELECT number FROM numbers(1500);</pre></figure>
+        <figure class="shot"><img src="assets/06-display-limit.png" alt="Play UI для numbers(1500): над таблицей 1000+ rows in result и выделена кнопка скачивания" loading="lazy" width="2560" height="880"><figcaption>1 — признак ограничения просмотра, 2 — переход к скачиванию результата.</figcaption></figure>
+        <p>В проверенной версии Play UI отображает первые 1000 строк и пишет <code>1000+ rows in result</code>. Плюс означает, что ответ показан частично; точное число остальных строк здесь не указано. По этой надписи нельзя узнать размер исходной таблицы или утверждать, что сервер вернул ровно 1000 строк.</p>
+        <p>Здесь полный результат заранее известен по генератору: 1500 строк. На следующем шаге проверим их в файле. Для неизвестной таблицы одного просмотра недостаточно: размер результата зависит и от текста запроса.</p>
+        <details class="more"><summary>В терминале тоже возможен сокращённый показ</summary><p>Не делайте обратный вывод «в терминале всегда видны все строки». У табличного формата семейства <code>Pretty</code> тоже есть ограничение: в стенде <code>output_format_pretty_max_rows</code> по умолчанию равно 1000. Эта настройка ограничивает число напечатанных строк. Для получения полного файла выберем формат, у которого нет такого ограничения печати.</p></details>
+        <p class="check">Вы видите <code>1000+</code>, но ещё не считаете опыт завершённым: нужно получить и проверить оставшиеся 500 строк вне предпросмотра.</p>
+
+        <h2 id="s8"><span class="sec">§8</span>Экспорт без потери строк</h2>
+        <p><b>Экспорт результата</b> — сохранение строк ответа в файл. Файл содержит только ответ конкретного запроса. Для нашего опыта выберем <code>CSVWithNames</code>: значения записываются через запятую, а первая строка содержит названия столбцов.</p>
+        <h3>Скачать через Play UI</h3>
+        <p>Не меняя запрос с <code>numbers(1500)</code>, нажмите значок стрелки вниз справа от строки статистики. В поле <b>Format</b> выберите <b>CSVWithNames</b> и нажмите <b>Download</b>.</p>
+        <figure class="shot"><img src="assets/07-download.png" alt="Реальное меню скачивания Play UI: Format установлен в CSVWithNames, ниже кнопка Download" loading="lazy" width="2560" height="960"><figcaption>1 — формат сохранения, 2 — Download.</figcaption></figure>
+        <p>Браузер получает файл <code>result.csv</code> (при повторном скачивании имя может получить суффикс). Для скачивания отправляется отдельное обращение к серверу за результатом выбранного запроса. В этой версии оно может использовать кеш результата — временно сохранённый ответ. Поэтому нельзя обещать, что скачивание всегда заново вычисляет запрос или обязательно отражает изменения данных после просмотра.</p>
+        <h3>Сохранить через clickhouse-client</h3>
+        <p>Для одного запроса необязательно входить в интерактивный сеанс. Флаг <code>-q</code> передаёт SQL в кавычках и завершает клиент после выполнения, <code>-f</code> выбирает формат ответа. В следующей команде <code>-T</code> отключает выделение терминала Docker, а знак <code>&gt;</code> направляет вывод в файл на вашем компьютере.</p>
+        <figure class="code"><figcaption><span>Терминал ОС · из clickhouse-practice</span><span>не вводить после course :)</span></figcaption><pre>docker compose exec -T clickhouse clickhouse-client -q "SELECT number FROM numbers(1500)" -f CSVWithNames &gt; client-result.csv</pre></figure>
+        <p>Файл появится в текущей папке терминала ОС, не в контейнере. Команда ничего не печатает на экран при успехе, потому что данные направлены в файл. Это само по себе ещё не доказывает успех: сообщение об ошибке может остаться в терминале. Имя выбрано отдельно от браузерного <code>result.csv</code>; если файл <code>client-result.csv</code> уже существует, <code>&gt;</code> перезапишет его.</p>
+        <h3>Проверить оба файла</h3>
+        <p>Откройте CSV в текстовом редакторе с нумерацией строк. Для нашего одностолбцового результата ожидаются:</p>
+        <figure class="code code--out"><figcaption><span>Фрагменты CSV</span><span>многоточие обозначает пропущенные здесь строки, его нет в файле</span></figcaption><pre>"number"
+0
+1
+…
+1498
+1499</pre></figure>
+        <p class="check">В каждом файле 1500 строк данных и один заголовок, первая запись — <code>0</code>, последняя — <code>1499</code>. В опыте с одним числом на запись это 1501 непустая строка текста. Пустая строка, которую редактор может показывать после завершающего перевода строки, не является записью данных.</p>
+        <p>Выбор CSV не отменяет сам SQL: если запрос ограничивает результат или завершается ошибкой, экспорт не восстановит отброшенные данные. Проверка показала: ограничение просмотра Play UI не обрезало экспорт. Осталось выбрать подходящий способ работы для своей задачи.</p>
+
+        <h2 id="s9"><span class="sec">§9</span>Как выбрать клиент</h2>
+        <p>Сопоставим действие и необходимые возможности клиента:</p>
+        <div class="table-scroll"><table><thead><tr><th>Действие</th><th>Клиент и причина выбора</th></tr></thead><tbody>
+          <tr><td>Посмотреть небольшой ответ и исправить SQL</td><td>Play UI: редактор и результат на одной странице.</td></tr>
+          <tr><td>Продолжить работу с выбранной через USE базой</td><td>Один сеанс clickhouse-client сохраняет контекст.</td></tr>
+          <tr><td>Скачать результат вручную</td><td>Play UI: выбор формата в меню Download.</td></tr>
+          <tr><td>Повторять сохранение командой</td><td>clickhouse-client с -q, -f и перенаправлением.</td></tr>
+        </tbody></table></div>
+        <p>Не нужно переносить запрос в другой клиент только из-за ошибки SQL: сервер обнаружит ту же причину. Переход имеет смысл, когда нужен другой способ ввода, контекст сеанса или выдача результата.</p>
+
+        <h2 id="s10"><span class="sec">§10</span>Частые ошибки</h2>
+        <details class="err"><summary>В терминале появился ответ раньше, чем дописан запрос</summary><p>Проверьте, запускали ли клиент с <code>-m</code>. Если нет, выйдите и включите многострочный режим. Уже отправленный фрагмент продолжением не исправить: повторите запрос целиком. Порядок опыта — <a href="#s4">§4</a>.</p></details>
+        <details class="err"><summary>Run one вернул «не тот» ответ</summary><p>Проверьте положение курсора: при нескольких инструкциях оно определяет выбранный запрос. Для двух ответов нужен Run all. Не добавляйте второй SELECT внутрь первого.</p></details>
+        <details class="err"><summary>После USE работает в терминале, но не в Play UI</summary><p>Сравните контекст через <code>currentDatabase()</code>. Для примеров с таблицами используйте явное имя с базой. Не повторяйте USE перед каждым запуском в надежде сохранить HTTP-сеанс — <a href="#s6">§6</a>.</p></details>
+        <details class="err"><summary>CSV создан, но нужных строк в нём нет</summary><p>Проверьте ошибку в терминале, текущую папку и файл, который открыли. Затем сравните SQL с исходным: экспорт сохраняет результат указанного запроса. Если видели 1000+ в Play UI, получите файл через Download.</p></details>
+        <details class="err"><summary>Нет подключения или неверен пароль</summary><p>Убедитесь, что открыли свой адрес и порт, а пользователь указан как <code>student</code>. Если не отвечает и проверка из главы <a href="../01-stend/index.html">0.1</a>, сначала восстановите подключение по ней. Менять SQL при недоступном сервере бессмысленно.</p></details>
+
+        <h2 id="s11"><span class="sec">§11</span>Самопроверка и самостоятельная задача</h2>
+        <details><summary>Два SELECT дали две таблицы по одной строке. Над ними написано 2 rows in result. Получился один ответ с двумя строками?</summary><p>Нет. При Run all это суммарное число строк разных результатов. У каждого SELECT своя таблица. Чтобы понять структуру ответа, нужно проверить границы каждой таблицы.</p></details>
+        <details><summary>В Play UI видно 1000+, а CSV заканчивается числом 1499. Какие данные нужны, чтобы признать экспорт полным?</summary><p>Нужно знать ожидаемый результат запроса. Для <code>numbers(1500)</code> это последовательность от 0 до 1499: проверяем 1500 записей, начало и конец. Одна последняя строка или размер файла в байтах не доказывают отсутствие пропусков.</p></details>
+        <details><summary>После ошибки missing_column вы открыли clickhouse-client. Должен ли тот же SQL теперь сработать?</summary><p>Нет. Сервер отклоняет запрос из-за неизвестного имени. Смена клиента не добавляет этому имени значение. Исправление нужно отправить серверу заново.</p></details>
+        <details><summary>В clickhouse-client выполнили USE shop, вышли и запустили клиент снова. Можно ли полагаться на прежний выбор?</summary><p>Нет: это новый сеанс. Проверяем <code>currentDatabase()</code> или указываем базу явно. История ввода и контекст соединения — не одно и то же.</p></details>
+        <h3>Самостоятельно: проверить передачу полного ответа</h3>
+        <p>Получите числа от 0 до 1249 с помощью <code>numbers(1250)</code>. До запуска запишите, сколько строк ожидаете в результате и как отличите ограничение просмотра от потери данных. Затем:</p>
         <ol class="steps">
-          <li><b>Нажмите кнопку скачивания</b>Значок со стрелкой вниз справа от итога (5 на карте экрана).</li>
-          <li><b>Выберите формат и нажмите Download</b>
-            <figure class="shot"><img src="../../shots/10-play-download.png" alt="Меню скачивания Play UI: поле Format со значением JSONLines и кнопка Download"><figcaption>Play UI · меню скачивания: 1 — формат, 2 — Download</figcaption></figure>
-          </li>
+          <li>Выполните запрос в Play UI и зафиксируйте надпись над таблицей.</li>
+          <li>Сохраните CSV через Play UI и через команду в терминале. Для команды выберите новое имя файла.</li>
+          <li>Сравните количество записей, первую и последнюю записи двух файлов. Сформулируйте, какое ограничение обошёл экспорт.</li>
         </ol>
-        <div class="vsteps" aria-label="Какой формат выбрать">
-          <div class="vcard is-hot"><h5>CSVWithNames</h5><b>для Excel</b><small>значения через запятую, первая строка — названия столбцов</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>JSON · JSONLines</h5><b>для программ</b><small>JSONLines — по объекту на строку, выбран сразу</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>Markdown</h5><b>для отчёта</b><small>готовая таблица для текста</small></div>
-        </div>
-        <p class="check">в папке «Загрузки» появился файл с пятью товарами.</p>
-        <details class="more">
-          <summary>все форматы меню</summary>
-          <p>В списке: CSV, CSVWithNames, TSV, JSON, JSONLines, Parquet, Markdown и Other — там можно вписать любой формат ClickHouse. Для скачивания Play UI выполняет запрос заново, поэтому в файл попадает весь результат, даже если на экране была только первая тысяча строк.</p>
-        </details>
-
-        <h2 id="s6"><span class="sec">§6</span>Веб-терминал в Play UI</h2>
-        <p class="purpose"><b>Зачем это знать</b>Терминал прямо в браузере: ничего не нужно запускать в PowerShell или Терминале. Выручает, если команда <code>docker compose exec</code> не получается.</p>
-        <p>Нажмите значок терминала внизу слева (7 на карте экрана). Сверху откроется чёрная панель с приглашением <code>course :)</code>. Наберите запрос и нажмите <kbd>Enter</kbd>:</p>
-        <figure class="shot"><img src="../../shots/12-play-terminal.png" alt="Веб-терминал Play UI: ClickHouse embedded version 26.8.36.3, запрос SELECT count() FROM web.events и ответ 10324592"><figcaption>Play UI · веб-терминал: тот же клиент, что в обычном терминале</figcaption></figure>
-        <p>Веб-терминал работает так же, как clickhouse-client в обычном терминале: <kbd>Enter</kbd> сразу отправляет строку на сервер.</p>
-        <p class="check">после запроса напечатано <code>10324592</code> и время <code>Elapsed</code>.</p>
-
-        <h2 id="s7"><span class="sec">§7</span>clickhouse-client: Enter отправляет</h2>
-        <p class="purpose"><b>Зачем это знать</b>Здесь чаще всего ошибаются в первый раз. Запрос, набранный в несколько строк, ломается на куски.</p>
-        <p>Откройте клиент, как в главе 0.1:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
-<pre>docker compose exec clickhouse clickhouse-client</pre></figure>
-        <p>В Play UI <kbd>Enter</kbd> переносит строку. В клиенте <kbd>Enter</kbd> сразу отправляет строку на сервер. Попробуем набрать запрос в три строки:</p>
-        <div class="vsteps" aria-label="Запрос в три строки превращается в три запроса">
-          <div class="vcard is-bad"><h5>строка 1 · Enter</h5><b>SELECT title, price</b><small>ушла одна: нет FROM — ошибка</small></div>
-          <div class="varr">дальше</div>
-          <div class="vcard"><h5>строка 2 · Enter</h5><b>FROM shop.products</b><small>ушла одна: вернула всю таблицу, 21 строку</small></div>
-          <div class="varr">дальше</div>
-          <div class="vcard is-bad"><h5>строка 3 · Enter</h5><b>ORDER BY price DESC LIMIT 3;</b><small>ушла одна: синтаксическая ошибка</small></div>
-        </div>
-        <details class="more">
-          <summary>что напечатал клиент на каждую строку</summary>
-          <figure class="code code--out"><figcaption><span>clickhouse-client</span><span>три строки — три запроса; таблица на 21 строку опущена</span></figcaption>
-<pre>course :) SELECT title, price
-…
-Code: 47. DB::Exception: Received from localhost:9000. DB::Exception: Unknown expression identifier `title` in scope SELECT title, price: Note: the query does not have the FROM clause. Did you forget to add it?. (UNKNOWN_IDENTIFIER)
-
-course :) FROM shop.products
-
-SELECT *
-FROM shop.products
-…
-21 rows in set. Elapsed: 0.004 sec.
-
-course :) ORDER BY price DESC LIMIT 3;
-
-Syntax error: failed at position 1 (ORDER):</pre></figure>
-          <p>Вторая строка сработала неожиданно: ClickHouse разрешает начать запрос с <code>FROM</code> и тогда достраивает <code>SELECT *</code> — это видно в повторе запроса.</p>
-        </details>
-        <p>Выхода два. Короткий запрос пишут в одну строку. Для длинного запускают клиент с флагом <code>-m</code> — «многострочный режим». Тогда <kbd>Enter</kbd> переносит строку, а запрос уходит на сервер, когда строка кончается точкой с запятой:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>многострочный режим</span></figcaption>
-<pre>docker compose exec clickhouse clickhouse-client -m</pre></figure>
-        <figure class="code code--out"><figcaption><span>clickhouse-client -m</span><span>три строки — один запрос</span></figcaption>
-<pre>course :) SELECT title, price
-FROM shop.products
-ORDER BY price DESC LIMIT 3;
-
-SELECT
-    title,
-    price
-FROM shop.products
-ORDER BY price DESC
-LIMIT 3
-
-Query id: 6cebe9a8-8707-4616-8403-f693dc76ee3f
-
-   ┌─title────────────────────────┬──price─┐
-1. │ Ноутбук Apple MacBook Air 13 │ 114990 │
-2. │ Ноутбук Acer Nitro V15       │  89990 │
-3. │ Смартфон Apple iPhone 15     │  79990 │
-   └──────────────────────────────┴────────┘
-
-3 rows in set. Elapsed: 0.009 sec.</pre></figure>
-        <p class="check">три строки ушли одним запросом, и клиент вернул три самых дорогих товара.</p>
-        <details class="more">
-          <summary>удобства клиента: история, вертикальный вывод, выход</summary>
-          <ul class="short">
-            <li>Стрелки <kbd>↑</kbd> и <kbd>↓</kbd> листают прошлые запросы.</li>
-            <li><code>\G</code> в конце запроса вместо <code>;</code> печатает каждую строку столбиком «поле: значение». Так легче читать строку, когда столбцов много. Подробнее — в главе <a href="../11-server-baza-tablica/index.html">1.1</a>.</li>
-            <li><code>exit</code> или <kbd>Ctrl</kbd> + <kbd>D</kbd> — выйти из клиента. Сервер продолжает работать.</li>
-          </ul>
-        </details>
-
-        <h2 id="s8"><span class="sec">§8</span>Запрос без входа в клиент</h2>
-        <p class="purpose"><b>Зачем это знать</b>Иногда нужен один ответ: проверить число или сохранить результат в файл. Входить в клиент ради этого не обязательно.</p>
-        <p>Флаг <code>-q</code> выполняет один запрос и сразу выходит. Флаг <code>-f</code> выбирает, как напечатать ответ. Один и тот же запрос в трёх форматах:</p>
-        <figure class="code"><figcaption><span>Терминал</span><span>из папки репозитория</span></figcaption>
-<pre>docker compose exec clickhouse clickhouse-client -q "SELECT title, price FROM shop.products ORDER BY price DESC LIMIT 3"</pre></figure>
-        <div class="vsteps" aria-label="Один запрос в трёх форматах">
-          <div class="vcard"><h5>без -f</h5><b>TabSeparated</b><small>значения через табуляцию, без рамки — для других программ</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-hot"><h5>-f PrettyCompact</h5><b>таблица в рамке</b><small>как в интерактивном клиенте — для чтения глазами</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>-f CSVWithNames</h5><b>CSV с заголовком</b><small>для Excel и файлов</small></div>
-        </div>
-        <details class="more">
-          <summary>как выглядит ответ в каждом формате</summary>
-          <figure class="code code--out"><figcaption><span>Вывод</span><span>без -f</span></figcaption>
-<pre>Ноутбук Apple MacBook Air 13	114990
-Ноутбук Acer Nitro V15	89990
-Смартфон Apple iPhone 15	79990</pre></figure>
-          <figure class="code code--out"><figcaption><span>Вывод</span><span>-f PrettyCompact</span></figcaption>
-<pre>   ┌─title────────────────────────┬──price─┐
-1. │ Ноутбук Apple MacBook Air 13 │ 114990 │
-2. │ Ноутбук Acer Nitro V15       │  89990 │
-3. │ Смартфон Apple iPhone 15     │  79990 │
-   └──────────────────────────────┴────────┘</pre></figure>
-          <figure class="code code--out"><figcaption><span>Вывод</span><span>-f CSVWithNames</span></figcaption>
-<pre>"title","price"
-"Ноутбук Apple MacBook Air 13",114990
-"Ноутбук Acer Nitro V15",89990
-"Смартфон Apple iPhone 15",79990</pre></figure>
-          <p>Чтобы сохранить ответ в файл, допишите в конце команды <code>&gt; top3.csv</code>. Флаг <code>-T</code> после <code>exec</code> говорит Docker не открывать интерактивный терминал: для записи в файл он не нужен.</p>
-          <figure class="code"><figcaption><span>Терминал</span><span>ответ в файл</span></figcaption>
-<pre>docker compose exec -T clickhouse clickhouse-client -q "SELECT title, price FROM shop.products ORDER BY price DESC LIMIT 3" -f CSVWithNames &gt; top3.csv</pre></figure>
-        </details>
-
-        <h2 id="s9"><span class="sec">§9</span>Что когда выбирать</h2>
-        <div class="life">
-          <div><code>Play UI</code><p>Почти все запросы книги: видно таблицу, можно скачать файл.</p><div class="life__keep"><span class="y">таблица</span><span class="y">файл</span><span class="y">вкладки</span></div></div>
-          <div><code>веб-терминал</code><p>Нужен клиент, а запускать команды в терминале не хочется.</p><div class="life__keep"><span class="y">без Docker-команд</span></div></div>
-          <div><code>clickhouse-client</code><p>Длинные сеансы, история запросов, ответ сразу в файл.</p><div class="life__keep"><span class="y">-m</span><span class="y">-q</span><span class="y">-f</span></div></div>
-        </div>
-
-        <h2 id="s10"><span class="sec">§10</span>Если не получилось</h2>
-        <details class="err"><summary>Запрос в несколько строк в клиенте<small>Note: the query does not have the FROM clause. Did you forget to add it?. (UNKNOWN_IDENTIFIER)</small></summary><p>Клиент отправил первую строку отдельно. Наберите запрос в одну строку или запустите клиент с <code>-m</code> и закончите запрос точкой с запятой — <a href="#s7">§7</a>.</p></details>
-        <details class="err"><summary>Таблица без базы в Play UI<small>Unknown table expression identifier 'products' … Maybe you meant shop.products?. (UNKNOWN_TABLE)</small></summary><p>Play UI не помнит <code>USE</code> между запусками. Пишите имя с базой: <code>shop.products</code> — <a href="#s4">§4</a>.</p></details>
-        <details class="err"><summary>Строк меньше, чем ожидали<small>1000+ rows in result</small></summary><p>Play UI показывает не больше тысячи строк. Добавьте <code>LIMIT</code> или скачайте результат файлом — <a href="#s3">§3</a>, <a href="#s5">§5</a>.</p></details>
-        <details class="err"><summary>Клиент не запускается<small>service "clickhouse" is not running</small></summary><p>Стенд остановлен. Выполните <code>docker compose up -d</code> из папки репозитория.</p></details>
-        <details class="err"><summary>Неверный пароль<small>Authentication failed: password is incorrect, or there is no user with such name. (AUTHENTICATION_FAILED)</small></summary><p>Пользователь и пароль — <code>student</code> строчными латинскими буквами. Кадр ошибки — в главе <a href="../01-stend/index.html#s12">0.1</a>.</p></details>
-
-        <h2 id="s11"><span class="sec">§11</span>Проверьте себя</h2>
-        <details>
-          <summary>Почему в clickhouse-client запрос в три строки дал две ошибки?</summary>
-          <p>Без флага <code>-m</code> каждое нажатие <kbd>Enter</kbd> отправляет строку на сервер. Три строки стали тремя отдельными запросами: в первом нет <code>FROM</code>, третий начинается с <code>ORDER BY</code>.</p>
-        </details>
-        <details>
-          <summary>Как выполнить два запроса в Play UI одним нажатием?</summary>
-          <p>Написать их в одном поле через точку с запятой и нажать <b>Run all</b> или <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd>. Каждый результат будет отдельной таблицей.</p>
-        </details>
-        <details>
-          <summary>Play UI написал «1000+ rows in result». Как получить все строки?</summary>
-          <p>Скачать результат кнопкой со стрелкой вниз: в файл попадает весь ответ. Для просмотра глазами лучше сузить запрос через <code>LIMIT</code>.</p>
-        </details>
+        <details><summary>Критерии проверки</summary><p>Ожидаются 1250 записей данных, от 0 до 1249, и заголовок <code>number</code> в обоих CSV. Play UI показывает <code>1000+</code>. Экспорт позволяет получить полный результат вместо ограниченного экранного представления. Текст SQL остаётся тем же. Для этого одностолбцового опыта проверьте также, что числа идут подряд без пропусков.</p></details>
 
         <h2 id="s12"><span class="sec">§12</span>Шпаргалка</h2>
-        <div class="cheat">
-          <div>
-            <b>Play UI</b>
-            <code>localhost:8123/play   student / student</code>
-            <code>Ctrl+Enter         выполнить</code>
-            <code>Ctrl+Shift+Enter   выполнить все</code>
-          </div>
-          <div>
-            <b>Клиент</b>
-            <code>docker compose exec clickhouse clickhouse-client</code>
-            <code>  -m     запрос до «;»</code>
-            <code>exit     выйти</code>
-          </div>
-          <div>
-            <b>Один запрос</b>
-            <code>… clickhouse-client -q "SELECT …"</code>
-            <code>  -f PrettyCompact   таблица</code>
-            <code>  -f CSVWithNames    CSV</code>
-          </div>
+        <div class="client-reference">
+          <p><b>В браузере:</b> <code>http://localhost:8123/play</code> · <code>student / student</code>.<br>Один запрос — Run; при нескольких — Run one под курсором или Run all.</p>
+          <p><b>В терминале ОС:</b></p>
+          <pre>docker compose exec clickhouse clickhouse-client -m</pre>
+          <p><b>Внутри клиента:</b> закончить SQL — <code>;</code> и Enter; вернуться в ОС — <code>exit;</code> и Enter.</p>
+          <p><b>Файл из ОС:</b> <code>docker compose exec -T clickhouse clickhouse-client -q "SQL" -f CSVWithNames &gt; новое-имя.csv</code>. Перед записью выберите несуществующее имя.</p>
         </div>
+        <p><b>Глава пройдена, если</b> вы получили одинаковый ответ в двух клиентах и нашли сообщение о неверном SQL. Полноту CSV вы можете подтвердить проверкой записей файла.</p>
 
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>Play UI, веб-терминал и clickhouse-client — три окна к одному серверу.</li>
-          <li>В Play UI видно до 1000 строк. Несколько запросов выполняет Run all, весь результат сохраняет кнопка скачивания.</li>
-          <li>В клиенте <kbd>Enter</kbd> сразу отправляет строку. Для длинных запросов — флаг <code>-m</code> и точка с запятой в конце.</li>
-          <li><code>-q</code> выполняет один запрос без входа в клиент, <code>-f</code> выбирает формат ответа.</li>
-        </ul>
-
-        <div class="pager"><a href="../01a-windows-wsl/index.html">← 0.1а Windows: Docker Desktop и WSL 2</a><a href="../../index.html">К содержанию справочника</a></div>
-
-        <div class="colophon">
-          <span>Глава 0.2 · Клиенты: Play UI и clickhouse-client · Справочник по ClickHouse</span>
-          <span class="author-line">Автор: Макаров Максим Николаевич</span>
-        </div>
+        <div class="pager"><a href="../01a-windows-wsl/index.html">← 0.1а Windows: Docker Desktop и WSL 2</a><a href="../11-server-baza-tablica/index.html">1.1 Сервер, база, таблица →</a></div>
+        <div class="colophon"><span>Глава 0.2 · Клиенты: Play UI и clickhouse-client · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
       </main>
     </div>
   </div>
