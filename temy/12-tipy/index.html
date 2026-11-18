@@ -9,455 +9,213 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../styles.css">
+  <style>
+    .type-flow {display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center;margin:20px 0;padding:20px;border:1px solid var(--rule);border-radius:8px;background:var(--leaf-pale)}
+    .type-flow > div {min-width:0;overflow-wrap:anywhere}
+    .type-flow b,.type-flow code,.type-flow small {display:block}
+    .type-flow small {margin-top:6px;color:var(--ink-soft)}
+    .type-flow .arrow {font-size:24px;color:var(--leaf);text-align:center}
+    .type-note {border-left:3px solid var(--leaf);padding:8px 16px;margin:20px 0}
+    @media(max-width:600px){.type-flow{grid-template-columns:minmax(0,1fr);gap:8px;padding:16px}.type-flow .arrow{transform:rotate(90deg)}.leaf{min-width:0}.table-scroll{max-width:100%}.shot figcaption{overflow-wrap:anywhere}}
+  </style>
 </head>
 <body>
-  <div class="book">
-    <div class="book__body">
-      <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+<div class="book"><div class="book__body">
+  <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+  <main class="leaf">
+    <div class="running"><p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 1 · первые данные</p><p class="running__folio">Глава 1.2</p></div>
+    <header class="chapter-head"><span class="chapter-num">1.2</span><h1>Типы данных</h1><p class="lead">Нужно сохранить позицию заказа: количество, сумму, название, дату доставки, время заказа и код товара. Выберем для каждого значения тип так, чтобы не потерять копейки, ведущие нули и нужную точность времени.</p></header>
+    <dl class="passport">
+      <div><dt>Категория</dt><dd>Первые данные</dd></div><div><dt>Уровень</dt><dd>Начальный</dd></div>
+      <div><dt>Уже знаете</dt><dd>База, таблица, строка, столбец; SELECT и DESCRIBE</dd></div><div><dt>Понадобится</dt><dd>Стенд 26.8.36.3; Play UI или clickhouse-client</dd></div>
+    </dl>
+    <section class="gist" aria-label="Задача главы"><p class="gist__head">Что предстоит решить</p><p>Магазин принимает до 50 000 единиц товара в одной позиции, сумма позиции — не больше 5 000 000 рублей с копейками. Названия произвольные, доставка назначается на день, время заказа известно до секунды. В коде товара <code>00127</code> начальные нули значимы.</p><ol class="route" aria-label="Шаги главы"><li><a href="#s3"><b>Количество</b><small>знак и диапазон</small></a></li><li><a href="#s4"><b>Сумма</b><small>точность и масштаб</small></a></li><li><a href="#s6"><b>Название</b><small>байты и символы</small></a></li><li><a href="#s7"><b>Дата и время</b><small>день, секунда, пояс</small></a></li><li><a href="#s8"><b>Код товара</b><small>не количество</small></a></li></ol></section>
+    <nav class="contents"><b>В этой главе</b><ol>
+      <li><a href="#s1">От значения к типу</a></li><li><a href="#s2">Как проверить выбранный тип</a></li><li><a href="#s3">Количество: Int и UInt</a></li><li><a href="#s4">Дробные значения: где Float теряет точность</a></li><li><a href="#s5">Денежная сумма: Decimal</a></li><li><a href="#s6">Название: String, байты и символы</a></li><li><a href="#s7">День доставки и момент заказа</a></li><li><a href="#s8">Идентификатор: почему цифры не всегда число</a></li><li><a href="#s9">Нужны ли специальные типы</a></li><li><a href="#s10">Собираем схему позиции заказа</a></li><li><a href="#s11">Частые ошибки</a></li><li><a href="#s12">Самопроверка и самостоятельная задача</a></li><li><a href="#s13">Краткая шпаргалка</a></li>
+    </ol></nav>
 
-      <main class="leaf">
-        <div class="running">
-          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 1 · первые данные</p>
-          <p class="running__folio">Глава 1.2</p>
-        </div>
+    <h2 id="s1"><span class="sec">§1</span>От значения к типу</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Одинаково записанные значения могут требовать разных правил хранения: количество <code>127</code> и код товара <code>00127</code> используют по-разному.</p>
+    <p><b>Тип данных</b> задаёт множество допустимых значений, их внутреннее представление и операции над ними. Для количества требуются арифметика и верхняя граница; для кода товара — сохранение записи. Поэтому сначала выясняют смысл значения и требования ко всему столбцу.</p>
+    <p>Проверим ход выбора на количестве. Недостаточно увидеть в первой строке число 3: нужно учесть весь разрешённый диапазон.</p>
+    <figure class="pic"><div class="type-flow" role="img" aria-label="Количество товара: требование от нуля до 50000 штук ведёт к беззнаковому целому UInt16 и проверке границ"><div><b>Смысл и требования</b><code>0…50 000 штук</code><small>Только целые; отрицательных количеств нет.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Представление</b><code>Целое без минуса</code><small>Выбранное представление: максимум 65 535.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Проверка</b><code>50 000 помещается</code><small>Дополнительно проверяем, как обнаруживать выход за границу.</small></div></div><figcaption>Выбор представления для количества до 50 000.</figcaption></figure>
+    <p>Получившийся тип покрывает заявленный максимум. Он не запрещает количество 60 000: это уже нарушение правила магазина, но ещё помещается в выбранное представление. Тип не заменяет все проверки данных.</p>
+    <details class="simple"><summary>По-простому: тара для отмеренного количества</summary><p>Для доставки жидкости сначала узнают объём и допустимы ли доли литра, а затем выбирают мерную тару. Надпись «3 литра» на первой заявке не означает, что все будущие заявки поместятся в трёхлитровую ёмкость.</p><p><b>Что есть что:</b> объём заявки — значение; вместимость и деления — диапазон и точность типа. <b>Граница аналогии:</b> жидкость при избытке выливается, а преобразование в ClickHouse может вернуть другое число или ошибку. Конкретное поведение проверяют отдельным запросом.</p></details>
+    <p>Для такой проверки сначала понадобится функция, показывающая тип результата.</p>
 
-        <header class="chapter-head">
-          <span class="chapter-num">1.2</span>
-          <h1>Типы данных</h1>
-          <p class="lead">В главе — типы столбцов ClickHouse: целые и дробные числа, деньги, текст, даты, «да или нет», идентификаторы и списки значений. Для каждого — что в нём помещается, сколько он весит и где он подводит.</p>
-        </header>
+    <h2 id="s2"><span class="sec">§2</span>Как проверить выбранный тип</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Отделим тип числа в тексте запроса от типа, который нужен в будущей таблице.</p>
+    <p>Функция <code>toTypeName(выражение)</code> возвращает имя типа. <b>Функция</b> получает значения в скобках и вычисляет результат. <code>toUInt16(значение)</code> преобразует значение в беззнаковое целое с 16 битами. <code>SELECT</code> без <code>FROM</code> вычисляет выражения без чтения таблицы; <code>AS</code> задаёт имя столбца ответа.</p>
+    <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>тип литерала и выбранный тип</span></figcaption><pre>SELECT toTypeName(42) AS literal_type,
+       toTypeName(toUInt16(42)) AS chosen_type</pre></figure>
+    <figure class="shot"><img src="assets/typename.png" alt="Play UI с кнопкой Run и запросом: literal_type UInt8, chosen_type UInt16" loading="lazy"><figcaption>Тип целого литерала 42 и тип после явного преобразования.</figcaption></figure>
+    <p>Ответ: <code>UInt8</code> и <code>UInt16</code>. <b>Литерал</b> — значение, записанное прямо в запросе, например <code>42</code> или <code>'Ноутбук'</code>. Для положительного целого литерала сервер подбирает небольшой подходящий тип; это не рекомендация для всего столбца.</p>
+    <p class="type-note">Все следующие запросы только вычисляют значения: они не создают таблицы и не меняют данные. В Play UI из главы 0.2 замените текст запроса и нажмите <b>Run</b>. Кадры сняты на ClickHouse <b>26.8.36.3</b>, часовой пояс сервера — <b>UTC</b>. Запускайте каждый пример отдельно.</p>
+    <p class="check">в первом столбце ответа — <code>UInt8</code>, во втором — <code>UInt16</code>. Одно значение 42 представимо в обоих типах.</p>
+    <p>Теперь проверим диапазоны целых и результат выхода за их границы.</p>
 
-        <dl class="passport">
-          <div><dt>Категория</dt><dd>Первые данные</dd></div>
-          <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>1.1 Сервер, база, таблица · 1.3 Пустое значение · 1.4 CREATE TABLE</dd></div>
-          <div><dt>Понадобится</dt><dd>поднятый стенд, Play UI или clickhouse-client</dd></div>
-        </dl>
+    <h2 id="s3"><span class="sec">§3</span>Количество: Int и UInt</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>В оптовом заказе количество достигает 50 000 штук. Проверим, какие целые типы покрывают этот максимум.</p>
+    <p><code>Int</code> — целое со знаком: допускает минус. <code>UInt</code> — целое без знака: от нуля вверх. Число в имени — количество <b>битов</b>, двоичных разрядов. В одном байте 8 бит. У типа с n битами есть 2<sup>n</sup> комбинаций: <code>UInt</code> использует их для неотрицательных чисел, <code>Int</code> — для отрицательных и неотрицательных.</p>
+    <div class="table-scroll"><table><thead><tr><th>Тип</th><th>Байт на значение</th><th>Допустимый диапазон</th><th>Решение для нашей задачи</th></tr></thead><tbody>
+      <tr><td><code>UInt8</code></td><td>1</td><td>0…255</td><td>Не подходит для 50 000 штук</td></tr><tr><td><code>Int8</code></td><td>1</td><td>−128…127</td><td>Знак сокращает положительную часть диапазона</td></tr><tr><td><code>UInt16</code></td><td>2</td><td>0…65 535</td><td>Подходит для количества</td></tr><tr><td><code>Int16</code></td><td>2</td><td>−32 768…32 767</td><td>50 000 уже не помещается</td></tr><tr><td><code>UInt32</code></td><td>4</td><td>0…4 294 967 295</td><td>Нужен, если количество превысит 65 535</td></tr><tr><td><code>Int32</code></td><td>4</td><td>−2 147 483 648…2 147 483 647</td><td>Например, изменение остатка до ±50 000</td></tr>
+    </tbody></table></div>
+    <p>Это размеры представления значений, не размер сжатой таблицы на диске. Более широкие целые есть, но для заявленных количеств они не нужны.</p>
+    <p>Теперь проверим не только допустимое значение, но и ошибочный выбор узкого типа.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>границы и преобразование</span></figcaption><pre>SELECT toUInt8(255) AS fits,
+       toUInt8(256) AS wrapped,
+       toUInt8(-1) AS negative,
+       toInt8(128) AS signed,
+       toUInt16(50000) AS qty</pre></figure>
+    <figure class="shot"><img src="assets/integers.png" alt="Play UI: fits 255, wrapped 0, negative 255, signed −128, qty 50000" loading="lazy"><figcaption>Результат преобразований: 50 000 сохранено в UInt16, а три значения за границами узких типов изменились без ошибки.</figcaption></figure>
+    <p>Здесь <b>переполнение</b> означает, что число вышло за диапазон целевого типа. При этих преобразованиях сохраняются младшие 8 бит: у 256 двоичная запись <code>1 0000 0000</code>, после удаления старшего разряда остаются восемь нулей. Для <code>Int8</code> комбинация, соответствующая 128 без знака, читается как −128.</p>
+    <p>Если нужно обнаружить выход за диапазон, используйте <code>accurateCast(значение, 'Тип')</code> — преобразование с проверкой представимости. Имя типа здесь передаётся строкой.</p>
+    <figure class="code"><figcaption><span>Отдельный запрос</span><span>ожидается ошибка</span></figcaption><pre>SELECT accurateCast(256, 'UInt8')</pre></figure>
+    <figure class="shot"><img src="assets/strict-error.png" alt="Play UI: accurateCast(256, UInt8) завершился ошибкой Code 70 CANNOT_CONVERT_TYPE" loading="lazy"><figcaption>Проверка представимости значения 256 в UInt8.</figcaption></figure>
+    <p>На проверенном стенде ответ — <code>Code: 70</code>, <code>CANNOT_CONVERT_TYPE</code>: 256 нельзя безопасно представить в <code>UInt8</code>. Такой результат нельзя принять за успешную загрузку значения.</p>
+    <p class="type-note">Вывод о молчаливом изменении относится к показанным <code>toUInt8</code> и <code>toInt8</code>. Он не описывает любой <code>INSERT</code>: поведение зависит от способа вставки, формата и настроек. Загрузка данных — глава 1.5.</p>
+    <p class="check">ответ первого запроса — <code>255, 0, 255, -128, 50000</code>, второго — ошибка. Для количества до 50 000 без минуса выбран <code>UInt16</code>; для изменения остатка с минусом понадобился бы <code>Int32</code>.</p>
+    <p>Количество определено. Для суммы с копейками нужно проверить точность дробного представления.</p>
 
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Тип — правило и размер</b><p>Тип решает, что можно положить в столбец и сколько байт займёт каждое значение.</p><p>Умножьте байты на 10 миллионов строк — и выбор типа становится заметен.</p></div>
-            <div><b data-n="2">Целые переполняются молча</b><p><code>toUInt8(256)</code> даёт <b>0</b> без всякой ошибки.</p><p>Берите тип с запасом по диапазону.</p></div>
-            <div><b data-n="3">Деньги — не во Float</b><p>Миллион раз по 0,1 во Float — <b>100000.00000000528</b>, в Decimal — ровно <b>100000</b>.</p><p>Для денег — Decimal или целые рубли.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s2"><b>Узнать тип</b><small>toTypeName</small></a></li>
-            <li><a href="#s3"><b>Целые</b><small>UInt и Int</small></a></li>
-            <li><a href="#s4"><b>Дробные</b><small>Float и Decimal</small></a></li>
-            <li><a href="#s7"><b>Даты</b><small>Date и DateTime</small></a></li>
-            <li><a href="#s9"><b>Список значений</b><small>Enum</small></a></li>
-          </ol>
-        </section>
+    <h2 id="s4"><span class="sec">§4</span>Дробные значения: где Float теряет точность</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>У суммы есть копейки. Прежде чем выбирать дробный тип, проверим, сохраняет ли он нужные десятичные значения.</p>
+    <p>На линейке с миллиметровыми делениями длину между рисками записывают с округлением. У дробного типа тоже есть ограничение представимости; у Float доступный шаг зависит от величины числа, поэтому равномерная шкала линейки объясняет лишь сам факт округления.</p>
+    <p><code>Float32</code> и <code>Float64</code> — числа с <b>плавающей точкой</b>: хранят двоичные значащие цифры и порядок, задающий положение точки. Они представляют широкий диапазон величин, но с ограниченной точностью. Примерно это 7 значащих десятичных цифр у Float32 и 15–16 у Float64. Это точность всего числа, включая целую часть. Конечные значения имеют порядок до 10<sup>38</sup> и 10<sup>308</sup> соответственно; представлены не все числа между границами.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>погрешность и потеря целого разряда</span></figcaption><pre>SELECT 0.1 + 0.2 AS total,
+       0.1 + 0.2 = 0.3 AS equal,
+       toFloat32(16777217) AS rounded</pre></figure>
+    <figure class="shot"><img src="assets/float.png" alt="Play UI: total 0.30000000000000004, equal 0, rounded 16777216" loading="lazy"><figcaption>Float64 не дал точного десятичного равенства; Float32 изменил большое целое на единицу.</figcaption></figure>
+    <p>Дробные литералы здесь имеют тип <code>Float64</code>. Десятичная 0,1 в двоичной системе — бесконечная дробь, подобно 1/3 в десятичной. Для хранения её округляют до доступных разрядов. Поэтому сумма равна <code>0.30000000000000004</code>, а сравнение с <code>0.3</code> возвращает <code>0</code> — ложь. Это результат сравнения самих значений, которое выполняется до отображения.</p>
+    <p>Float подходит для измерений, если его погрешность меньше допустимой погрешности данных: например, для температуры с точностью до десятых градуса. При больших величинах доступный шаг между соседними числами увеличивается — это видно по третьему столбцу. Для суммы, которая должна точно хранить копейки, выберем другое представление. Скорость типов этот опыт не сравнивает.</p>
+    <p class="check">получены хвост у суммы, ложное равенство и <code>16777216</code> вместо <code>16777217</code>. Критерий выбора Float — допустимая погрешность во всём рабочем диапазоне.</p>
+    <p>Для суммы с точными копейками рассмотрим хранение десятичных разрядов через целое число.</p>
 
-        <nav class="contents">
-          <b>В этой главе</b>
-          <ol>
-            <li><a href="#s1">Зачем столбцу тип</a></li>
-            <li><a href="#s2">Шаг 1. Узнать тип значения</a></li>
-            <li><a href="#s3">Шаг 2. Целые числа</a></li>
-            <li><a href="#s4">Шаг 3. Дробные числа: Float</a></li>
-            <li><a href="#s5">Деньги: Decimal</a></li>
-            <li><a href="#s6">Текст: String</a></li>
-            <li><a href="#s7">Шаг 4. Даты и время</a></li>
-            <li><a href="#s8">Bool и UUID</a></li>
-            <li><a href="#s9">Шаг 5. Список значений: Enum</a></li>
-            <li><a href="#s10">Как выбрать тип</a></li>
-            <li><a href="#s11">Если не получилось</a></li>
-            <li><a href="#s12">Проверьте себя</a></li>
-            <li><a href="#s13">Шпаргалка и глоссарий</a></li>
-          </ol>
-        </nav>
+    <h2 id="s5"><span class="sec">§5</span>Денежная сумма: Decimal</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Сумма позиции должна хранить рубли и копейки без двоичного приближения десятичных дробей.</p>
+    <p>В книге учёта можно договориться записывать все суммы в копейках: 1499 рублей 70 копеек превращаются в целое 149970. Такая договорённость о единице соответствует масштабу десятичного типа. В отличие от бумажного учёта, его диапазон ограничен выбранным представлением.</p>
+    <p><code>Decimal(P, S)</code> — десятичное число с фиксированной точкой. <b>Точность P</b> задаёт общее количество десятичных цифр, <b>масштаб S</b> — количество знаков после запятой. Для <code>Decimal(9, 2)</code> остаётся семь цифр до запятой: допустимы значения от <code>-9999999.99</code> до <code>9999999.99</code> с шагом 0,01. Сумма до 5 000 000 рублей помещается; знак у Decimal есть независимо от того, нужен ли он магазину.</p>
+    <p>Проследим, как представляется 1499,70 рубля. На схеме проверим соответствие между целым числом и масштабом.</p>
+    <figure class="pic"><div class="type-flow" role="img" aria-label="Строка 1499.70 преобразуется в Decimal с целым 149970 и масштабом 2, при выводе возвращается денежное значение"><div><b>Входной текст</b><code>'1499.70'</code><small>Десятичные цифры без промежуточного Float.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Представление</b><code>149970; S = 2</code><small>Целое число и масштаб типа.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Значение</b><code>149970 / 100</code><small>1499 рублей 70 копеек.</small></div></div><figcaption>Масштаб 2 относится к типу. Он не хранится отдельной пометкой возле каждой суммы.</figcaption></figure>
+    <p>При сложении сумм одного масштаба складываются целые представления: нет необходимости округлять каждую десятую до двоичной дроби. Но результат по-прежнему должен помещаться в тип.</p>
+    <p><code>toDecimal32(значение, масштаб)</code> создаёт <code>Decimal(9, S)</code> с 32-битным целым представлением, то есть 4 байтами на значение. Таким образом, 32 обозначает разрядность внутреннего целого. Вводим исходные суммы строками в одинарных кавычках:</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>сложение и уменьшение масштаба</span></figcaption><pre>SELECT toDecimal32('0.10', 2) + toDecimal32('0.20', 2) AS total,
+       toTypeName(toDecimal32('0.10', 2)) AS type,
+       toDecimal32('19.999', 2) AS reduced_scale</pre></figure>
+    <figure class="shot"><img src="assets/decimal.png" alt="Play UI: total 0.3, type Decimal(9, 2), reduced_scale 19.99" loading="lazy"><figcaption>Сумма равна 0,30; третий столбец показывает, что лишний разряд отброшен без округления.</figcaption></figure>
+    <p>Клиент может вывести <code>0.3</code>, убрав завершающий ноль: значение остаётся точным, а масштаб типа — 2. Однако <code>19.999</code> стало <code>19.99</code>, не <code>20.00</code>. Фиксированный масштаб не задаёт бухгалтерское правило округления. Правило для лишних разрядов нужно согласовать до загрузки.</p>
+    <details class="more"><summary>Почему исходную сумму передаём строкой</summary><p><code>toDecimal64(x, 2)</code> создаёт более широкий <code>Decimal(18, 2)</code>. Сравните два входа:</p><figure class="code"><figcaption><span>Отдельный опыт</span><span>Float и текст на входе</span></figcaption><pre>SELECT toDecimal64(1.15, 2) AS from_float,
+       toDecimal64('1.15', 2) AS from_text</pre></figure><figure class="shot"><img src="assets/decimal-input.png" alt="Play UI: from_float 1.14 и from_text 1.15" loading="lazy"><figcaption>Результаты преобразования Float и десятичной строки в Decimal(18, 2).</figcaption></figure><p>На стенде результат — <code>1.14</code> и <code>1.15</code>. В первом случае десятичное значение уже приблизительно представлено во Float; при масштабировании и отбрасывании дробной части теряется копейка. Преобразование в Decimal не восстанавливает потерянную точность. Строка позволяет разобрать исходные десятичные цифры без этого промежуточного приближения.</p></details>
+    <p>Проверка границы: <code>SELECT toDecimal32('10000000.00', 2)</code> на стенде завершается ошибкой <code>Code: 69</code>, <code>ARGUMENT_OUT_OF_BOUND</code>. Восемь цифр до запятой не помещаются в выбранную точность и масштаб. Это результат показанного преобразования строки, не обещание одинаковой проверки для всех Decimal-операций и настроек.</p>
+    <p class="check">сумма — 0,30, тип — <code>Decimal(9, 2)</code>, лишняя тысячная отброшена. Для нашей суммы выбран <code>Decimal(9, 2)</code>. Если потребуется большая сумма, увеличиваем точность, сохраняя масштаб копеек; другой вариант — целые копейки с явно указанной единицей измерения.</p>
 
-        <h2 id="s1"><span class="sec">§1</span>Зачем столбцу тип</h2>
-        <p class="purpose"><b>Зачем это знать</b>В главе 1.1 <code>DESCRIBE</code> показал у каждого столбца тип. Тип задают один раз при создании таблицы, и потом он действует для всех строк.</p>
-        <p>У типа две задачи. Первая — не пустить в столбец чужое: в <code>price UInt32</code> не положить слово «дорого». Вторая — задать размер: сколько байт занимает каждое значение. Типы ClickHouse весят по-разному:</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 300" role="img" aria-label="Сколько байт занимает одно значение: UInt8 и Bool 1, Date 2, UInt32, Float32 и DateTime 4, UInt64, Float64, DateTime64 и Decimal64 8, String mobile 14, UUID 16">
-            <text class="tm" x="10" y="32">UInt8 · Bool</text><rect class="sc-acc" x="250" y="16" width="36" height="24" rx="3"/><text class="tm" x="296" y="33">1 байт</text>
-            <text class="tm" x="10" y="72">Date</text><rect class="sc-acc" x="250" y="56" width="72" height="24" rx="3"/><text class="tm" x="332" y="73">2 байта</text>
-            <text class="tm" x="10" y="112">UInt32 · Float32 · DateTime</text><rect class="sc-acc" x="250" y="96" width="144" height="24" rx="3"/><text class="tm" x="404" y="113">4 байта</text>
-            <text class="tm" x="10" y="152">UInt64 · Float64</text><rect class="sc-acc" x="250" y="136" width="288" height="24" rx="3"/><text class="tm" x="548" y="153">8 байт</text>
-            <text class="tm" x="10" y="172">DateTime64 · Decimal64</text>
-            <text class="tm" x="10" y="212">String 'mobile'</text><rect class="sc-warm" x="250" y="196" width="504" height="24" rx="3"/><text class="tm" x="764" y="213">14 байт</text>
-            <text class="tm" x="10" y="252">UUID</text><rect class="sc-acc" x="250" y="236" width="576" height="24" rx="3"/><text class="tm" x="836" y="253">16</text>
-            <text class="t" x="10" y="290">размер одного значения по функции byteSize · у строки — 6 байт текста и 8 служебных</text>
-          </svg>
-          <figcaption>сколько байт занимает одно значение каждого типа</figcaption>
-        </figure>
-        <p>Все типы, кроме строки, весят одинаково при любом значении. Строка весит столько, сколько в ней текста, плюс служебные байты. Разница в 4 байта кажется мелочью, пока не умножишь её на 10 миллионов строк <code>web.events</code>, — это 39 МиБ на один столбец.</p>
+    <p>Числовые поля выбраны. Название товара потребует другой проверки — длины и сохранности текста.</p>
 
-        <details class="simple">
-          <summary>тип столбца на примере клеточек в бланке</summary>
-          <div class="vsteps">
-            <div class="vcard"><i>🧾</i><h5>тип</h5><b>Графа «индекс» — 6 клеточек</b><small>В каждую — одна цифра. Буквы не впишешь, седьмую цифру — тоже.</small></div>
-            <div class="varr">поэтому</div>
-            <div class="vcard is-hot"><i>✅</i><h5>проверка</h5><b>Ошибку видно сразу</b><small>Бланк с буквой в индексе не примут.</small></div>
-            <div class="varr">и</div>
-            <div class="vcard is-dark"><i>📏</i><h5>размер</h5><b>Место известно заранее</b><small>Под графу на бланке отведено ровно 6 клеточек.</small></div>
-          </div>
-          <p class="simple__map"><b>Что есть что:</b> графа — столбец, число и вид клеточек — тип (<code>UInt8</code> — «маленькое число»). Бланк, который не приняли, — ошибка при вставке. Место на бланке — байты на диске.</p>
-        </details>
+    <h2 id="s6"><span class="sec">§6</span>Название: String, байты и символы</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Название товара нужно сохранить как текст, а проверку его длины нельзя свести к числу байтов.</p>
+    <p>При отправке письма число букв и объём вложения в байтах — разные характеристики. Для названия товара тоже нужно различать текст и объём его кодировки. Байты позволяют хранить и передавать данные, но их количество не определяет число видимых знаков.</p>
+    <p><code>String</code> хранит последовательность байтов переменной длины, в том числе произвольные двоичные данные. У String нет параметра с максимальным числом символов. Практические пределы задают ресурсы и ограничения обработки. Если название должно быть не длиннее 100 символов, это отдельное правило проверки.</p>
+    <p>Для текста будем использовать <b>UTF-8</b> — кодировку, в которой один код Unicode записывается одним или несколькими байтами. Unicode — стандарт кодов для символов письменности и других знаков. Сам String не гарантирует корректный UTF-8. Функция <code>length</code> считает байты, <code>lengthUTF8</code> при корректном UTF-8 — кодовые точки Unicode. Видимый знак может состоять из нескольких кодовых точек.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>байты, кодовые точки и видимый знак</span></figcaption><pre>SELECT length('Ноутбук') AS bytes,
+       lengthUTF8('Ноутбук') AS code_points,
+       length('Laptop') AS ascii_bytes,
+       lengthUTF8('е́') AS combined</pre></figure>
+    <figure class="shot"><img src="assets/strings.png" alt="Play UI: bytes 14, code_points 7, ascii_bytes 6, combined 2" loading="lazy"><figcaption>В последнем литерале — буква «е» и отдельный комбинируемый знак ударения: визуально один знак с ударением, но две кодовые точки.</figcaption></figure>
+    <p>У слова «Ноутбук» семь букв и 14 байтов в UTF-8; у «Laptop» шесть букв и шесть байтов. Здесь каждая русская буква занимает два байта, каждая латинская ASCII-буква — один. Это свойства конкретных символов, не правило «любой русский текст вдвое тяжелее любого латинского». Число байтов текста также не равно полному размеру столбца на диске: там есть служебные данные и сжатие.</p>
+    <p class="check">ответ — <code>14, 7, 6, 2</code>. Для произвольного названия выбираем <code>String</code>; отдельно определяем кодировку и то, что считается длиной.</p>
 
-        <h2 id="s2"><span class="sec">§2</span>Шаг 1. Узнать тип значения</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Тип есть не только у столбца, но и у любого значения в запросе. Функция <code>toTypeName</code> его показывает, ею пользуется вся глава.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>тип восьми значений</span></figcaption>
-<pre>SELECT toTypeName(42), toTypeName(300), toTypeName(-1), toTypeName(1.5),
-       toTypeName('Ноутбук'), toTypeName(true), toTypeName(today()), toTypeName(now())</pre></figure>
-        <p class="tech"><b>По словам:</b> <code>SELECT</code> без <code>FROM</code> вычисляет выражения и возвращает одну строку. <code>today()</code> — сегодняшняя дата, <code>now()</code> — текущий момент.</p>
-        <figure class="shot"><img src="../../shots/12-01-typename.png" alt="Play UI показывает строку столбиком: 42 — UInt8, 300 — UInt16, -1 — Int8, 1.5 — Float64, текст — String, true — Bool, today() — Date, now() — DateTime"><figcaption>Play UI · одна широкая строка показана столбиком: 1–3 — у целых чисел разные типы</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>Число в запросе получает самый маленький подходящий тип. <code>42</code> помещается в один байт — <code>UInt8</code> (рамка 1). <code>300</code> в байт уже не влезает — <code>UInt16</code> (рамка 2). У <code>-1</code> есть минус — <code>Int8</code>, тип со знаком (рамка 3). Дробное <code>1.5</code> — <code>Float64</code>, текст в кавычках — <code>String</code>.</p>
-        <p class="check">у <code>42</code> тип <code>UInt8</code>, у <code>now()</code> — <code>DateTime</code>.</p>
-        <details class="more">
-          <summary>тип столбца таблицы и почему ответ столбиком</summary>
-          <p>Так же узнают тип столбца: <code>SELECT toTypeName(price) FROM shop.products LIMIT 1</code> вернёт <code>UInt32</code> — то же, что <code>DESCRIBE</code>. Ответ из одной строки с большим числом столбцов Play UI показывает столбиком сам, чтобы он поместился по ширине.</p>
-        </details>
+    <p>Для названия достаточно строки с оговорённой кодировкой. У даты доставки и времени заказа нужно сохранить календарный смысл и точность.</p>
 
-        <h2 id="s3"><span class="sec">§3</span>Шаг 2. Целые числа</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Целых типов восемь. Они различаются размером и тем, бывает ли минус. Ошибиться с размером опасно: сервер не всегда об этом скажет.</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Тип</th><th>Байт</th><th>От</th><th>До</th><th>На стенде</th></tr></thead>
-            <tbody>
-              <tr><td><code>UInt8</code></td><td>1</td><td>0</td><td>255</td><td><code>humidity</code> — влажность, 35–89</td></tr>
-              <tr><td><code>UInt16</code></td><td>2</td><td>0</td><td>65 535</td><td><code>qty</code> — штук в позиции заказа</td></tr>
-              <tr><td><code>UInt32</code></td><td>4</td><td>0</td><td>4 294 967 295</td><td><code>price</code> — до 114 990 ₽</td></tr>
-              <tr><td><code>UInt64</code></td><td>8</td><td>0</td><td>18 446 744 073 709 551 615</td><td>счётчики, идентификаторы</td></tr>
-              <tr><td><code>Int8</code></td><td>1</td><td>−128</td><td>127</td><td></td></tr>
-              <tr><td><code>Int16</code></td><td>2</td><td>−32 768</td><td>32 767</td><td></td></tr>
-              <tr><td><code>Int32</code></td><td>4</td><td>−2 147 483 648</td><td>2 147 483 647</td><td></td></tr>
-              <tr><td><code>Int64</code></td><td>8</td><td>−9,2 · 10<sup>18</sup></td><td>9,2 · 10<sup>18</sup></td><td>разница сумм, может быть с минусом</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="tech"><b>U</b> — unsigned, «без знака»: только ноль и больше. Число в имени — сколько бит; бит восемь в байте.</p>
-        <p>Что будет, если значение не влезает в тип? Функция <code>toUInt8</code> переводит число в <code>UInt8</code>:</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>значения на границе типа</span></figcaption>
-<pre>SELECT toUInt8(255), toUInt8(256), toUInt8(-1), toInt8(127), toInt8(128)</pre></figure>
-        <figure class="shot"><img src="../../shots/12-02-overflow.png" alt="toUInt8(256) равно 0, toUInt8(-1) равно 255, toInt8(128) равно -128"><figcaption>Play UI · 1 — 256 стало нулём; 2 — минус один стал 255; 3 — 128 стало −128</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>Ошибки нет, а числа другие. Это <b>переполнение</b>: у <code>UInt8</code> восемь бит, и число 256 в них не помещается. Лишний старший бит отбрасывается, остаётся 0. Счёт идёт по кругу, как у стрелок часов: после 255 снова 0, перед 0 — 255.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 150" role="img" aria-label="Шкала UInt8 замкнута в круг: 254, 255, затем 0, 1; шаг назад от 0 даёт 255">
-            <rect class="sc-box" x="60" y="40" width="110" height="44" rx="6"/><text class="tb tc" x="115" y="68">254</text>
-            <rect class="sc-box" x="230" y="40" width="110" height="44" rx="6"/><text class="tb tc" x="285" y="68">255</text>
-            <rect class="sc-warm" x="400" y="40" width="110" height="44" rx="6"/><text class="tb tc" x="455" y="68">0</text>
-            <rect class="sc-box" x="570" y="40" width="110" height="44" rx="6"/><text class="tb tc" x="625" y="68">1</text>
-            <rect class="sc-box" x="740" y="40" width="110" height="44" rx="6"/><text class="tb tc" x="795" y="68">2</text>
-            <path class="sc-arrow" d="M174 62 L224 62 M217 56 L224 62 L217 68 M344 62 L394 62 M387 56 L394 62 L387 68 M514 62 L564 62 M557 56 L564 62 L557 68 M684 62 L734 62 M727 56 L734 62 L727 68"/>
-            <text class="t tc" x="370" y="30">+1 = 256 → 0</text>
-            <path class="sc-arrow-w" d="M455 90 L455 118 L285 118 L285 92 M279 99 L285 92 L291 99"/>
-            <text class="t tc" x="370" y="140">0 − 1 → 255</text>
-          </svg>
-          <figcaption>UInt8 считает по кругу: за 255 идёт 0</figcaption>
-        </figure>
-        <p class="check">в рамках 1–3 — <code>0</code>, <code>255</code> и <code>-128</code>. Вывод: тип выбирают с запасом по самому большому значению, которое может прийти.</p>
-        <details class="more">
-          <summary>когда переполнения не будет: сложение и вычитание</summary>
-          <p>В арифметике сервер сам берёт тип пошире. <code>toUInt8(200) + toUInt8(100)</code> даёт <code>300</code> типа <code>UInt16</code>, а <code>toUInt32(5) - toUInt32(10)</code> — <code>-5</code>: у разности беззнаковых тип со знаком. Опасность — в переводе в узкий тип: функциями <code>toUInt8</code>, <code>toInt8</code> и при записи в столбец узкого типа. Как ведёт себя вставка — глава <a href="../15-insert/index.html">1.5</a>.</p>
-        </details>
+    <h2 id="s7"><span class="sec">§7</span>День доставки и момент заказа</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Обещание «доставим 12 октября» и запись «заказ оформлен в 14:30:00» имеют разную точность и разный смысл.</p>
+    <p>Запись в календаре «доставка 12 октября» определяет день. Показание часов «14:30:00» само по себе не определяет момент: нужны дата и пояс. В календаре для этого служат подписи, а в данных — тип и правила разбора времени.</p>
+    <p><code>Date</code> хранит календарный день как число дней от 1970-01-01, без времени суток и часового пояса. Диапазон — 1970-01-01…2149-06-06, представление занимает 2 байта. Для назначенного дня доставки этого достаточно. Если нужны более ранние даты, рассматривают <code>Date32</code> с более широким диапазоном.</p>
+    <p><code>DateTime</code> хранит момент с шагом в одну секунду как число секунд от 1970-01-01 00:00:00 UTC; занимает 4 байта. В UTC диапазон заканчивается 2106-02-07 06:28:15. <code>DateTime64(3)</code> хранит отсчёты по 0,001 секунды в 8 байтах; число 3 задаёт количество десятичных знаков долей секунды. Он нужен, если источник передаёт миллисекунды и они нужны в задачах.</p>
+    <p>Функции <code>toDate</code>, <code>toDateTime</code> и <code>toDateTime64</code> преобразуют вход в соответствующий тип. В последних двух явно зададим <code>'UTC'</code>, чтобы результат не зависел от часового пояса сервера.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>различная точность</span></figcaption><pre>SELECT toDate('2026-10-10') AS delivery_date,
+       toDateTime('2026-10-10 14:30:00', 'UTC') AS ordered_at,
+       toDateTime64('2026-10-10 14:30:00.123', 3, 'UTC') AS precise</pre></figure>
+    <figure class="shot"><img src="assets/dates.png" alt="Play UI: день 2026-10-10, момент 2026-10-10 14:30:00 и момент с миллисекундами 2026-10-10 14:30:00.123" loading="lazy"><figcaption>Дата не содержит времени, DateTime различает секунды, DateTime64(3) сохраняет миллисекунды.</figcaption></figure>
+    <p>Если вместо момента заказа сохранить только <code>Date</code>, уже нельзя восстановить, какой заказ был оформлен раньше внутри дня. И наоборот, полночь в DateTime не добавляет полезного смысла обещанному дню доставки.</p>
+    <p><b>Часовой пояс</b> задаёт правила перевода между моментом и местными часами. В типе <code>DateTime('UTC')</code> пояс — общее свойство типа столбца, не отдельное поле каждой строки. При разборе текста он определяет, какой момент обозначают часы, а при выводе — как показать момент. Проверим, меняет ли смена пояса сам момент:</p>
+    <figure class="pic"><div class="type-flow" role="img" aria-label="Момент 2026-10-10 14:30:00 UTC хранится как счётчик секунд; тот же счётчик в Москве отображается как 17:30:00"><div><b>Ввод в UTC</b><code>2026-10-10<br>14:30:00</code><small>Текст разбирается с поясом UTC.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Один момент</b><small>Счётчик секунд от начала эпохи не меняется.</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Вывод в Москве</b><code>2026-10-10<br>17:30:00</code><small>Для этой даты пояс UTC+3.</small></div></div><figcaption>Отображение одного момента в UTC и Europe/Moscow.</figcaption></figure>
+    <p><code>toTimeZone(момент, пояс)</code> меняет пояс представления, <code>toUnixTimestamp(момент)</code> возвращает счётчик секунд. Второй функцией сравним моменты независимо от отображения. В следующем запросе <code>utc</code> — имя первого выражения, используемое дальше в том же SELECT.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>один момент в двух поясах</span></figcaption><pre>SELECT toDateTime('2026-10-10 14:30:00', 'UTC') AS utc,
+       toTimeZone(utc, 'Europe/Moscow') AS moscow,
+       toUnixTimestamp(utc) = toUnixTimestamp(moscow) AS same_instant</pre></figure>
+    <figure class="shot"><img src="assets/timezone.png" alt="Play UI: utc 14:30:00, moscow 17:30:00, same_instant 1" loading="lazy"><figcaption>Часы отличаются на три часа, но равенство счётчиков секунд истинно: same_instant = 1.</figcaption></figure>
+    <p>Если исходный текст уже дан по московским часам, разбирать его как UTC нельзя: это будет другой момент. По той же причине день, полученный из момента, зависит от пояса: возле полуночи местные даты могут различаться. Подробные вычисления с датами и поясами — глава 2.4.</p>
+    <p class="check">сохранены нужные доли секунды; смена пояса дала <code>17:30:00</code> и <code>1</code>. Для доставки выбран <code>Date</code>, для заказа с секундной точностью — <code>DateTime('UTC')</code>; миллисекунды без требования не добавляем.</p>
 
-        <h2 id="s4"><span class="sec">§4</span>Шаг 3. Дробные числа: Float</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Рейтинг товара <code>4.2</code> и температура <code>-3.4</code> — дробные. Для них есть <code>Float32</code> и <code>Float64</code>. Они быстрые, но считают приблизительно.</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>одна десятая плюс две десятых</span></figcaption>
-<pre>SELECT 0.1 + 0.2, 0.1 + 0.2 = 0.3</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌──────plus(0.1, 0.2)─┬─equals(plus(0.1, 0.2), 0.3)─┐
-1. │ 0.30000000000000004 │                           0 │
-   └─────────────────────┴─────────────────────────────┘</pre></figure>
-        <p>Сумма вышла чуть больше 0,3, и сравнение с <code>0.3</code> вернуло <code>0</code> — «неверно». Float хранит число в двоичном виде. В двоичной системе 0,1 — бесконечная дробь, как 1/3 в десятичной: 0,333… Её обрезают, и в последнем знаке остаётся погрешность.</p>
-        <div class="vsteps" aria-label="Float32 и Float64">
-          <div class="vcard"><h5>Float32 · 4 байта</h5><b>около 7 верных цифр</b><small><code>toFloat32(16777217)</code> → <code>16777216</code>: восьмая цифра уже потеряна.</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-hot"><h5>Float64 · 8 байт</h5><b>около 16 верных цифр</b><small>Тип дробного числа в запросе по умолчанию.</small></div>
-        </div>
-        <p class="check">вы видите <code>0.30000000000000004</code> и <code>0</code>. Float годится для замеров — температуры, рейтинга, времени отклика, — где последний знак не важен.</p>
+    <p>Осталось поле с цифрами, для которого точность времени и арифметика не нужны: код товара.</p>
 
-        <h2 id="s5"><span class="sec">§5</span>Деньги: Decimal</h2>
-        <p class="purpose"><b>Зачем это знать</b>Погрешность в последнем знаке незаметна в одном числе. В сумме миллиона чисел она вылезает наружу, а в деньгах копейка должна сходиться.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>миллион раз по 0,1 — в двух типах</span></figcaption>
-<pre>SELECT sum(0.1) AS float_sum, sum(toDecimal64(0.1, 2)) AS decimal_sum
-FROM numbers(1000000)</pre></figure>
-        <p class="tech"><b>По словам:</b> <code>numbers(1000000)</code> — готовая таблица из миллиона строк (глава 4.2), <code>sum</code> — сумма по всем строкам (глава 2.5).</p>
-        <p class="tech"><code>toDecimal64(0.1, 2)</code> — «0,1 как десятичное число с двумя знаками после запятой». <code>AS</code> даёт столбцу ответа имя.</p>
-        <figure class="shot"><img src="../../shots/12-03-float-decimal.png" alt="float_sum равно 100000.00000000528, decimal_sum равно 100000"><figcaption>Play UI · 1 — сумма во Float с хвостом погрешности; 2 — сумма в Decimal ровная</figcaption></figure>
-        <p><b>Decimal</b> хранит число как целое и помнит, сколько знаков у него после запятой: 0,10 лежит как 10 с пометкой «два знака». Целые складываются без погрешности, поэтому сумма ровная (рамка 2).</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Запись</th><th>Тип</th><th>Байт</th><th>Всего цифр</th><th>Пример предела при 2 знаках</th></tr></thead>
-            <tbody>
-              <tr><td><code>toDecimal32(x, 2)</code></td><td><code>Decimal(9, 2)</code></td><td>4</td><td>9</td><td>9 999 999,99</td></tr>
-              <tr><td><code>toDecimal64(x, 2)</code></td><td><code>Decimal(18, 2)</code></td><td>8</td><td>18</td><td>около 10<sup>16</sup></td></tr>
-              <tr><td><code>toDecimal128(x, 2)</code></td><td><code>Decimal(38, 2)</code></td><td>16</td><td>38</td><td>около 10<sup>36</sup></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="tech">В <code>Decimal(18, 2)</code> первое число — сколько цифр всего, второе — сколько из них после запятой.</p>
-        <p class="check">в рамке 2 — ровно <code>100000</code>. Для денег берите <code>Decimal</code> или храните сумму целым числом в копейках. На стенде цены — <code>UInt32</code> в целых рублях: копеек в магазине нет.</p>
-        <details class="more">
-          <summary>Decimal не переполняется молча</summary>
-          <p>В отличие от целых, Decimal на переполнении останавливает запрос. В <code>toDecimal32(99999999.99, 2)</code> десять цифр вместо девяти, и сервер отвечает ошибкой <code>Code: 407 … Decimal convert overflow … (DECIMAL_OVERFLOW)</code>. Деление сохраняет число знаков: <code>toDecimal32(42990.5, 2) / 3</code> = <code>14330.16</code>, остаток отброшен.</p>
-        </details>
+    <h2 id="s8"><span class="sec">§8</span>Идентификатор: почему цифры не всегда число</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Код товара нужен для поиска и сопоставления записей. Сохранность его записи проверим преобразованием туда и обратно.</p>
+    <p>Номер ячейки в гардеробе нужен для сопоставления жетона и вещи. Сложение двух номеров не помогает получить вещи. Сравнение объясняет назначение кода; формат и диапазон кодов определяет сама система.</p>
+    <p><b>Идентификатор</b> обозначает объект. Числовой идентификатор без значимых нулей можно хранить в <code>UInt32</code> или более широком целом. Но код поставщика <code>00127</code> должен сохранить все знаки; завтра в нём может появиться буква. Выбираем <code>String</code>, допускающий такую запись.</p>
+    <p>Посмотрим, какая информация исчезает при переводе кода в число. <code>toUInt32</code> разбирает цифры как целое, <code>toString</code> возвращает текстовое представление уже полученного значения.</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>преобразование не всегда обратимо</span></figcaption><pre>SELECT '00127' AS product_code,
+       toUInt32('00127') AS as_number,
+       toString(toUInt32('00127')) AS back_to_text</pre></figure>
+    <figure class="shot"><img src="assets/identifier.png" alt="Play UI: product_code 00127, as_number 127, back_to_text 127" loading="lazy"><figcaption>Возврат в String не восстанавливает нули: после числового преобразования их уже нет.</figcaption></figure>
+    <p>Для кода <code>00000</code> и <code>0</code> могут обозначать разные объекты, но числовое представление их не различит. Кроме того, строковый порядок отличается от числового: текстовые коды нельзя автоматически считать числовой последовательностью.</p>
+    <p>Если система выдаёт идентификаторы в формате UUID, подойдёт тип <code>UUID</code>: 128-битное значение, обычно записываемое шестнадцатеричными группами с дефисами. Но превращать код поставщика в UUID не требуется. Тип значения сам по себе не гарантирует уникальность записей в таблице.</p>
+    <p class="check">первый столбец сохранил <code>00127</code>, два остальных — нет. Критерий выбора: что определяет тождество объекта — числовое значение или точная запись кода.</p>
 
-        <h2 id="s6"><span class="sec">§6</span>Текст: String</h2>
-        <p class="purpose"><b>Зачем это знать</b>Название, город, адрес страницы — всё это <code>String</code>. У строки нет предела длины, и её размер считают в байтах.</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>длина строки</span></figcaption>
-<pre>SELECT length('Ноутбук'), lengthUTF8('Ноутбук'), length('Laptop')</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌─length('Ноутбук')─┬─lengthUTF8('Ноутбук')─┬─length('Laptop')─┐
-1. │                14 │                     7 │                6 │
-   └───────────────────┴───────────────────────┴──────────────────┘</pre></figure>
-        <div class="vsteps" aria-label="Байты русских и латинских букв">
-          <div class="vcard"><h5>Laptop</h5><b>6 букв = 6 байт</b><small>латинская буква — 1 байт</small></div>
-          <div class="varr">а</div>
-          <div class="vcard is-hot"><h5>Ноутбук</h5><b>7 букв = 14 байт</b><small>русская буква — 2 байта</small></div>
-        </div>
-        <p><code>length</code> считает байты, <code>lengthUTF8</code> — буквы. Текст хранится в кодировке UTF-8, где русская буква занимает два байта. Поэтому русский текст весит вдвое больше латинского той же длины.</p>
-        <p class="check"><code>length('Ноутбук')</code> — 14, <code>lengthUTF8('Ноутбук')</code> — 7.</p>
-        <details class="more">
-          <summary>FixedString и строки-идентификаторы</summary>
-          <p><code>FixedString(N)</code> — строка ровно из N байт, короче дополняется нулевыми байтами. Подходит для кодов постоянной длины: код страны <code>RU</code> — <code>FixedString(2)</code>. Для обычного текста не нужна. Столбцы с небольшим числом повторяющихся строк — город, устройство — выгоднее хранить иначе: про <code>Enum</code> — <a href="#s9">§9</a>, про <code>LowCardinality</code> — глава 3.8.</p>
-        </details>
+    <p>Для выбранных полей типов достаточно. Проверим, есть ли задача для специальных ограниченных наборов значений.</p>
 
-        <h2 id="s7"><span class="sec">§7</span>Шаг 4. Даты и время</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Почти каждая строка в аналитике привязана ко времени: когда заказ, когда событие, когда замер. Типов для этого четыре, и они различаются точностью.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>одна и та же дата в трёх типах</span></figcaption>
-<pre>SELECT toDate('2026-10-10'),
-       toDateTime('2026-10-10 14:30:00'),
-       toDateTime64('2026-10-10 14:30:00.123', 3)</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌─toDate('2026-10-10')─┬─toDateTime('⋯ 14:30:00')─┬─toDateTime64⋯00.123', 3)─┐
-1. │           2026-10-10 │      2026-10-10 14:30:00 │  2026-10-10 14:30:00.123 │
-   └──────────────────────┴──────────────────────────┴──────────────────────────┘</pre></figure>
-        <figure class="pic">
-          <svg viewBox="0 0 880 230" role="img" aria-label="Четыре типа времени: Date — день, 2 байта, 1970–2149; Date32 — день, 4 байта, шире диапазон; DateTime — секунда, 4 байта, до 2106; DateTime64(3) — миллисекунда, 8 байт">
-            <rect class="sc-acc" x="10" y="14" width="200" height="200" rx="8"/><text class="tb" x="24" y="40">Date</text><text class="tm" x="24" y="66">2026-10-10</text><text class="t" x="24" y="100">точность: день</text><text class="t" x="24" y="122">2 байта</text><text class="t" x="24" y="144">1970-01-01 —</text><text class="t" x="24" y="162">2149-06-06</text><text class="t" x="24" y="196">shop.products.added</text>
-            <rect class="sc-soft" x="230" y="14" width="200" height="200" rx="8"/><text class="tb" x="244" y="40">Date32</text><text class="tm" x="244" y="66">1950-05-09</text><text class="t" x="244" y="100">точность: день</text><text class="t" x="244" y="122">4 байта</text><text class="t" x="244" y="144">века до 1970</text><text class="t" x="244" y="162">и после 2149</text><text class="t" x="244" y="196">даты рождения</text>
-            <rect class="sc-warm" x="450" y="14" width="200" height="200" rx="8"/><text class="tb" x="464" y="40">DateTime</text><text class="tm" x="464" y="66">… 14:30:00</text><text class="t" x="464" y="100">точность: секунда</text><text class="t" x="464" y="122">4 байта</text><text class="t" x="464" y="144">1970 —</text><text class="t" x="464" y="162">2106-02-07</text><text class="t" x="464" y="196">web.events.event_time</text>
-            <rect class="sc-ink" x="670" y="14" width="200" height="200" rx="8"/><text class="tw" x="684" y="40" style="font:700 13px var(--body)">DateTime64(3)</text><text class="tw" x="684" y="66" style="font:500 12px var(--mono)">… 14:30:00.123</text><text class="tw" x="684" y="100" style="font:500 12px var(--body)">точность: 0,001 с</text><text class="tw" x="684" y="122" style="font:500 12px var(--body)">8 байт</text><text class="tw" x="684" y="144" style="font:500 12px var(--body)">(3) — знаков</text><text class="tw" x="684" y="162" style="font:500 12px var(--body)">после секунд</text><text class="tw" x="684" y="196" style="font:500 12px var(--body)">замеры, логи</text>
-          </svg>
-          <figcaption>четыре типа времени: точность, размер, диапазон</figcaption>
-        </figure>
-        <p>Выбирают по точности, которая нужна. Для дня рождения хватит <code>Date</code>, для заказа — <code>DateTime</code>, для журнала запросов с миллисекундами — <code>DateTime64(3)</code>.</p>
-        <p>С датами можно считать. Целое число прибавляется к <code>Date</code> как дни, а к <code>DateTime</code> — как секунды:</p>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>SELECT toDate('2026-10-10') + 30, toDateTime('2026-10-10 14:30:00') + 60</span></figcaption>
-<pre>   ┌─plus(toDate(⋯0-10'), 30)─┬─plus(toDateT⋯0:00'), 60)─┐
-1. │               2026-11-09 │      2026-10-10 14:31:00 │
-   └──────────────────────────┴──────────────────────────┘</pre></figure>
-        <p class="check">через 30 дней после 10 октября — 9 ноября, через 60 секунд после 14:30:00 — 14:31:00.</p>
-        <details class="more">
-          <summary>дата вне диапазона и часовой пояс</summary>
-          <p>Дата за пределами типа прижимается к краю, ошибки нет: <code>toDate('1969-12-31')</code> = <code>1970-01-01</code>, <code>toDate('2150-01-01')</code> = <code>2149-06-06</code>, <code>toDateTime('2107-01-01 00:00:00')</code> = <code>2106-02-07 06:28:15</code>. Для старых дат берите <code>Date32</code>: <code>toDate32('1950-05-09')</code> вернёт ту же дату.</p>
-          <p>У <code>DateTime</code> может быть часовой пояс: <code>DateTime('Europe/Moscow')</code>. Сервер стенда работает в UTC, поэтому все времена в базах — по UTC. Часовые пояса разбирает глава 2.4.</p>
-        </details>
+    <h2 id="s9"><span class="sec">§9</span>Нужны ли специальные типы</h2>
+    <p>Для шести выбранных полей они не нужны. Если добавить поле «оплачен ли заказ», у него два логических значения: <code>true</code> и <code>false</code>, для которых предназначен <code>Bool</code>. А фиксированный перечень состояний можно задать через <code>Enum</code> — соответствие разрешённых строк и целых кодов.</p>
+    <p>У произвольного названия товара нет закрытого перечня, поэтому сохраняем String. При добавлении состояния заказа выбор зависит от допустимости новых состояний: Enum потребует заранее перечислить каждое из них.</p>
+    <div class="table-scroll"><table><thead><tr><th>Дополнительная задача</th><th>Допустимые значения</th><th>Тип</th></tr></thead><tbody><tr><td>Факт оплаты</td><td>Истина или ложь</td><td>Bool</td></tr><tr><td>Закрытый набор состояний</td><td>Только заранее перечисленные строки</td><td>Enum</td></tr><tr><td>Произвольное название</td><td>Новые названия допускаются без изменения типа</td><td>String</td></tr></tbody></table></div>
+    <p>Добавлять такие поля сейчас не требуется. Зафиксируем схему шести исходных полей и границы её применимости.</p>
 
-        <h2 id="s8"><span class="sec">§8</span>Bool и UUID</h2>
-        <p class="purpose"><b>Зачем это знать</b>Два типа с узкой задачей: «да или нет» и уникальный номер, который можно выдать без общего счётчика.</p>
-        <div class="vsteps" aria-label="Bool и UUID">
-          <div class="vcard is-hot"><h5>Bool · 1 байт</h5><b><code>true</code> или <code>false</code></b><small><code>shop.orders.paid</code> — оплачен ли заказ. Внутри это 1 и 0: <code>toUInt8(paid)</code> → <code>1</code>.</small></div>
-          <div class="varr">и</div>
-          <div class="vcard"><h5>UUID · 16 байт</h5><b><code>4da7618c-cfaa-4fb8-b894-700db1710b85</code></b><small>Случайный номер, повтор практически невозможен. <code>generateUUIDv4()</code> выдаёт новый при каждом вызове.</small></div>
-        </div>
-        <p>UUID удобен, когда записи создают несколько программ сразу и им некогда договариваться о следующем номере. Но он вчетверо тяжелее <code>UInt32</code>, поэтому в стенде у событий номера сессий — <code>UInt32</code>.</p>
-        <p class="check"><code>SELECT toTypeName(paid) FROM shop.orders LIMIT 1</code> возвращает <code>Bool</code>. Ваш UUID будет другим — он случайный.</p>
+    <h2 id="s10"><span class="sec">§10</span>Собираем схему позиции заказа</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Зафиксируем имена типов вместе с условиями, при которых выбор остаётся верным.</p>
+    <div class="table-scroll"><table><thead><tr><th>Поле</th><th>Тип</th><th>Обоснование</th><th>Когда пересмотреть</th></tr></thead><tbody>
+      <tr><td><code>qty</code></td><td><code>UInt16</code></td><td>Целые 0…50 000 штук, без минуса</td><td>Появится минус или максимум свыше 65 535</td></tr>
+      <tr><td><code>amount</code></td><td><code>Decimal(9, 2)</code></td><td>Сумма позиции до 5 000 000 ₽; точные копейки</td><td>Суммы превысят 9 999 999,99 ₽ или нужна доля копейки</td></tr>
+      <tr><td><code>product_name</code></td><td><code>String</code></td><td>Произвольное название в UTF-8</td><td>Отдельно определить предел длины; тип его не задаёт</td></tr>
+      <tr><td><code>delivery_date</code></td><td><code>Date</code></td><td>Только день доставки в рабочем диапазоне</td><td>Потребуется время суток или дата вне диапазона</td></tr>
+      <tr><td><code>ordered_at</code></td><td><code>DateTime('UTC')</code></td><td>Момент заказа, точность источника — секунда</td><td>Нужны доли секунды или более широкий диапазон</td></tr>
+      <tr><td><code>product_code</code></td><td><code>String</code></td><td>Код с ведущими нулями; возможны буквы</td><td>Изменится правило формирования и сопоставления кодов</td></tr>
+    </tbody></table></div>
+    <p>Это проект типов, ещё не команда создания таблицы. Получим одну строку с выбранными представлениями, чтобы проверить значения до главы 1.4:</p>
+    <figure class="code"><figcaption><span>Запрос</span><span>будущая позиция заказа</span></figcaption><pre>SELECT toUInt16(3) AS qty,
+       toDecimal32('1499.70', 2) AS amount,
+       'Ноутбук' AS product_name,
+       toDate('2026-10-12') AS delivery_date,
+       toDateTime('2026-10-10 14:30:00', 'UTC') AS ordered_at,
+       '00127' AS product_code</pre></figure>
+    <figure class="shot"><img src="assets/final.png" alt="Play UI: строка позиции заказа, количество 3, сумма 1499.7, название Ноутбук, дата доставки 2026-10-12, момент заказа 2026-10-10 14:30:00, код 00127" loading="lazy"><figcaption>Выбранные типы сохраняют значения примера. Сумма может отображаться без конечного нуля; код — обязательно с начальными нулями.</figcaption></figure>
+    <p class="check">у суммы сохранены копейки, у кода — запись <code>00127</code>, у даты нет выдуманного времени. Вы можете обосновать каждый тип и назвать условие его пересмотра.</p>
 
-        <h2 id="s9"><span class="sec">§9</span>Шаг 5. Список значений: Enum</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>В <code>web.events.device</code> всего три разных значения: <code>desktop</code>, <code>mobile</code>, <code>tablet</code>. Хранить в каждой из 10 миллионов строк слово целиком — расточительно.</p>
-        <p><b>Enum</b> — тип со списком разрешённых слов, где каждому слову присвоен номер. В таблице лежит номер, на экран выводится слово.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>слово превращается в Enum</span></figcaption>
-<pre>SELECT CAST('mobile' AS Enum8('desktop' = 1, 'mobile' = 2, 'tablet' = 3)) AS d,
-       toTypeName(d), toInt8(d)</pre></figure>
-        <p class="tech"><b>По словам:</b> <code>CAST(значение AS тип)</code> — «переведи значение в тип». <code>Enum8</code> — номера помещаются в один байт, до 256 слов.</p>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌─d──────┬─toTypeName(d)────────────────────────────────────┬─toInt8(d)─┐
-1. │ mobile │ Enum8('desktop' = 1, 'mobile' = 2, 'tablet' = 3) │         2 │
-   └────────┴──────────────────────────────────────────────────┴───────────┘</pre></figure>
-        <p>На экране — <code>mobile</code>, внутри — <code>2</code>. Сколько это экономит на настоящем столбце:</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 170" role="img" aria-label="Столбец device в web.events: строкой 141,02 МиБ, как Enum8 9,85 МиБ; столбец price: UInt32 39,39 МиБ, Float64 78,77 МиБ">
-            <text class="tm" x="10" y="32">device · String</text><rect class="sc-warm" x="230" y="16" width="600" height="24" rx="3"/><text class="tm" x="760" y="33">141 МиБ</text>
-            <text class="tm" x="10" y="68">device · Enum8</text><rect class="sc-acc" x="230" y="52" width="42" height="24" rx="3"/><text class="tm" x="282" y="69">9,9 МиБ</text>
-            <text class="tm" x="10" y="112">price · Float64</text><rect class="sc-warm" x="230" y="96" width="335" height="24" rx="3"/><text class="tm" x="575" y="113">78,8 МиБ</text>
-            <text class="tm" x="10" y="148">price · UInt32</text><rect class="sc-acc" x="230" y="132" width="168" height="24" rx="3"/><text class="tm" x="408" y="149">39,4 МиБ</text>
-          </svg>
-          <figcaption>10 324 592 значения столбцов web.events в разных типах · без сжатия · одна шкала</figcaption>
-        </figure>
-        <p>Слово <code>mobile</code> со служебными байтами занимает 14 байт, номер в <code>Enum8</code> — один. Столбец <code>device</code> уменьшается в 14 раз. Цена в <code>Float64</code> вместо <code>UInt32</code> заняла бы вдвое больше и вдобавок считалась бы с погрешностью.</p>
-        <p>Цена такой экономии — список нужно знать заранее. Слова вне списка сервер не примет:</p>
-        <figure class="shot"><img src="../../shots/12-04-enum-error.png" alt="Ошибка Code 691 UNKNOWN_ELEMENT_OF_ENUM: Unknown element phone for enum"><figcaption>Play UI · слова phone нет в списке — ошибка 691</figcaption></figure>
-        <p class="check">вывод с <code>mobile</code> и <code>2</code>, а на <code>'phone'</code> — ошибка <code>UNKNOWN_ELEMENT_OF_ENUM</code>. Enum подходит для коротких списков, которые меняются редко: тип устройства, статус заказа.</p>
-        <details class="more">
-          <summary>как посчитаны размеры</summary>
-          <p>Размеры строковых и числовых столбцов взяты из служебной таблицы <code>system.columns</code>, поле <code>data_uncompressed_bytes</code>: <code>device</code> — 141.02 MiB, <code>price</code> — 39.38 MiB. Варианты, которых в таблице нет, посчитаны запросом по всем строкам с функцией <code>byteSize</code>: <code>device</code> как <code>Enum8</code> — 9.85 MiB, <code>price</code> как <code>Float64</code> — 78.77 MiB. На диске всё лежит сжатым и занимает меньше — это глава 3.1. Изменить тип у существующего столбца можно, это глава 1.8.</p>
-        </details>
+    <h2 id="s11"><span class="sec">§11</span>Частые ошибки</h2>
+    <details class="err"><summary>Количество изменилось после преобразования</summary><p>Сравните исходное значение с диапазоном целевого типа. Для проверки подозрительного значения примените <code>accurateCast</code>: выход за диапазон даст ошибку. Если фактические требования выросли, пересмотрите схему; если пришли ошибочные данные — исправьте источник.</p></details>
+    <details class="err"><summary>Decimal дал на копейку меньше ожидаемого</summary><p>Проверьте, не был ли вход уже Float, как в опыте с 1,15. Передавайте исходную десятичную запись без промежуточного двоичного приближения. Отдельно проверьте лишние знаки: уменьшение масштаба отбрасывает их без денежного округления.</p></details>
+    <details class="err"><summary>Название «короче лимита», но проверка его отклоняет</summary><p>Уточните, в чём задан лимит: байтах, кодовых точках или видимых знаках. <code>length</code> и <code>lengthUTF8</code> отвечают на разные вопросы. Для составных символов даже кодовых точек может быть больше, чем видимых знаков.</p></details>
+    <details class="err"><summary>Время заказа сдвинулось на несколько часов</summary><p>Сначала выясните пояс исходного текста. Его разбор в неверном поясе и отображение верного момента в другом поясе — разные причины. Проверка через счётчик секунд помогает отделить изменение момента от изменения отображения.</p></details>
+    <details class="err"><summary>Коды после загрузки перестали различаться</summary><p>Если <code>00127</code> и <code>127</code> сначала стали числом 127, последующий перевод в String не восстановит различие. Для восстановления нужны исходные коды.</p></details>
 
-        <h2 id="s10"><span class="sec">§10</span>Как выбрать тип</h2>
-        <p class="purpose"><b>Зачем это знать</b>Свои таблицы вы начнёте создавать в главе 1.4. Перед этим — порядок вопросов, которые задают каждому столбцу.</p>
-        <div class="vsteps" aria-label="Порядок выбора типа">
-          <div class="vcard"><h5>1 · что это</h5><b>Число, текст, время, да/нет?</b><small>Номер телефона — текст: с ним не считают, и у него бывает «+».</small></div>
-          <div class="varr">число</div>
-          <div class="vcard"><h5>2 · целое?</h5><b>Целое — UInt/Int</b><small>Дробное: деньги — Decimal, замер — Float64.</small></div>
-          <div class="varr">целое</div>
-          <div class="vcard is-hot"><h5>3 · диапазон</h5><b>Максимум с запасом</b><small>Бывает минус — Int. Нет — UInt. Размер — наименьший, где поместится максимум.</small></div>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Столбец</th><th>Значения</th><th>Тип на стенде</th><th>Почему</th></tr></thead>
-            <tbody>
-              <tr><td><code>iot.readings.humidity</code></td><td>35–89 %</td><td><code>UInt8</code></td><td>влажность не больше 100</td></tr>
-              <tr><td><code>shop.orders.delivery_days</code></td><td>дни доставки</td><td><code>UInt8</code></td><td>доставка не идёт 255 дней</td></tr>
-              <tr><td><code>shop.order_items.qty</code></td><td>штук в позиции</td><td><code>UInt16</code></td><td>до 65 535 — с запасом для опта</td></tr>
-              <tr><td><code>web.events.price</code></td><td>0–114 990 ₽</td><td><code>UInt32</code></td><td>в 65 535 уже не влезает</td></tr>
-              <tr><td><code>iot.readings.temperature</code></td><td>−3,4…35 °C</td><td><code>Float32</code></td><td>замер, 7 верных цифр хватает</td></tr>
-              <tr><td><code>shop.customers.phone</code></td><td>+7 …</td><td><code>String</code></td><td>с номером не считают</td></tr>
-              <tr><td><code>web.events.event_time</code></td><td>момент события</td><td><code>DateTime</code></td><td>точности в секунду хватает</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="check">для каждого столбца стенда вы можете объяснить, почему у него такой тип. Столбцы <code>device</code> и <code>event_type</code> в <code>web.events</code> намеренно хранятся строками — в модуле 3 их переделают и сравнят.</p>
+    <h2 id="s12"><span class="sec">§12</span>Самопроверка и самостоятельная задача</h2>
+    <details><summary>1. Теперь в позиции может быть до 70 000 штук. Достаточно ли заменить UInt16 на Int16?</summary><p>Нет. У Int16 положительная граница даже меньше — 32 767. При отсутствии минуса подойдёт UInt32: его диапазон покрывает 70 000. Если нужно учитывать отрицательное изменение до −70 000, выбирают Int32. Знак и ширина решают разные вопросы.</p></details>
+    <details><summary>2. Входная сумма — «7.999», а тип — Decimal(9, 2). Получится ли 8 рублей?</summary><p><code>toDecimal32('7.999', 2)</code> возвращает <code>7.99</code>: лишний разряд отбрасывается. Если по правилам магазина требуется 8,00, нужно отдельно определить и применить округление. Сам выбор Decimal этого не делает.</p></details>
+    <details><summary>3. События приходят с миллисекундами. Можно ли сначала записать их в DateTime, а потом перевести в DateTime64(3)?</summary><p>Такой перевод не восстановит исходные миллисекунды, если при сохранении они были потеряны. Если доли секунды нужны для порядка событий, выбирают DateTime64(3) до загрузки и проверяют, что источник действительно их передаёт.</p></details>
+    <details><summary>4. Поставщик гарантирует, что код состоит только из цифр. Хватит ли этого для выбора UInt32?</summary><p>Нет. Нужно также знать, значимы ли ведущие нули и каков диапазон кодов. Имеет значение и правило сопоставления объектов по коду. <code>toUInt32('00042')</code> даёт 42. При значимых нулях нужен String независимо от отсутствия букв.</p></details>
+    <h3>Самостоятельно: изменились требования магазина</h3>
+    <p>Подготовьте таблицу «поле → тип → обоснование → граничная проверка» для новой версии набора данных:</p>
+    <ul><li>Вместо количества хранится изменение остатка от −50 000 до +50 000 штук.</li><li>Сумма позиции может достигать 20 000 000 рублей, копейки должны сохраняться.</li><li>В коде товара разрешены буквы; названия остаются произвольными.</li><li>Момент заказа приходит в UTC с миллисекундами; доставка по-прежнему назначается на день.</li></ul>
+    <p>Для каждого изменённого числового поля выполните запрос преобразования граничного значения и запрос <code>toTypeName</code>. Для кода проверьте сохранение <code>'00A42'</code>, для момента — <code>'2026-10-10 14:30:00.123'</code>. Не создавайте и не меняйте таблицы.</p>
+    <details class="more"><summary>Критерии проверки решения</summary><p>Ожидаются Int32 для изменения остатка, Decimal(18, 2) для суммы (функция <code>toDecimal64</code>), String для кода и названия, DateTime64(3, 'UTC') для момента, Date для доставки. Для более широкого типа укажите требование, которое делает его необходимым. В результате преобразований должны сохраниться знак, копейки, буквы и нули кода, миллисекунды. У каждой проверки укажите ожидаемый результат до запуска, затем сравните с фактическим.</p></details>
 
-        <h2 id="s11"><span class="sec">§11</span>Если не получилось</h2>
-        <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
-        <details class="err"><summary>Число без ошибки, но не то<small>SELECT toUInt8(256) → 0</small></summary><p>Переполнение: значение не поместилось в тип, и счёт пошёл по кругу. Сервер об этом не сообщает. Возьмите тип шире — <code>UInt16</code> или <code>UInt32</code> (<a href="#s3">§3</a>).</p></details>
-        <details class="err"><summary>Сумма с хвостом из цифр<small>100000.00000000528 вместо 100000</small></summary><p>Числа во Float. Для денег — <code>Decimal</code> или целые копейки (<a href="#s5">§5</a>).</p></details>
-        <details class="err"><summary>Сравнение дробных не срабатывает<small>SELECT 0.1 + 0.2 = 0.3 → 0</small></summary><p>Во Float сумма равна <code>0.30000000000000004</code>. Сравнивайте Float с допуском, например «разница меньше 0,0001», или храните такие значения в Decimal.</p></details>
-        <details class="err"><summary>Текст не переводится в число<small>Code: 6. DB::Exception: Cannot parse string '42a' as UInt32: syntax error at position 2 (parsed just '42'). Note: there are toUInt32OrZero and toUInt32OrNull functions … (CANNOT_PARSE_TEXT)</small></summary><p>В строке лишний символ. Если такие строки ожидаются, сервер сам подсказывает функции <code>toUInt32OrZero</code> (вернёт 0) и <code>toUInt32OrNull</code> (вернёт NULL, глава 1.3).</p></details>
-        <details class="err"><summary>Сложили текст и число<small>Code: 43. DB::Exception: Illegal types String and UInt8 of arguments of function plus: In scope SELECT 'abc' + 1. (ILLEGAL_TYPE_OF_ARGUMENT)</small></summary><p>ClickHouse не переводит типы сам, если результат неочевиден. Переведите явно: <code>toUInt32('41') + 1</code>.</p></details>
-        <details class="err"><summary>Слова нет в списке Enum<small>Code: 691. DB::Exception: Unknown element 'phone' for enum … (UNKNOWN_ELEMENT_OF_ENUM)</small></summary><p>Enum принимает только слова из своего списка. Проверьте написание или добавьте слово в список типа (глава 1.8).</p></details>
-        <details class="err"><summary>Число не влезает в Decimal<small>Code: 407. DB::Exception: Decimal convert overflow. Float is out of Decimal range … (DECIMAL_OVERFLOW)</small></summary><p>Цифр больше, чем позволяет тип: в <code>Decimal(9, 2)</code> — не больше девяти. Берите <code>toDecimal64</code>.</p></details>
-        <details class="err"><summary>Старая дата превратилась в 1970-01-01<small>toDate('1969-12-31') → 1970-01-01</small></summary><p><code>Date</code> начинается с 1970 года, более ранняя дата прижимается к краю без ошибки. Берите <code>Date32</code>.</p></details>
-
-        <h2 id="s12"><span class="sec">§12</span>Проверьте себя</h2>
-        <details>
-          <summary>Какой тип получит число <code>70000</code> в запросе и почему не <code>UInt16</code>?</summary>
-          <p><code>UInt32</code>: так отвечает <code>toTypeName(70000)</code>. Предел <code>UInt16</code> — 65 535, а 70 000 больше.</p>
-        </details>
-        <details>
-          <summary>Чему равно <code>toUInt8(300)</code>?</summary>
-          <p><code>44</code>: после 255 счёт начинается с нуля, 300 − 256 = 44. Ошибки не будет.</p>
-        </details>
-        <details>
-          <summary>Почему цену в рублях с копейками не хранят в <code>Float64</code>?</summary>
-          <p>Float считает с погрешностью в последних знаках. На сумме миллиона значений она вылезает: <code>100000.00000000528</code> вместо <code>100000</code>. <code>Decimal</code> хранит число как целое с пометкой о знаках после запятой и складывает точно.</p>
-        </details>
-        <details>
-          <summary>Сколько байт займёт столбец <code>Enum8</code> на 10 324 592 строках и сколько — <code>DateTime64(3)</code>?</summary>
-          <p><code>Enum8</code> — 1 байт на строку, 10 324 592 байта, это 9.85 MiB. <code>DateTime64(3)</code> — 8 байт, вдвое больше, чем <code>DateTime</code>, около 79 MiB. Оба числа — без сжатия.</p>
-        </details>
-
-        <h2 id="s13"><span class="sec">§13</span>Шпаргалка и глоссарий</h2>
-        <div class="cheat">
-          <div>
-            <b>Узнать тип</b>
-            <code>SELECT toTypeName(42)        -- UInt8</code>
-            <code>DESCRIBE shop.products</code>
-          </div>
-          <div>
-            <b>Числа</b>
-            <code>UInt8 16 32 64   -- без минуса</code>
-            <code>Int8 16 32 64    -- с минусом</code>
-            <code>Float32 Float64  -- замеры</code>
-            <code>Decimal(18, 2)   -- деньги</code>
-          </div>
-          <div>
-            <b>Текст и время</b>
-            <code>String  FixedString(2)</code>
-            <code>Date  Date32  DateTime</code>
-            <code>DateTime64(3)    -- миллисекунды</code>
-          </div>
-          <div>
-            <b>Прочее</b>
-            <code>Bool  UUID</code>
-            <code>Enum8('a' = 1, 'b' = 2)</code>
-            <code>CAST(x AS тип)  toUInt32(x)</code>
-          </div>
-        </div>
-        <details class="more">
-          <summary>6 терминов главы с картинками</summary>
-        <div class="glossary">
-          <article class="gl" id="g-tip">
-            <div class="gl__text">
-              <h3>Тип данных<i>data type</i></h3>
-              <p class="gl__def">Правило для значений столбца или выражения: что допустимо и сколько байт занимает каждое значение.</p>
-              <p class="gl__ex"><b>Пример</b><code>toTypeName(300)</code> → <code>UInt16</code>.</p>
-              <p class="gl__where"><b>Где</b>§1, §2</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Графа из шести клеточек для цифр"><text class="t" x="20" y="34">графа «индекс»</text><rect class="sc-box" x="20" y="48" width="34" height="40" rx="3"/><rect class="sc-box" x="58" y="48" width="34" height="40" rx="3"/><rect class="sc-box" x="96" y="48" width="34" height="40" rx="3"/><rect class="sc-box" x="134" y="48" width="34" height="40" rx="3"/><rect class="sc-box" x="172" y="48" width="34" height="40" rx="3"/><rect class="sc-box" x="210" y="48" width="34" height="40" rx="3"/><text class="tm" x="20" y="112">только 6 цифр</text></svg></figure>
-          </article>
-          <article class="gl" id="g-overflow">
-            <div class="gl__text">
-              <h3>Переполнение<i>overflow</i></h3>
-              <p class="gl__def">Значение больше предела целого типа. Лишние старшие биты отбрасываются, счёт идёт по кругу, ошибки нет.</p>
-              <p class="gl__ex"><b>Пример</b><code>toUInt8(256)</code> → <code>0</code>, <code>toInt8(128)</code> → <code>-128</code>.</p>
-              <p class="gl__where"><b>Где</b>§3</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Круг: 255 переходит в 0"><circle class="sc-acc" cx="130" cy="65" r="48"/><text class="tb tc" x="130" y="34">0</text><text class="tm tc" x="98" y="40">255</text><text class="tm tc" x="164" y="40">1</text><text class="t tc" x="130" y="72">по кругу</text></svg></figure>
-          </article>
-          <article class="gl" id="g-float">
-            <div class="gl__text">
-              <h3>Float</h3>
-              <p class="gl__def">Дробное число в двоичном виде. Быстрое, но хранит около 7 (<code>Float32</code>) или 16 (<code>Float64</code>) верных цифр, остальное — погрешность.</p>
-              <p class="gl__ex"><b>Пример</b><code>0.1 + 0.2</code> = <code>0.30000000000000004</code>.</p>
-              <p class="gl__where"><b>Где</b>§4</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="0,1 плюс 0,2 даёт 0,30000000000000004"><rect class="sc-warm" x="14" y="44" width="232" height="40" rx="4"/><text class="tm tc" x="130" y="69">0.30000000000000004</text></svg></figure>
-          </article>
-          <article class="gl" id="g-decimal">
-            <div class="gl__text">
-              <h3>Decimal</h3>
-              <p class="gl__def">Дробное число, которое хранится как целое с пометкой, сколько знаков после запятой. Складывается без погрешности, при переполнении даёт ошибку.</p>
-              <p class="gl__ex"><b>Пример</b><code>Decimal(18, 2)</code>: 18 цифр, из них 2 после запятой.</p>
-              <p class="gl__where"><b>Где</b>§5</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="0,10 хранится как 10 с пометкой два знака"><rect class="sc-acc" x="14" y="40" width="100" height="48" rx="4"/><text class="tb tc" x="64" y="70">0.10</text><path class="sc-arrow" d="M118 64 L140 64 M133 58 L140 64 L133 70"/><rect class="sc-box" x="146" y="40" width="100" height="48" rx="4"/><text class="tm tc" x="196" y="62">10</text><text class="t tc" x="196" y="80">знаков: 2</text></svg></figure>
-          </article>
-          <article class="gl" id="g-datetime64">
-            <div class="gl__text">
-              <h3>DateTime64</h3>
-              <p class="gl__def">Дата и время с долями секунды. Число в скобках — сколько знаков после секунд. Занимает 8 байт.</p>
-              <p class="gl__ex"><b>Пример</b><code>DateTime64(3)</code>: <code>2026-10-10 14:30:00.123</code>.</p>
-              <p class="gl__where"><b>Где</b>§7</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Время с миллисекундами"><rect class="sc-ink" x="14" y="44" width="232" height="40" rx="4"/><text class="tw tc" x="130" y="69" style="font:600 13px var(--mono)">14:30:00.123</text></svg></figure>
-          </article>
-          <article class="gl" id="g-enum">
-            <div class="gl__text">
-              <h3>Enum</h3>
-              <p class="gl__def">Тип со списком разрешённых слов. В таблице хранится номер слова, на экран выводится само слово. Слово вне списка — ошибка.</p>
-              <p class="gl__ex"><b>Пример</b><code>Enum8('desktop' = 1, 'mobile' = 2, 'tablet' = 3)</code>.</p>
-              <p class="gl__where"><b>Где</b>§9</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Слово mobile хранится как номер 2"><rect class="sc-warm" x="14" y="40" width="100" height="48" rx="4"/><text class="tm tc" x="64" y="69">mobile</text><path class="sc-arrow" d="M118 64 L140 64 M133 58 L140 64 L133 70"/><rect class="sc-acc" x="146" y="40" width="100" height="48" rx="4"/><text class="tb tc" x="196" y="69">2</text></svg></figure>
-          </article>
-        </div>
-        </details>
-
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>Тип задаёт, что можно положить в столбец и сколько байт займёт значение. <code>toTypeName</code> показывает тип любого выражения.</li>
-          <li>Целые — <code>UInt</code> без минуса и <code>Int</code> с минусом, от 1 до 8 байт. При переводе в узкий тип переполнение проходит молча.</li>
-          <li>Float считает с погрешностью — для замеров. Деньги — <code>Decimal</code> или целые копейки.</li>
-          <li><code>String</code> меряется в байтах, русская буква — 2 байта.</li>
-          <li>Время: <code>Date</code> — день, <code>DateTime</code> — секунда, <code>DateTime64(3)</code> — миллисекунда.</li>
-          <li><code>Enum</code> хранит номер вместо слова: <code>device</code> в 14 раз меньше.</li>
-        </ul>
-        <p>Дальше — глава <a href="../13-pustoe-znachenie/index.html">1.3</a>: что делать, когда значения нет, и почему <code>Nullable</code> стоит дороже обычного типа.</p>
-
-        <div class="pager"><a href="../11-server-baza-tablica/index.html">← 1.1 Сервер, база, таблица</a><a href="../13-pustoe-znachenie/index.html">1.3 Пустое значение →</a></div>
-
-        <div class="colophon">
-          <span>Глава 1.2 · Типы данных · Справочник по ClickHouse</span>
-          <span class="author-line">Автор: Макаров Максим Николаевич</span>
-        </div>
-      </main>
-    </div>
-  </div>
-  <script src="../../book.js"></script>
+    <h2 id="s13"><span class="sec">§13</span>Краткая шпаргалка</h2>
+    <div class="cheat"><div><b>До выбора</b><p>Смысл и единица → допустимые значения → точность → нужные операции → представление.</p></div><div><b>При проверке</b><p><code>toTypeName(x)</code> — тип результата.<br><code>accurateCast(x, 'UInt16')</code> — проверка представимости целого.</p></div><div><b>Для этой схемы</b><p>Количество — UInt16; сумма — Decimal(9, 2); название и код — String; день — Date; момент — DateTime('UTC').</p></div><div><b>Когда пересматривать</b><p>Изменились знак, максимум, требуемая точность, формат кода или смысл времени.</p></div></div>
+    <h2 id="s14"><span class="sec">§14</span>Что дальше</h2>
+    <p>Типы для шести полей выбраны. Остаётся другой вопрос: что записывать, если значение неизвестно? Это тема <a href="../13-pustoe-znachenie/index.html">главы 1.3</a>. Создание таблицы по такой схеме — следующий отдельный шаг, глава 1.4.</p>
+    <details class="more"><summary>Воспроизводимость и документация</summary><p>Проверено на ClickHouse 26.8.36.3 с поясом UTC. <a href="assets/queries.json">Запросы численных опытов</a> включают как успешные результаты, так и ожидаемые ошибки. Они не меняют данные. Отдельного сравнения скорости или размера сжатых таблиц здесь нет.</p><ul><li><a href="https://clickhouse.com/docs/sql-reference/data-types/int-uint">Целые типы</a> и <a href="https://clickhouse.com/docs/sql-reference/functions/type-conversion-functions">преобразования</a></li><li><a href="https://clickhouse.com/docs/sql-reference/data-types/float">Float</a> и <a href="https://clickhouse.com/docs/sql-reference/data-types/decimal">Decimal</a></li><li><a href="https://clickhouse.com/docs/sql-reference/data-types/string">String</a>, <a href="https://clickhouse.com/docs/sql-reference/data-types/date">Date</a>, <a href="https://clickhouse.com/docs/sql-reference/data-types/datetime">DateTime</a> и <a href="https://clickhouse.com/docs/sql-reference/data-types/datetime64">DateTime64</a></li></ul></details>
+    <div class="pager"><a href="../11-server-baza-tablica/index.html">← 1.1 Сервер, база, таблица</a><a href="../13-pustoe-znachenie/index.html">1.3 Пустое значение →</a></div>
+    <div class="colophon"><span>Глава 1.2 · Типы данных · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
+  </main>
+</div></div>
+<script src="../../book.js"></script>
 </body>
 </html>
