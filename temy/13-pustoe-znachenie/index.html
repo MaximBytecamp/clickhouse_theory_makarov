@@ -9,438 +9,282 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../styles.css">
+  <style>
+    .null-flow { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1.3fr) auto minmax(0,1fr); align-items:center; gap:12px; padding:20px; border:1px solid var(--rule); background:var(--leaf-pale); border-radius:8px; }
+    .null-flow > div { min-width:0; padding:12px; background:var(--page); border:1px solid var(--rule); border-radius:6px; }
+    .null-flow b,.null-flow code,.null-flow small { display:block; overflow-wrap:anywhere; }
+    .null-flow small { margin-top:8px; }
+    .null-flow .arrow { font-size:24px; color:var(--leaf); text-align:center; }
+    .null-note { padding:12px 16px; border-left:4px solid var(--leaf); background:var(--leaf-pale); }
+    .null-table td { vertical-align:top; }
+    @media(max-width:600px) { .null-flow { grid-template-columns:minmax(0,1fr); padding:12px; } .null-flow .arrow { transform:rotate(90deg); } }
+  </style>
 </head>
 <body>
-  <div class="book">
-    <div class="book__body">
-      <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+<div class="book"><div class="book__body">
+  <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+  <main class="leaf">
+    <div class="running"><p class="eyebrow"><a href="../../index.html">Справочник по ClickHouse</a> · модуль 1 · первые данные</p><p class="running__folio">Глава 1.3</p></div>
+    <header class="chapter-head"><span class="chapter-num">1.3</span><h1>Пустое значение: DEFAULT и&nbsp;Nullable</h1><p class="lead">У одного товара скидка равна нулю, у другого её размер ещё неизвестен. Если записать обоим ноль, отчёт перестанет различать эти состояния.</p></header>
+    <dl class="passport">
+      <div><dt>Категория</dt><dd>Первые данные</dd></div><div><dt>Уровень</dt><dd>Начальный</dd></div>
+      <div><dt>Уже знаем</dt><dd>строку и столбец, основные типы, простой SELECT</dd></div><div><dt>Понадобится</dt><dd>стенд 26.8.36.3, Play UI или clickhouse-client</dd></div>
+    </dl>
+    <p>Здесь разберём смысл пропусков, их запись и влияние на расчёт. Устройство таблиц, пакетную вставку и группировку изучим позже; необходимые команды для небольшого опыта приведены целиком.</p>
+    <nav class="contents"><b>В этой главе</b><ol>
+      <li><a href="#s1">Ноль, пустая строка и неизвестное значение</a></li><li><a href="#s2">Как Nullable хранит NULL</a></li><li><a href="#s3">Значения по умолчанию</a></li><li><a href="#s4">Пропущенный столбец и явный NULL при вставке</a></li><li><a href="#s5">Выражения и условия</a></li><li><a href="#s6">Подсчёт строк, сумма и среднее</a></li><li><a href="#s7">Замена без потери смысла</a></li><li><a href="#s8">Частые ошибки</a></li><li><a href="#s9">Самопроверка и самостоятельная задача</a></li><li><a href="#s10">Шпаргалка</a></li>
+    </ol></nav>
 
-      <main class="leaf">
-        <div class="running">
-          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 1 · первые данные</p>
-          <p class="running__folio">Глава 1.3</p>
-        </div>
+    <h2 id="s1"><span class="sec">§1</span>Ноль, пустая строка и NULL</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Отделим факт «скидка 0 %» от отсутствия сведений о скидке, прежде чем считать цену.</p>
+    <p><code>0</code> — известное число. Пустая строка <code>''</code> — известный текст длиной ноль символов. <b>NULL</b> — специальная отметка отсутствующего значения. Она принадлежит отдельному состоянию данных. Его смысл задаёт модель: в нашем опыте скидка с NULL пока неизвестна.</p>
+    <p>Создадим три строки с ценой 100. В столбце <code>discount</code> будет скидка в процентах, в <code>label</code> — подпись. <code>Nullable(T)</code> разрешает значения типа <code>T</code> и NULL.</p>
+    <p>В Play UI откройте <code>http://localhost:8123/play</code> и выполните команды ниже <b>по одной</b>: вставьте команду в поле запроса и нажмите <b>Run</b>. В clickhouse-client команды можно выполнять последовательно. База <code>sandbox</code> — песочница для собственных таблиц; <code>CREATE DATABASE IF NOT EXISTS</code> создаёт её, только если её ещё нет.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>подготовка опыта, один раз</span></figcaption><pre>CREATE DATABASE IF NOT EXISTS sandbox;
 
-        <header class="chapter-head">
-          <span class="chapter-num">1.3</span>
-          <h1>Пустое значение: DEFAULT и&nbsp;Nullable</h1>
-          <p class="lead">В главе — что хранит ClickHouse, когда значения нет: значение по умолчанию или отметку NULL. Разберём, как NULL меняет вычисления и подсчёты, как его заменить и сколько стоит столбец, где он разрешён.</p>
-        </header>
+CREATE TABLE sandbox.null_lesson (
+    id UInt8,
+    price UInt16,
+    discount Nullable(UInt8),
+    label Nullable(String)
+) ENGINE = Memory;
 
-        <dl class="passport">
-          <div><dt>Категория</dt><dd>Первые данные</dd></div>
-          <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>1.2 Типы данных · 1.4 CREATE TABLE · 2.1 Условия</dd></div>
-          <div><dt>Понадобится</dt><dd>поднятый стенд, Play UI или clickhouse-client</dd></div>
-        </dl>
+INSERT INTO sandbox.null_lesson VALUES
+    (1, 100, 0, ''),
+    (2, 100, 10, 'sale'),
+    (3, 100, NULL, NULL);
 
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Два вида «пусто»</b><p>Обычный столбец хранит значение по умолчанию: 0, пустую строку, 1970-01-01. <code>Nullable</code> умеет хранить NULL — «значения нет».</p><p>0 — это скидка ноль процентов. NULL — скидку не назначали.</p></div>
-            <div><b data-n="2">NULL заразен</b><p><code>NULL + 1</code> — NULL, <code>NULL = NULL</code> — тоже NULL. Подсчёты NULL пропускают.</p><p>Средняя скидка: 13,18 % без NULL и 6,90 %, если NULL считать нулём.</p></div>
-            <div><b data-n="3">Nullable стоит денег</b><p>Рядом со столбцом хранится маска «пусто или нет» — байт на строку.</p><p>На 10 миллионах цен: +25 % объёма при чтении.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s3"><b>Выражения</b><small>NULL заразен</small></a></li>
-            <li><a href="#s4"><b>Подсчёты</b><small>NULL пропускают</small></a></li>
-            <li><a href="#s5"><b>Замена</b><small>ifNull, coalesce</small></a></li>
-            <li><a href="#s6"><b>DEFAULT</b><small>своё «по умолчанию»</small></a></li>
-            <li><a href="#s7"><b>Цена</b><small>маска рядом</small></a></li>
-          </ol>
-        </section>
+SELECT * FROM sandbox.null_lesson ORDER BY id;</pre></figure>
+    <p><code>CREATE TABLE</code> создаёт таблицу с перечисленными столбцами. <code>ENGINE = Memory</code> означает хранение в оперативной памяти: строки этого опыта не сохранятся после перезапуска сервера. <code>INSERT … VALUES</code> добавляет строки в порядке столбцов; <code>ORDER BY id</code> в SELECT упорядочивает вывод по номеру. Для опыта достаточно этих команд.</p>
+    <div class="table-scroll"><table><thead><tr><th>id</th><th>price</th><th>discount</th><th>label</th><th>Что известно</th></tr></thead><tbody>
+      <tr><td>1</td><td>100</td><td>0</td><td><code>''</code></td><td>Скидка нулевая, подпись пустая.</td></tr><tr><td>2</td><td>100</td><td>10</td><td>sale</td><td>Скидка 10 %, подпись заполнена.</td></tr><tr><td>3</td><td>100</td><td>NULL</td><td>NULL</td><td>О скидке и подписи нет сведений.</td></tr>
+    </tbody></table></div>
+    <figure class="shot"><img src="assets/01-rows.png" alt="Настоящий Play UI: поле запроса, кнопка Run и три строки таблицы null_lesson"><figcaption>Результат SELECT на отдельном стенде. Пустая ячейка label в строке 1 — пустая строка; в строке 3 отображается NULL. Кадры сняты на версии 26.8.36.3.</figcaption></figure>
+    <p class="check">Получилось, если в discount три разных состояния: <code>0</code>, <code>10</code> и <code>NULL</code>. Кавычки у пустой строки в таблице выше добавлены для различения; интерфейс показывает пустую ячейку. Разберём, как тип столбца сохраняет различие между нулём и NULL.</p>
 
-        <nav class="contents">
-          <b>В этой главе</b>
-          <ol>
-            <li><a href="#s1">Когда значения нет</a></li>
-            <li><a href="#s2">Значение по умолчанию и NULL</a></li>
-            <li><a href="#s3">Шаг 1. NULL в выражениях</a></li>
-            <li><a href="#s4">Шаг 2. NULL в подсчётах</a></li>
-            <li><a href="#s5">Шаг 3. Заменить пустое</a></li>
-            <li><a href="#s6">Шаг 4. Своё значение по умолчанию: DEFAULT</a></li>
-            <li><a href="#s7">Шаг 5. Сколько стоит Nullable</a></li>
-            <li><a href="#s8">Что выбрать</a></li>
-            <li><a href="#s9">Если вы знаете MongoDB</a></li>
-            <li><a href="#s10">Если не получилось</a></li>
-            <li><a href="#s11">Проверьте себя</a></li>
-            <li><a href="#s12">Шпаргалка и глоссарий</a></li>
-          </ol>
-        </nav>
+    <h2 id="s2"><span class="sec">§2</span>Как Nullable различает ноль и NULL</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Поймём, почему NULL не нужно кодировать особым числом.</p>
+    <p>В <code>Nullable(UInt8)</code> внутренний тип <code>UInt8</code> задаёт числовые значения, а обёртка <code>Nullable</code> добавляет возможность хранить NULL. Ноль сохраняется как числовое значение. Рядом со значениями есть <b>маска NULL</b> — служебная последовательность отметок по строкам: 0 означает, что значение есть, 1 — что нужно вернуть NULL.</p>
+    <p>Проследим чтение двух строк. Проверим, какое SQL-значение получится после учёта маски.</p>
+    <figure class="pic">
+      <div class="null-flow" role="img" aria-label="Чтение Nullable: значение и маска вместе определяют результат; маска 0 сохраняет число, маска 1 даёт NULL">
+        <div><b>Внутренние данные</b><code>число 0, маска 0</code><code>число ·, маска 1</code><small>· — внутреннее число для этой строки не используется как результат</small></div><span class="arrow" aria-hidden="true">→</span>
+        <div><b>Проверка маски</b><small>0: прочитать число.<br>1: вернуть отметку NULL.</small></div><span class="arrow" aria-hidden="true">→</span>
+        <div><b>Значение SQL</b><code>0</code><code>NULL</code></div>
+      </div><figcaption>Схема чтения Nullable: маска определяет, вернуть число или NULL.</figcaption>
+    </figure>
+    <p>В первой строке результат — настоящий ноль. Во второй результатом будет NULL независимо от внутреннего числа. Поэтому проверка <code>isNull(x)</code> возвращает 1 для NULL и 0 для известного значения; проверять сам ноль вместо маски было бы ошибкой.</p>
+    <p>Запись <code>AS имя</code> задаёт имя столбца результата. Для текста добавим <code>length(x)</code> — функцию длины строки в байтах. На пустой строке это 0, на нашей латинской подписи <code>sale</code> — 4.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>проверяем исходные строки</span></figcaption><pre>SELECT id, discount, isNull(discount) AS unknown,
+       label, length(label) AS chars
+FROM sandbox.null_lesson ORDER BY id;</pre></figure>
+    <figure class="shot"><img src="assets/02-nullable.png" alt="discount 0, 10, NULL дают unknown 0, 0, 1; длина label — 0, 4, NULL"><figcaption>Пустая строка имеет длину 0. Для отсутствующей подписи результат length — NULL.</figcaption></figure>
+    <details class="simple"><summary>По-простому: незаполненная графа анкеты</summary><p>В бумажной анкете ответ «0 детей» отличается от незаполненной графы. Ноль участвует в подсчёте, пустая графа не сообщает число. <b>Что есть что:</b> анкета — строка, графа — столбец, отсутствие ответа — NULL.</p><p><b>Граница аналогии:</b> в таблице нет физически отсутствующей ячейки: у каждой строки есть этот столбец. Nullable хранит отметку отсутствия значения. Причину — «не ответили», «не спрашивали» или «сведения потеряны» — сама отметка не кодирует; для различения причин нужен отдельный признак.</p></details>
+    <details class="more"><summary>Есть ли у Nullable дополнительная стоимость?</summary><p>Да: для маски в несжатом представлении используется байт на строку. Из этого устройства нельзя вычислить память целого запроса или размер файлов. Сжатие маски, выделенная память и время запроса — разные показатели. В этой главе нет опыта, который позволял бы назвать процент замедления или прибавку на диске.</p></details>
+    <p class="check">Получилось, если строка 1 имеет <code>unknown = 0</code>, а строка 3 — <code>unknown = 1</code>. Теперь проверим, что происходит, когда клиент вообще не передаёт значение столбца.</p>
 
-        <h2 id="s1"><span class="sec">§1</span>Когда значения нет</h2>
-        <p class="purpose"><b>Зачем это знать</b>В главе 1.1 у ноутбука <code>p-001</code> в столбце <code>discount</code> стояло <code>NULL</code>. Разберёмся, что это значит и чем отличается от нуля.</p>
-        <p>В магазине 21 товар. Скидку назначили одиннадцати, у остальных десяти её нет совсем:</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 150" role="img" aria-label="21 товар: у 11 есть скидка, у 10 столбец discount пустой — NULL">
-            <g>
-              <rect class="sc-acc" x="10" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="50" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="90" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="130" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="170" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="210" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="250" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="290" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="330" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="370" y="20" width="34" height="44" rx="4"/><rect class="sc-acc" x="410" y="20" width="34" height="44" rx="4"/>
-              <rect class="sc-soft" x="470" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="510" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="550" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="590" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="630" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="670" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="710" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="750" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="790" y="20" width="34" height="44" rx="4"/><rect class="sc-soft" x="830" y="20" width="34" height="44" rx="4"/>
-            </g>
-            <text class="tb" x="10" y="92">11 товаров — скидка есть</text><text class="t" x="10" y="112">5, 10, 15, 20 … процентов, вместе 145</text>
-            <text class="tb" x="470" y="92">10 товаров — NULL</text><text class="t" x="470" y="112">скидку не назначали</text>
-            <text class="t" x="10" y="142">shop.products.discount · тип Nullable(UInt8)</text>
-          </svg>
-          <figcaption>скидка у 21 товара: значения и пустые места</figcaption>
-        </figure>
-        <p>Пустое место — это не «скидка 0 %». Скидка 0 % значит «решили не снижать цену». Пустое место значит «вопрос о скидке не решали». Для отчёта это разные факты, и в ClickHouse их можно хранить по-разному.</p>
+    <h2 id="s3"><span class="sec">§3</span>Значения по умолчанию типа и столбца</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Определим, что записать в столбец, когда вставка не передаёт для него значение.</p>
+    <p>У типа есть <b>значение по умолчанию</b>. Для уже знакомого числового <code>UInt8</code> это 0, для <code>String</code> — <code>''</code>, для <code>Nullable(UInt8)</code> — NULL. Функция <code>defaultValueOfTypeName</code> принимает название типа строкой и показывает его значение по умолчанию.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>спрашиваем значения типов</span></figcaption><pre>SELECT defaultValueOfTypeName('UInt8') AS number,
+       defaultValueOfTypeName('String') AS text,
+       defaultValueOfTypeName('Nullable(UInt8)') AS nullable;</pre></figure>
+    <figure class="shot"><img src="assets/03-defaults.png" alt="Значения типов по умолчанию: UInt8 — 0, String — пустая строка, Nullable(UInt8) — NULL"><figcaption>Три результата: 0, пустая ячейка и NULL. Это запрос о типах; строку в таблицу он не добавляет.</figcaption></figure>
+    <p>Столбцу можно назначить другое правило через <b>DEFAULT</b> в его описании. Например, <code>city String DEFAULT 'не указан'</code> задаёт текст для пропуска города при вставке. Значение по умолчанию самого типа String остаётся пустой строкой.</p>
+    <p class="null-note">DEFAULT задаёт правило заполнения. Происхождение сохранённого значения отдельно не отмечается. Если после вставки хранится <code>'не указан'</code>, по одному этому тексту нельзя узнать, подставил его сервер или отправил клиент.</p>
+    <p class="check">Вы различаете две вещи: значение по умолчанию типа и выражение DEFAULT конкретного столбца. Проверим их действие на вставке.</p>
 
-        <details class="simple">
-          <summary>ноль и NULL на примере анкеты</summary>
-          <div class="vsteps">
-            <div class="vcard"><i>📝</i><h5>значение</h5><b>«Детей: 2»</b><small>Человек ответил.</small></div>
-            <div class="varr">или</div>
-            <div class="vcard is-hot"><i>0️⃣</i><h5>ноль</h5><b>«Детей: 0»</b><small>Ответил: детей нет.</small></div>
-            <div class="varr">или</div>
-            <div class="vcard is-dark"><i>⬜</i><h5>NULL</h5><b>Графа пустая</b><small>Не ответил. Сколько детей — неизвестно.</small></div>
-          </div>
-          <p class="simple__map"><b>Что есть что:</b> анкета — строка таблицы, графа «Детей» — столбец. Ноль — настоящее значение, его можно складывать. Пустая графа — <code>NULL</code>: считать с ней нельзя, о ней можно только сказать «пусто».</p>
-        </details>
+    <h2 id="s4"><span class="sec">§4</span>Пропуск столбца и явный NULL при вставке</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Сопоставим отправленные данные с сохранёнными: после вставки часть различий уже нельзя восстановить.</p>
+    <p>Создадим вторую таблицу. Здесь у <code>discount</code> значение по умолчанию типа — NULL, у <code>qty</code> — 0, а у <code>city</code> задан DEFAULT. В первой вставке список <code>(id)</code> означает, что клиент передаёт только id; остальные столбцы пропущены.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>в Play UI — по одной команде</span></figcaption><pre>CREATE TABLE sandbox.null_insert (
+    id UInt8,
+    discount Nullable(UInt8),
+    qty UInt8,
+    city String DEFAULT 'не указан'
+) ENGINE = Memory;
 
-        <h2 id="s2"><span class="sec">§2</span>Значение по умолчанию и NULL</h2>
-        <p class="purpose"><b>Зачем это знать</b>В обычном столбце пустоты не бывает: в каждой строке лежит какое-то значение. Посмотрим, какое.</p>
-        <p>Если при вставке значения нет, обычный столбец получает <b>значение по умолчанию</b> своего типа. Его показывает функция <code>defaultValueOfTypeName</code>:</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Тип</th><th>По умолчанию</th></tr></thead>
-            <tbody>
-              <tr><td><code>UInt32</code> и другие числа</td><td><code>0</code></td></tr>
-              <tr><td><code>String</code></td><td>пустая строка <code>''</code></td></tr>
-              <tr><td><code>Date</code></td><td><code>1970-01-01</code></td></tr>
-              <tr><td><code>DateTime</code></td><td><code>1970-01-01 00:00:00</code></td></tr>
-              <tr><td><code>Bool</code></td><td><code>false</code></td></tr>
-              <tr><td><code>Nullable(UInt8)</code></td><td><code>NULL</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="vsteps" aria-label="Два способа хранить пустоту">
-          <div class="vcard"><h5>обычный тип · UInt8</h5><b>пусто = 0</b><small>Нельзя отличить «нет скидки» от «скидка 0 %».</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-hot"><h5>Nullable(UInt8)</h5><b>пусто = NULL</b><small>Отличить можно, но за это платят местом и скоростью.</small></div>
-        </div>
-        <p class="check"><code>SELECT defaultValueOfTypeName('Date')</code> возвращает <code>1970-01-01</code>.</p>
+INSERT INTO sandbox.null_insert (id) VALUES (1);
+INSERT INTO sandbox.null_insert VALUES (2, NULL, 0, '');
+INSERT INTO sandbox.null_insert VALUES (3, 0, 0, 'не указан');
 
-        <h2 id="s3"><span class="sec">§3</span>Шаг 1. NULL в выражениях</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Посчитаем цену со скидкой. У половины товаров скидки нет — что получится в их строках?</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>NULL в сравнении и арифметике</span></figcaption>
-<pre>SELECT NULL = NULL, NULL + 1, 5 > NULL, isNull(NULL), toTypeName(NULL + 1)</pre></figure>
-        <figure class="shot"><img src="../../shots/13-01-null-expr.png" alt="NULL = NULL, NULL + 1 и 5 > NULL дают NULL; isNull(NULL) даёт 1"><figcaption>Play UI · 1 — NULL не равен даже NULL; 2 — арифметика с NULL; 3 — сравнение с NULL</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>Любая операция с NULL даёт NULL. Логика такая: если одно из чисел неизвестно, то неизвестна и сумма, и ответ на вопрос «больше ли». Даже два NULL нельзя назвать равными — это два разных неизвестных (рамка 1). Проверить, пусто ли значение, можно только функцией <code>isNull</code> — она возвращает 1 или 0.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 170" role="img" aria-label="Цена со скидкой: 67900 и скидка 10 дают 61110; 42990 и NULL дают NULL">
-            <rect class="sc-box" x="10" y="20" width="120" height="44" rx="6"/><text class="tm tc" x="70" y="47">67900</text>
-            <text class="tb tc" x="160" y="47">×</text>
-            <rect class="sc-acc" x="190" y="20" width="160" height="44" rx="6"/><text class="tm tc" x="270" y="47">(100 − 10) / 100</text>
-            <path class="sc-arrow" d="M360 42 L410 42 M403 36 L410 42 L403 48"/>
-            <rect class="sc-acc" x="420" y="20" width="120" height="44" rx="6"/><text class="tb tc" x="480" y="47">61110</text>
-            <text class="t" x="560" y="47">p-003, скидка 10 %</text>
-            <rect class="sc-box" x="10" y="96" width="120" height="44" rx="6"/><text class="tm tc" x="70" y="123">42990</text>
-            <text class="tb tc" x="160" y="123">×</text>
-            <rect class="sc-soft" x="190" y="96" width="160" height="44" rx="6"/><text class="tm tc" x="270" y="123">(100 − NULL) / 100</text>
-            <path class="sc-arrow" d="M360 118 L410 118 M403 112 L410 118 L403 124"/>
-            <rect class="sc-warm" x="420" y="96" width="120" height="44" rx="6"/><text class="tb tc" x="480" y="123">NULL</text>
-            <text class="t" x="560" y="123">p-001, скидки нет — цена пропала</text>
-          </svg>
-          <figcaption>цена со скидкой для двух товаров: NULL проходит через всё выражение</figcaption>
-        </figure>
-        <p>Это видно на настоящем расчёте цены. У <code>p-001</code> скидки нет, и цена со скидкой тоже стала NULL, хотя товар продаётся за 42 990 ₽:</p>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>SELECT product_id, price, discount, price * (100 - discount) / 100 AS final FROM shop.products LIMIT 4</span></figcaption>
-<pre>   ┌─product_id─┬──price─┬─discount─┬────final─┐
-1. │ p-001      │  42990 │     ᴺᵁᴸᴸ │     ᴺᵁᴸᴸ │
-2. │ p-002      │  51490 │     ᴺᵁᴸᴸ │     ᴺᵁᴸᴸ │
-3. │ p-003      │  67900 │       10 │    61110 │
-4. │ p-004      │ 114990 │        5 │ 109240.5 │
-   └────────────┴────────┴──────────┴──────────┘</pre></figure>
-        <p class="check">первые три значения на кадре — <code>NULL</code>, <code>isNull(NULL)</code> — <code>1</code>. Как вернуть цену в строки без скидки — в шаге 3.</p>
-        <details class="more">
-          <summary>тип Nullable(Nothing) и NULL в условиях WHERE</summary>
-          <p>У голого <code>NULL</code> в запросе тип <code>Nullable(Nothing)</code> — «пусто, тип неизвестен». В столбце тип всегда конкретный: <code>Nullable(UInt8)</code>, <code>Nullable(String)</code>.</p>
-          <p>То же правило действует в условиях отбора. <code>WHERE discount = NULL</code> не найдёт ни одной строки: сравнение с NULL всегда даёт NULL, и строка не проходит. Пустые находят через <code>IS NULL</code>. Условия разбирают главы <a href="../16-chtenie/index.html">1.6</a> и 2.1.</p>
-        </details>
+SELECT * FROM sandbox.null_insert ORDER BY id;</pre></figure>
+    <figure class="shot"><img src="assets/04-insert.png" alt="Результаты трёх вставок: пропущенные столбцы получили NULL, 0 и не указан; явная пустая строка сохранилась"><figcaption>Строка 1: discount = NULL, qty = 0, city = «не указан». Строка 2: явный NULL сохранён в Nullable, явная пустая строка сохранена в String. Строка 3: скидка 0 осталась нулём.</figcaption></figure>
+    <p>Строки 1 и 3 содержат одинаковые <code>qty</code> и <code>city</code>, хотя в первом случае значения подставлены, а в третьем отправлены явно. Пропуск существует на входе. В сохранённой строке каждый столбец уже получил значение. Явная пустая строка во второй вставке не запускает DEFAULT.</p>
+    <h3>Если передать NULL в обычный String</h3>
+    <p>В <code>city String</code> NULL хранить нельзя. Но это ещё не определяет, будет ли ошибка на входе: поведение зависит от способа вставки и настроек. Вставим одну и ту же входную строку <code>(4, NULL)</code> через формат <code>VALUES</code>. Настройка <code>input_format_null_as_default</code> управляет обработкой NULL для обычных, не Nullable-столбцов при таком вводе. <code>SETTINGS имя=значение</code> задаёт настройку только для этой команды.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>сначала строгая проверка</span></figcaption><pre>INSERT INTO sandbox.null_insert (id, city)
+SETTINGS input_format_null_as_default = 0
+VALUES (4, NULL);</pre></figure>
+    <figure class="code code--out"><figcaption><span>Фактическая ошибка</span><span>фрагмент сообщения, 26.8.36.3</span></figcaption><pre>Code: 53. … Cannot insert NULL value into a column of type 'String'
+(TYPE_MISMATCH)</pre></figure>
+    <p>Эта строка не добавлена. Теперь разрешим замену, оставив тот же формат и те же данные:</p>
+    <figure class="code"><figcaption><span>SQL</span><span>замена вместо ошибки</span></figcaption><pre>INSERT INTO sandbox.null_insert (id, city)
+SETTINGS input_format_null_as_default = 1
+VALUES (4, NULL);
 
-        <h2 id="s4"><span class="sec">§4</span>Шаг 2. NULL в подсчётах</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Средняя скидка по магазину — частый вопрос к отчёту. С NULL ответ зависит от того, как его считать.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>Play UI</span><span>подсчёт с NULL и без</span></figcaption>
-<pre>SELECT count(), count(discount), avg(discount), avg(ifNull(discount, 0))
-FROM shop.products</pre></figure>
-        <p class="tech"><b>По словам:</b> <code>count(discount)</code> — сколько строк, где <code>discount</code> не пустой. <code>avg</code> — среднее. <code>ifNull(discount, 0)</code> — «скидка, а если пусто — 0»; подробно в шаге 3.</p>
-        <figure class="shot"><img src="../../shots/13-02-null-agg.png" alt="count() 21, count(discount) 11, avg(discount) 13.18, avg(ifNull(discount, 0)) 6.90"><figcaption>Play UI · 1 — непустых скидок 11 из 21; 2 — среднее по ним; 3 — среднее, если пустые считать нулём</figcaption></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>Функции подсчёта пропускают NULL. <code>count(discount)</code> вернул 11 из 21 (рамка 1). <code>avg(discount)</code> делит сумму скидок 145 на 11 и получает 13,18 (рамка 2). Если пустые считать нулями, делить придётся на 21 — выйдет 6,90 (рамка 3).</p>
-        <div class="vsteps" aria-label="Два средних">
-          <div class="vcard is-hot"><h5>avg(discount)</h5><b>145 / 11 = 13,18 %</b><small>«Средняя скидка среди товаров со скидкой»</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>avg(ifNull(discount, 0))</h5><b>145 / 21 = 6,90 %</b><small>«Средняя скидка по всему каталогу»</small></div>
-        </div>
-        <p>Оба числа верные, но отвечают на разные вопросы. Ошибка — взять первое, когда спрашивали второе. Поэтому, увидев <code>Nullable</code> в <code>DESCRIBE</code>, сначала решите, что значит пустота в этом столбце.</p>
-        <p class="check">на кадре <code>11</code>, <code>13.18…</code> и <code>6.90…</code>.</p>
+SELECT * FROM sandbox.null_insert WHERE id = 4;</pre></figure>
+    <p>Здесь <code>WHERE id = 4</code> оставляет в выводе только строку с номером 4. Получаем <code>id=4, discount=NULL, qty=0, city='не указан'</code>: подставился DEFAULT столбца city. В Nullable-столбец явный NULL по-прежнему записывается как NULL.</p>
+    <h3>Что меняется при другом способе вставки</h3>
+    <p>Для <code>INSERT … SELECT</code>, то есть вставки результата запроса, используется другая настройка — <code>insert_null_as_default</code>. В формате <code>JSONEachRow</code> каждая строка входа — отдельный JSON-объект с именами столбцов. При пропущенном поле применение выражения DEFAULT зависит от <code>input_format_defaults_for_omitted_fields</code>. Эти два случая нельзя выводить из опыта с VALUES.</p>
+    <details class="more"><summary>Проверить INSERT SELECT и пропущенные поля JSONEachRow</summary>
+      <p><code>CAST(NULL AS Nullable(String))</code> задаёт тип отсутствующего текстового значения. При <code>insert_null_as_default=0</code> команда ниже завершается ошибкой 349 <code>CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN</code>; при 1 добавляет строку с <code>city='не указан'</code>.</p>
+      <figure class="code"><figcaption><span>SQL</span><span>выполните с 0, затем с 1</span></figcaption><pre>INSERT INTO sandbox.null_insert (id, city)
+SELECT 5, CAST(NULL AS Nullable(String))
+SETTINGS insert_null_as_default = 0;</pre></figure>
+      <p>Далее две команды JSONEachRow выполняйте отдельно. В обеих входных строках отсутствует city, но настройки различаются:</p>
+      <figure class="code"><figcaption><span>SQL</span><span>первая команда</span></figcaption><pre>INSERT INTO sandbox.null_insert
+SETTINGS input_format_defaults_for_omitted_fields = 0
+FORMAT JSONEachRow
+{"id":6}</pre></figure>
+      <figure class="code"><figcaption><span>SQL</span><span>вторая команда</span></figcaption><pre>INSERT INTO sandbox.null_insert
+SETTINGS input_format_defaults_for_omitted_fields = 1
+FORMAT JSONEachRow
+{"id":7}</pre></figure>
+      <figure class="code"><figcaption><span>SQL</span><span>проверка сохранённых строк</span></figcaption><pre>SELECT * FROM sandbox.null_insert WHERE id >= 6 ORDER BY id;</pre></figure>
+      <div class="table-scroll"><table><thead><tr><th>id</th><th>discount</th><th>qty</th><th>city</th></tr></thead><tbody><tr><td>6</td><td>NULL</td><td>0</td><td><code>''</code></td></tr><tr><td>7</td><td>NULL</td><td>0</td><td>не указан</td></tr></tbody></table></div>
+      <p>При 0 пропущенный city получил значение по умолчанию типа String. При 1 вычислен DEFAULT столбца. Это опыт с <b>отсутствующим полем</b>, не с JSON <code>null</code>. Полный разбор форматов — в модуле 4.</p>
+    </details>
+    <p>Посмотрите реальные настройки своего сеанса: <code>system.settings</code> — системная таблица настроек, а <code>IN</code> здесь отбирает перечисленные имена.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>проверка окружения</span></figcaption><pre>SELECT name, value FROM system.settings
+WHERE name IN ('input_format_null_as_default',
+               'insert_null_as_default',
+               'input_format_defaults_for_omitted_fields')
+ORDER BY name;</pre></figure>
+    <p class="check">На проверенном стенде все три значения равны 1. Это не обещание для любого сервера: профиль пользователя или настройка запроса может их изменить. Для повторения опыта значения заданы явно. Дальше используем сохранённые строки в вычислениях и условиях.</p>
 
-        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Заменить пустое</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Чтобы NULL не портил расчёт, его заменяют подходящим значением прямо в запросе. Для этого три функции.</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Функция</th><th>Что делает</th><th>Пример</th><th>Ответ</th></tr></thead>
-            <tbody>
-              <tr><td><code>ifNull(x, y)</code></td><td>x, а если x пустой — y</td><td><code>ifNull(NULL, 'нет')</code></td><td><code>нет</code></td></tr>
-              <tr><td><code>coalesce(a, b, c…)</code></td><td>первое непустое из списка</td><td><code>coalesce(NULL, NULL, 3)</code></td><td><code>3</code></td></tr>
-              <tr><td><code>nullIf(x, y)</code></td><td>обратное: NULL, если x равен y</td><td><code>nullIf(0, 0)</code></td><td><code>NULL</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>Вернём цену товарам без скидки: пустую скидку заменим нулём.</p>
-        <figure class="code"><figcaption><span>Play UI</span><span>цена со скидкой, пустая скидка — 0</span></figcaption>
-<pre>SELECT product_id, price, discount,
-       price * (100 - ifNull(discount, 0)) / 100 AS final
-FROM shop.products LIMIT 4</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
-<pre>   ┌─product_id─┬──price─┬─discount─┬────final─┐
-1. │ p-001      │  42990 │     ᴺᵁᴸᴸ │    42990 │
-2. │ p-002      │  51490 │     ᴺᵁᴸᴸ │    51490 │
-3. │ p-003      │  67900 │       10 │    61110 │
-4. │ p-004      │ 114990 │        5 │ 109240.5 │
-   └────────────┴────────┴──────────┴──────────┘</pre></figure>
-        <p class="check">у <code>p-001</code> в <code>final</code> снова <code>42990</code>. Здесь замена нулём верна: нет скидки — платят полную цену.</p>
-        <details class="more">
-          <summary>когда нужен nullIf</summary>
-          <p>Бывает наоборот: в данных пустота записана нулём или пустой строкой, и она портит среднее. <code>avg(nullIf(qty, 0))</code> пропустит нули так же, как NULL. Ещё один частый случай — деление: <code>x / nullIf(y, 0)</code> при нулевом <code>y</code> даст NULL вместо бесконечности.</p>
-        </details>
+    <h2 id="s5"><span class="sec">§5</span>NULL в вычислении и отборе строк</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Посчитаем цену и найдём строки, которым пока нельзя назначить итоговую сумму.</p>
+    <p>Формула <code>price * (100 - discount) / 100</code> применяет процент скидки. Если скидка неизвестна, вычислить итоговую цену по этой формуле нельзя: результат — NULL. Сравнение <code>discount = 0</code> тоже возвращает NULL для неизвестной скидки: ответ пока неизвестен.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>исходная скидка рядом с результатами</span></figcaption><pre>SELECT id, discount,
+       price * (100 - discount) / 100 AS final,
+       discount = 0 AS eq_zero,
+       discount = NULL AS eq_null
+FROM sandbox.null_lesson ORDER BY id;</pre></figure>
+    <figure class="shot"><img src="assets/05-expressions.png" alt="Цена при скидках 0, 10 и NULL равна 100, 90 и NULL; сравнение со значением NULL даёт NULL во всех строках"><figcaption>eq_zero: 1, 0, NULL. eq_null: NULL во всех трёх строках. В числовом результате сравнения 1 означает «да», 0 — «нет».</figcaption></figure>
+    <p><code>NULL = NULL</code> даёт NULL: отметка отсутствия данных не сообщает, равны ли неизвестные значения. Поэтому <code>WHERE discount = NULL</code> не находит даже строку 3. <b>WHERE</b> оставляет строки, для которых условие истинно; 0 и NULL строку не пропускают. Для проверки отсутствия есть условие <code>IS NULL</code>.</p>
+    <p>Проследим отбор, чтобы объяснить, почему «не равно нулю» не включает неизвестную скидку.</p>
+    <figure class="pic"><div class="null-flow" role="img" aria-label="Скидки 0, 10, NULL после сравнения не равно нулю дают 0, 1, NULL; WHERE оставляет только id 2">
+      <div><b>Исходные скидки</b><code>id 1 → 0</code><code>id 2 → 10</code><code>id 3 → NULL</code></div><span class="arrow" aria-hidden="true">→</span><div><b>discount != 0</b><code>id 1 → 0 (нет)</code><code>id 2 → 1 (да)</code><code>id 3 → NULL</code></div><span class="arrow" aria-hidden="true">→</span><div><b>После WHERE</b><code>id 2</code><small>Прошла только строка с истинным условием.</small></div>
+    </div><figcaption>Схема отбора: сначала вычисляется условие для каждой строки, затем остаются строки с истинным результатом.</figcaption></figure>
+    <p>Строка 3 не прошла, потому что результат сравнения неизвестен. Если нужны и ненулевые, и неизвестные скидки, задайте оба условия через <code>OR</code> — логическое «или».</p>
+    <figure class="code"><figcaption><span>SQL</span><span>каждый запрос выполняйте отдельно</span></figcaption><pre>SELECT id FROM sandbox.null_lesson
+WHERE discount = NULL ORDER BY id;       -- нет строк
 
-        <h2 id="s6"><span class="sec">§6</span>Шаг 4. Своё значение по умолчанию: DEFAULT</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Ноль или пустая строка подходят не всегда. Столбцу можно задать своё значение по умолчанию — например, «не указан» для города.</p>
-        <p>Для этого нужна своя таблица. Создадим её в песочнице одной командой и вставим три строки. Устройство <code>CREATE TABLE</code> разбирает глава <a href="../14-create-table/index.html">1.4</a>, а <code>INSERT</code> — глава <a href="../15-insert/index.html">1.5</a>. Сейчас нужны только четыре строки со столбцами.</p>
-        <span class="phase">Делаем</span>
-        <figure class="code"><figcaption><span>clickhouse-client</span><span>в Play UI — по одному запросу</span></figcaption>
-<pre>CREATE TABLE sandbox.visits (
-    id    UInt32,
-    city  String DEFAULT 'не указан',
-    qty   UInt16,
-    promo Nullable(String)
-) ENGINE = MergeTree ORDER BY id;
+SELECT id FROM sandbox.null_lesson
+WHERE discount IS NULL ORDER BY id;      -- 3
 
-INSERT INTO sandbox.visits (id) VALUES (1);
-INSERT INTO sandbox.visits (id, city, qty, promo) VALUES (2, 'Казань', 3, 'FIRST5');
-INSERT INTO sandbox.visits VALUES (3, 'Омск', 1, NULL);
+SELECT id FROM sandbox.null_lesson
+WHERE discount != 0 ORDER BY id;          -- 2
 
-SELECT * FROM sandbox.visits ORDER BY id;</pre></figure>
-        <p class="tech"><b>По словам:</b> первая вставка называет только столбец <code>id</code>, остальные три сервер заполняет сам. <code>ORDER BY id</code> в конце выводит строки по порядку номеров.</p>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>последний запрос</span></figcaption>
-<pre>   ┌─id─┬─city──────┬─qty─┬─promo──┐
-1. │  1 │ не указан │   0 │ ᴺᵁᴸᴸ   │
-2. │  2 │ Казань    │   3 │ FIRST5 │
-3. │  3 │ Омск      │   1 │ ᴺᵁᴸᴸ   │
-   └────┴───────────┴─────┴────────┘</pre></figure>
-        <span class="phase phase--read">Разбираемся</span>
-        <p>В первой строке видны все три способа заполнить пропуск:</p>
-        <div class="vsteps" aria-label="Три способа заполнить пропуск в строке 1">
-          <div class="vcard is-hot"><h5>city · DEFAULT</h5><b>«не указан»</b><small>своё значение из описания столбца</small></div>
-          <div class="varr">и</div>
-          <div class="vcard"><h5>qty · UInt16</h5><b>0</b><small>значение по умолчанию типа</small></div>
-          <div class="varr">и</div>
-          <div class="vcard is-dark"><h5>promo · Nullable</h5><b>NULL</b><small>«значения нет»</small></div>
-        </div>
-        <p><code>DESCRIBE sandbox.visits</code> покажет у <code>city</code> заполненные столбцы, которые в главе 1.1 были пустыми: <code>default_type</code> = <code>DEFAULT</code>, <code>default_expression</code> = <code>'не указан'</code>.</p>
-        <p class="check">в строке 1 — <code>не указан</code>, <code>0</code> и <code>NULL</code>.</p>
-        <details class="more">
-          <summary>NULL в столбце без Nullable</summary>
-          <p>Попробуйте вставить NULL туда, где он не разрешён: <code>INSERT INTO sandbox.visits (id, city) VALUES (5, NULL)</code>. Ошибки не будет. Сервер молча запишет вместо NULL значение по умолчанию — для <code>city</code> это <code>не указан</code>, для <code>qty</code> был бы <code>0</code>. Так работает настройка <code>input_format_null_as_default</code>, она включена по умолчанию. При загрузке это выручает, но пустоту так можно потерять незаметно.</p>
-          <p>В <code>DEFAULT</code> можно писать и выражение: <code>created DateTime DEFAULT now()</code> запишет момент вставки. Таблицу после опытов можно удалить: <code>DROP TABLE sandbox.visits</code> — глава 1.8.</p>
-        </details>
+SELECT id FROM sandbox.null_lesson
+WHERE discount != 0 OR discount IS NULL
+ORDER BY id;                             -- 2, 3</pre></figure>
+    <p>Правило «любая операция с NULL возвращает NULL» неверно. Например, <code>isNull(NULL)</code> возвращает 1. У логических операций тоже есть определённые результаты: ложь <code>AND</code> неизвестность — ложь; истина <code>OR</code> неизвестность — истина. Неизвестный второй ответ уже не меняет вывод.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>границы правила</span></figcaption><pre>SELECT NULL + 1 AS arithmetic, NULL = NULL AS equality,
+       isNull(NULL) AS empty,
+       0 AND NULL AS logical_and, 1 OR NULL AS logical_or;
+-- NULL, NULL, 1, 0, 1</pre></figure>
+    <p class="check">Получилось, если <code>IS NULL</code> нашёл id 3, а <code>!= 0</code> — только id 2. Теперь посчитаем, сколько значений участвует в отчёте.</p>
 
-        <h2 id="s7"><span class="sec">§7</span>Шаг 5. Сколько стоит Nullable</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Возможность хранить NULL не бесплатна. Посмотрим, как Nullable устроен внутри и во что обходится на 10 миллионах строк.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 210" role="img" aria-label="Nullable(UInt8) хранится двумя столбцами: значения и маска пустоты, по байту на строку">
-            <text class="tb" x="10" y="26">discount · Nullable(UInt8) хранится двумя столбцами</text>
-            <text class="t" x="10" y="60">значения</text>
-            <rect class="sc-box" x="140" y="42" width="60" height="30" rx="3"/><text class="tm tc" x="170" y="62">0</text>
-            <rect class="sc-box" x="204" y="42" width="60" height="30" rx="3"/><text class="tm tc" x="234" y="62">0</text>
-            <rect class="sc-acc" x="268" y="42" width="60" height="30" rx="3"/><text class="tm tc" x="298" y="62">10</text>
-            <rect class="sc-acc" x="332" y="42" width="60" height="30" rx="3"/><text class="tm tc" x="362" y="62">5</text>
-            <text class="t" x="410" y="62">… обычный UInt8: под NULL лежит 0</text>
-            <text class="t" x="10" y="110">маска</text>
-            <rect class="sc-warm" x="140" y="92" width="60" height="30" rx="3"/><text class="tm tc" x="170" y="112">1</text>
-            <rect class="sc-warm" x="204" y="92" width="60" height="30" rx="3"/><text class="tm tc" x="234" y="112">1</text>
-            <rect class="sc-box" x="268" y="92" width="60" height="30" rx="3"/><text class="tm tc" x="298" y="112">0</text>
-            <rect class="sc-box" x="332" y="92" width="60" height="30" rx="3"/><text class="tm tc" x="362" y="112">0</text>
-            <text class="t" x="410" y="112">… 1 = пусто, 0 = значение есть; байт на строку</text>
-            <text class="t" x="140" y="150">p-001</text><text class="t" x="204" y="150">p-002</text><text class="t" x="268" y="150">p-003</text><text class="t" x="332" y="150">p-004</text>
-            <text class="t" x="10" y="190">чтобы прочитать столбец, сервер читает оба столбца и сверяет их строку за строкой</text>
-          </svg>
-          <figcaption>устройство Nullable: значения и маска пустоты</figcaption>
-        </figure>
-        <p>Nullable — это обычный столбец плюс второй, служебный: <b>маска пустоты</b>, по байту на строку. Чтение и вычисления проходят по обоим. Замер на ценах <code>web.events</code>: одни и те же 10 324 592 числа в столбце <code>UInt32</code> и в столбце <code>Nullable(UInt32)</code>.</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 220" role="img" aria-label="UInt32 против Nullable(UInt32): без сжатия 39,39 и 49,23 МиБ, на диске 24,11 и 24,16 МиБ, сумма 17 и 19 мс">
-            <text class="tb" x="10" y="24">без сжатия — столько читается в память</text>
-            <text class="tm" x="10" y="52">UInt32</text><rect class="sc-acc" x="200" y="36" width="480" height="24" rx="3"/><text class="tm" x="690" y="53">39,39 МиБ</text>
-            <text class="tm" x="10" y="82">Nullable(UInt32)</text><rect class="sc-warm" x="200" y="66" width="600" height="24" rx="3"/><text class="tm" x="810" y="83">49,23</text>
-            <text class="tb" x="10" y="124">на диске, сжатое</text>
-            <text class="tm" x="10" y="152">UInt32</text><rect class="sc-acc" x="200" y="136" width="294" height="24" rx="3"/><text class="tm" x="504" y="153">24,11 МиБ</text>
-            <text class="tm" x="10" y="182">Nullable(UInt32)</text><rect class="sc-warm" x="200" y="166" width="295" height="24" rx="3"/><text class="tm" x="505" y="183">24,16 МиБ</text>
-            <text class="t" x="10" y="212">сумма всех цен: 17 мс против 19 мс · медиана девяти запусков</text>
-          </svg>
-          <figcaption>одни и те же 10 324 592 цены в двух типах · одна шкала</figcaption>
-        </figure>
-        <p>В памяти Nullable занимает на четверть больше — это и есть маска. На диске разницы почти нет: в этом замере NULL нет ни одного, маска состоит из одних нулей и сжимается почти в ничто. Сумма считается на 2 мс дольше.</p>
-        <p class="check">вывод: Nullable стоит заметно, но не катастрофически. Ставьте его там, где пустота что-то значит.</p>
-        <details class="more">
-          <summary>как сделан замер и ещё одно ограничение</summary>
-          <p>Таблица из двух столбцов <code>p UInt32</code> и <code>pn Nullable(UInt32)</code> заполнена ценами из <code>web.events</code>. Размеры взяты из <code>system.columns</code>, время — <code>clickhouse-client --time</code>, девять запусков <code>SELECT sum(p)</code> и <code>SELECT sum(pn)</code>. Обе суммы равны <code>229007045950</code>. После замера таблица удалена.</p>
-          <p>Nullable-столбец нельзя без особой настройки ставить в ключ сортировки таблицы — <code>ORDER BY</code> в <code>CREATE TABLE</code>, глава 1.4. Сервер ответит ошибкой <code>Sorting key contains nullable columns</code>.</p>
-        </details>
+    <h2 id="s6"><span class="sec">§6</span>Сколько строк и по каким значениям считать</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Составим отчёт, в котором число товаров не подменяет число известных скидок.</p>
+    <p><b>Агрегатная функция</b> вычисляет один результат по набору строк.</p><ul><li><code>count()</code> считает все строки.</li><li><code>count(discount)</code> считает значения discount, отличные от NULL.</li><li><code>sum(discount)</code> складывает известные скидки.</li><li><code>avg(discount)</code> делит их сумму на число известных значений.</li></ul><p> Ноль участвует и в подсчёте, и в среднем.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>все три исходные строки</span></figcaption><pre>SELECT count() AS rows, count(discount) AS known,
+       sum(discount) AS total, avg(discount) AS mean
+FROM sandbox.null_lesson
+SETTINGS aggregate_functions_null_for_empty = 0;</pre></figure>
+    <figure class="shot"><img src="assets/06-aggregates.png" alt="Агрегаты по скидкам 0, 10 и NULL: count() 3, count(discount) 2, sum 10, avg 5"><figcaption>rows = 3; known = 2; total = 10; mean = 5. Среднее здесь (0 + 10) / 2.</figcaption></figure>
+    <p><code>aggregate_functions_null_for_empty=0</code> отключает настройку, которая автоматически добавляет поведение «вернуть NULL для пустого набора» к агрегатным функциям. Фиксируем её, чтобы сравнение ниже не зависело от профиля сервера. Тип Nullable у аргумента продолжает влиять на результат.</p>
+    <h3>Полностью NULL-набор и отсутствие строк</h3>
+    <p>В первом случае строка есть, но известного числа нет. Во втором нет даже строки. Выполните тот же запрос, сначала добавив перед SETTINGS <code>WHERE id = 3</code>, затем заменив условие на <code>WHERE id &gt; 3</code>.</p>
+    <div class="table-scroll"><table class="null-table"><thead><tr><th>Вход discount</th><th>count()</th><th>count(discount)</th><th>sum(discount)</th><th>avg(discount)</th></tr></thead><tbody>
+      <tr><td>0, 10, NULL — все строки</td><td>3</td><td>2</td><td>10</td><td>5</td></tr><tr><td>NULL — только id 3</td><td>1</td><td>0</td><td>NULL</td><td>NULL</td></tr><tr><td>Нет строк — id &gt; 3</td><td>0</td><td>0</td><td>NULL</td><td>NULL</td></tr>
+    </tbody></table></div>
+    <p>На версии 26.8.36.3 с этим Nullable-столбцом обе функции возвращают NULL, если ни одного известного значения не поступило. Это не правило для любого типа аргумента. Для обычного <code>qty UInt8</code> на пустом входе <code>sum(qty)</code> возвращает 0, а <code>avg(qty)</code> — <code>nan</code> («не число», числовое среднее не определено):</p>
+    <figure class="code"><figcaption><span>SQL</span><span>пустой набор обычного числового типа</span></figcaption><pre>SELECT count(), count(qty), sum(qty), avg(qty)
+FROM sandbox.null_insert WHERE id &gt; 10
+SETTINGS aggregate_functions_null_for_empty = 0;
+-- 0, 0, 0, nan</pre></figure>
+    <p class="check">Для отчёта теперь можно отличить «нет товаров» от «товары есть, но скидки неизвестны»: сравните count() и count(discount). Затем решите, что делать с отсутствующими значениями при выводе результата.</p>
 
-        <h2 id="s8"><span class="sec">§8</span>Что выбрать</h2>
-        <p class="purpose"><b>Зачем это знать</b>Решение принимают для каждого столбца при создании таблицы. Вопрос один: отличается ли «нет данных» от значения по умолчанию по смыслу?</p>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Столбец</th><th>Пусто значит</th><th>Выбор</th></tr></thead>
-            <tbody>
-              <tr><td><code>shop.products.discount</code></td><td>скидку не назначали; 0 % — другое решение</td><td><code>Nullable(UInt8)</code></td></tr>
-              <tr><td><code>shop.orders.promo</code></td><td>промокод не вводили</td><td><code>Nullable(String)</code>; подошла бы и пустая строка</td></tr>
-              <tr><td><code>shop.order_items.qty</code></td><td>не бывает: позиция без количества — ошибка</td><td><code>UInt16</code></td></tr>
-              <tr><td><code>sandbox.visits.city</code></td><td>город не сообщили</td><td><code>String DEFAULT 'не указан'</code></td></tr>
-              <tr><td><code>web.events.duration_ms</code></td><td>10 млн строк, у каждого события время есть</td><td><code>UInt32</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="check">для каждого столбца вы можете ответить, чем пустота отличается от нуля. Не отличается — обычный тип. Отличается — <code>Nullable</code> или <code>DEFAULT</code> с понятным значением.</p>
+    <h2 id="s7"><span class="sec">§7</span>Замена должна отвечать задаче</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Научимся выводить запасное значение, не выдавая предположение за исходный факт.</p>
+    <h3>Показать расчёт при условии, что неизвестная скидка равна нулю</h3>
+    <p>Предположим, для предварительного расчёта требуется полная цена, пока скидка не согласована. <code>ifNull(x, replacement)</code> возвращает x, если это не NULL, иначе replacement. Используем её в выражении, сохранив исходный discount рядом. Это допущение для расчёта, не изменение данных таблицы.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>исходное значение и принятое допущение</span></figcaption><pre>SELECT id, discount, ifNull(discount, 0) AS assumed,
+       price * (100 - ifNull(discount, 0)) / 100 AS estimated
+FROM sandbox.null_lesson ORDER BY id;</pre></figure>
+    <figure class="shot"><img src="assets/07-ifnull.png" alt="Исходные скидки 0, 10, NULL; после ifNull — 0, 10, 0; предварительные цены — 100, 90, 100"><figcaption>У id 3 исходная скидка осталась NULL. Цена 100 получена при явно принятом допущении; это не доказательство нулевой скидки.</figcaption></figure>
+    <p>Такая замена меняет и знаменатель среднего. Проверьте её отдельно:</p>
+    <figure class="code"><figcaption><span>SQL</span><span>два разных вопроса к данным</span></figcaption><pre>SELECT avg(discount) AS known_mean,
+       avg(ifNull(discount, 0)) AS assumed_mean
+FROM sandbox.null_lesson
+SETTINGS aggregate_functions_null_for_empty = 0;
+-- 5, 3.3333333333333335</pre></figure>
+    <p>5 % — среднее среди двух известных скидок, включая известный ноль. 3,333… % — среднее по трём товарам <em>при предположении</em>, что неизвестная скидка равна нулю. Настоящее среднее по всем товарам из этих данных пока неизвестно.</p>
+    <h3>Выбрать подпись и обработать пустую строку</h3>
+    <p>Для подписи можно проверить несколько источников по приоритету. <code>coalesce(a, b, …)</code> выбирает первый аргумент, который не NULL. Аргументы должны иметь совместимые типы; здесь все они текстовые. Пустую строку функция не пропускает — для неё это известное значение.</p>
+    <p>Допустим, правило отображения считает пустую подпись отсутствующей. Тогда нормализуем данные: приведём оба обозначения отсутствия к NULL. <code>nullIf(x, y)</code> возвращает NULL, когда x равен y, иначе сохраняет x. Поэтому <code>nullIf(label, '')</code> превращает только пустую строку в NULL.</p>
+    <figure class="code"><figcaption><span>SQL</span><span>один запасной текст; при необходимости источников может быть больше</span></figcaption><pre>SELECT id, label,
+       coalesce(label, 'без подписи') AS caption,
+       coalesce(nullIf(label, ''), 'без подписи') AS normalized
+FROM sandbox.null_lesson ORDER BY id;</pre></figure>
+    <figure class="shot"><img src="assets/08-labels.png" alt="Пустая подпись остаётся пустой после coalesce, но после nullIf и coalesce становится без подписи; sale сохраняется; NULL заменяется"><figcaption>У id 1 caption — пустая строка, normalized — «без подписи». У id 2 оба результата — sale. У id 3 оба — «без подписи».</figcaption></figure>
+    <p>Здесь nullIf меняет обозначение отсутствия перед выбором запасной подписи. Переносить этот приём на скидку без основания нельзя: <code>nullIf(discount, 0)</code> превратит настоящий ноль строки 1 в NULL, и отчёт потеряет известный факт.</p>
+    <p class="check">Вы можете объяснить каждую замену правилом задачи: предварительная цена, запасная подпись или нормализация входа. Если такого правила нет, сохраните NULL и покажите отсутствие сведений.</p>
 
-        <h2 id="s9"><span class="sec">§9</span>Если вы знаете MongoDB</h2>
-        <p class="purpose"><b>Зачем это знать</b>В MongoDB у пустоты два вида, в ClickHouse — один.</p>
-        <div class="vsteps" aria-label="Пустота в MongoDB и ClickHouse">
-          <div class="vcard"><h5>MongoDB</h5><b>поля нет или <code>discount: null</code></b><small>У документа поле может отсутствовать совсем. Это два разных случая.</small></div>
-          <div class="varr">против</div>
-          <div class="vcard is-hot"><h5>ClickHouse</h5><b>столбец есть всегда</b><small>Пустота — только NULL в Nullable или значение по умолчанию.</small></div>
-        </div>
-        <p>При переносе данных из MongoDB в ClickHouse оба случая — «поля нет» и <code>null</code> — превращаются в одно: NULL или значение по умолчанию. Загрузчик стенда так и сделал: товар, у которого в MongoDB не было поля <code>discount</code>, получил в ClickHouse NULL.</p>
+    <h2 id="s8"><span class="sec">§8</span>Частые ошибки</h2>
+    <details class="err"><summary>После перезапуска таблицы есть, а строки исчезли</summary><p>В опыте использован движок Memory. Снова подготовьте данные на своём стенде; повторное CREATE TABLE для существующей таблицы даст ошибку. Не перезапускайте общий сервер ради опыта. Постоянное хранение и устройство CREATE TABLE — следующая глава.</p></details>
+    <details class="err"><summary>Таблица null_lesson уже существует</summary><p>Подготовка рассчитана на одно выполнение. Сначала посмотрите <code>SELECT * FROM sandbox.null_lesson ORDER BY id</code>. Не запускайте INSERT повторно, если три строки уже есть: Memory не проверяет уникальность id, и повторы изменят агрегаты. Для нового опыта выберите другие собственные имена таблиц и замените их во всех запросах.</p></details>
+    <details class="err"><summary>Поиск NULL вернул ноль строк</summary><p>Проверьте условие: <code>= NULL</code> не проверяет отсутствие. Используйте <code>IS NULL</code>. Если и оно не нашло строки, посмотрите сохранённые значения: при загрузке в обычный тип отметка могла быть заменена. После такой замены восстановить причину по одному нулю нельзя.</p></details>
+    <details class="err"><summary>NULL не принят при вставке или заменён текстом</summary><p>Сначала проверьте тип через <code>DESCRIBE sandbox.null_insert</code>, затем способ вставки и настройки из <a href="#s4">§4</a>. Нельзя исправить это универсальной командой «включить замену»: сначала решите, допустима ли потеря отметки отсутствия.</p></details>
+    <details class="err"><summary>coalesce не подставил текст в пустую подпись</summary><p>Проверьте <code>length(label)</code> и <code>isNull(label)</code>. Длина 0 при isNull = 0 означает пустую строку, не NULL. Применять <code>nullIf(label, '')</code> нужно только при согласованном правиле, что пустая подпись считается отсутствующей.</p></details>
+    <details class="err"><summary>Среднее выглядит точным, но часть скидок неизвестна</summary><p>Показывайте рядом count() и count(discount). Не называйте среднее по известным значениям средним по всему каталогу, а результат с подставленными нулями — измеренным фактом. Проверьте также, не вставлены ли строки опыта повторно.</p></details>
 
-        <h2 id="s10"><span class="sec">§10</span>Если не получилось</h2>
-        <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
-        <details class="err"><summary>Расчёт вернул NULL<small>price * (100 - discount) / 100 → NULL</small></summary><p>В выражении участвует пустое значение. Замените его: <code>ifNull(discount, 0)</code> (<a href="#s5">§5</a>).</p></details>
-        <details class="err"><summary>Поиск пустых ничего не находит<small>WHERE discount = NULL → 0 строк</small></summary><p>Сравнение с NULL всегда даёт NULL. Пишите <code>discount IS NULL</code> или <code>isNull(discount)</code>.</p></details>
-        <details class="err"><summary>Строк с «не равно» меньше, чем ожидали<small>discount != 10 → 9 строк из 21</small></summary><p>Скидка 10 % у двух товаров, а «не равно 10» вернуло 9 строк вместо 19. Десять строк с NULL выпадают из обоих условий: и из «равно», и из «не равно». Нужны и они — допишите <code>OR discount IS NULL</code> (глава 2.1).</p></details>
-        <details class="err"><summary>Среднее не сходится с ожиданием<small>avg(discount) = 13.18, а ждали 6.90</small></summary><p><code>avg</code> пропускает NULL и делит на число непустых. Решите, какое среднее нужно, — <a href="#s4">§4</a>.</p></details>
-        <details class="err"><summary>Вставили NULL, а в таблице 0 или DEFAULT<small>INSERT … VALUES (5, NULL) → city = 'не указан'</small></summary><p>Столбец не <code>Nullable</code>, и сервер подставил значение по умолчанию без ошибки (<a href="#s6">§6</a>). Нужен NULL — объявите столбец <code>Nullable</code>.</p></details>
-        <details class="err"><summary>Nullable в ключе сортировки<small>Code: 44. DB::Exception: Sorting key contains nullable columns, but merge tree setting `allow_nullable_key` is disabled. (ILLEGAL_COLUMN)</small></summary><p>Столбец из <code>ORDER BY</code> таблицы должен быть обычного типа. Уберите <code>Nullable</code> или выберите другой столбец для ключа (глава 1.4).</p></details>
+    <h2 id="s9"><span class="sec">§9</span>Проверьте себя</h2>
+    <details><summary>После загрузки city = «не указан». Можно ли утверждать, что город был пропущен?</summary><p>Нет. Такой текст мог прийти явно, как в строке 3, или появиться из DEFAULT, как в строке 1. Если происхождение важно, при загрузке нужен дополнительный признак; одно сохранённое значение его не содержит.</p></details>
+    <details><summary>Для скидок 0, 10 и NULL запрос с условием discount != 10 найдёт строки 1 и 3?</summary><p>Только строку 1. Для строки 3 сравнение вернёт NULL, и WHERE её не пропустит. Если нужны и неизвестные значения, добавьте <code>OR discount IS NULL</code>. Так запрос включает неизвестные скидки как отдельную категорию.</p></details>
+    <details><summary>Отчёт показал count() = 1, count(discount) = 0, sum(discount) = NULL. Нет ли в нём противоречия?</summary><p>Нет: строка есть, известной скидки нет. Это полностью NULL-набор. Если бы строк не было, count() вернул бы 0. Число строк и число известных значений отвечают на разные вопросы.</p></details>
+    <details><summary>Можно ли nullIf(discount, 0) использовать для «очистки пустых скидок»?</summary><p>В нашей модели нельзя: ноль означает известную скидку 0 %. nullIf превратит этот факт в отсутствие значения. Для устаревшего источника, где 0 специально кодировал неизвестность, такое преобразование могло бы быть оправдано, но это уже другой договор о данных.</p></details>
+    <h3>Самостоятельная задача: предварительный отчёт</h3>
+    <p>По неизменённым трём строкам <code>sandbox.null_lesson</code> подготовьте два запроса:</p>
+    <ol><li>Найдите товары, для которых исходная формула цены не даёт числа. Выведите id, price и discount без замены NULL.</li><li>Выведите число строк, число известных скидок и сумму скидок. Затем отдельно посчитайте среднюю скидку, если для предварительной оценки неизвестную принять за 0. В подписи результата укажите допущение.</li></ol>
+    <details class="more"><summary>Разбор решения и контрольный результат</summary>
+      <figure class="code"><figcaption><span>SQL</span><span>исходные данные сохраняем</span></figcaption><pre>SELECT id, price, discount FROM sandbox.null_lesson
+WHERE discount IS NULL ORDER BY id;
+-- 3, 100, NULL
 
-        <h2 id="s11"><span class="sec">§11</span>Проверьте себя</h2>
-        <details>
-          <summary>Сколько заказов в <code>shop.orders</code> оформлено с промокодом?</summary>
-          <p><code>SELECT count(promo) FROM shop.orders</code> — <code>40</code> из 120. <code>count(promo)</code> считает только непустые значения.</p>
-        </details>
-        <details>
-          <summary>Чему равно <code>NULL = NULL</code> и почему?</summary>
-          <p><code>NULL</code>. Каждый NULL — неизвестное значение, и про два неизвестных нельзя сказать, равны ли они. Пустоту проверяют функцией <code>isNull</code> или условием <code>IS NULL</code>.</p>
-        </details>
-        <details>
-          <summary>В столбце <code>age UInt8</code> у части людей возраст не указан. Чем плох такой тип?</summary>
-          <p>Пустые получат 0, и средний возраст станет меньше настоящего. Нужен <code>Nullable(UInt8)</code>: тогда <code>avg(age)</code> посчитает только известные значения.</p>
-        </details>
-        <details>
-          <summary>Почему не делать все столбцы <code>Nullable</code> «на всякий случай»?</summary>
-          <p>Каждый такой столбец хранит маску — байт на строку, на ценах <code>web.events</code> это +25 % объёма при чтении. Кроме того, NULL придётся учитывать в каждом расчёте и условии, а в ключ сортировки такой столбец не поставить.</p>
-        </details>
+SELECT count() AS rows, count(discount) AS known,
+       sum(discount) AS total
+FROM sandbox.null_lesson
+SETTINGS aggregate_functions_null_for_empty = 0;
+-- 3, 2, 10
 
-        <h2 id="s12"><span class="sec">§12</span>Шпаргалка и глоссарий</h2>
-        <div class="cheat">
-          <div>
-            <b>Проверить</b>
-            <code>isNull(x)        -- 1 или 0</code>
-            <code>x IS NULL  x IS NOT NULL</code>
-            <code>count(x)         -- только непустые</code>
-          </div>
-          <div>
-            <b>Заменить</b>
-            <code>ifNull(x, 0)</code>
-            <code>coalesce(a, b, c)</code>
-            <code>nullIf(x, 0)     -- 0 → NULL</code>
-          </div>
-          <div>
-            <b>Объявить</b>
-            <code>discount Nullable(UInt8)</code>
-            <code>city String DEFAULT 'не указан'</code>
-          </div>
-          <div>
-            <b>По умолчанию</b>
-            <code>числа 0 · String ''</code>
-            <code>Date 1970-01-01 · Bool false</code>
-            <code>defaultValueOfTypeName('Date')</code>
-          </div>
-        </div>
-        <details class="more">
-          <summary>5 терминов главы с картинками</summary>
-        <div class="glossary">
-          <article class="gl" id="g-null">
-            <div class="gl__text">
-              <h3>NULL</h3>
-              <p class="gl__def">Отметка «значения нет». Любая операция с ней даёт NULL, функции подсчёта её пропускают.</p>
-              <p class="gl__ex"><b>Пример</b><code>NULL + 1</code> → <code>NULL</code>; <code>count(discount)</code> → 11 из 21.</p>
-              <p class="gl__where"><b>Где</b>§1, §3, §4</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Пустая графа анкеты"><rect class="sc-box" x="20" y="30" width="100" height="60" rx="4"/><text class="tm tc" x="70" y="66">0</text><rect class="sc-soft" x="140" y="30" width="100" height="60" rx="4"/><text class="tb tc" x="190" y="66">NULL</text><text class="t tc" x="130" y="116">ноль ≠ пусто</text></svg></figure>
-          </article>
-          <article class="gl" id="g-nullable">
-            <div class="gl__text">
-              <h3>Nullable</h3>
-              <p class="gl__def">Обёртка над типом, которая разрешает столбцу хранить NULL. Рядом со значениями хранит маску пустоты — байт на строку.</p>
-              <p class="gl__ex"><b>Пример</b><code>discount Nullable(UInt8)</code>, <code>promo Nullable(String)</code>.</p>
-              <p class="gl__where"><b>Где</b>§2, §7</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Столбец значений и столбец маски"><rect class="sc-acc" x="40" y="16" width="80" height="98" rx="4"/><text class="t tc" x="80" y="70">значения</text><rect class="sc-warm" x="140" y="16" width="80" height="98" rx="4"/><text class="t tc" x="180" y="70">маска</text></svg></figure>
-          </article>
-          <article class="gl" id="g-default">
-            <div class="gl__text">
-              <h3>Значение по умолчанию</h3>
-              <p class="gl__def">Значение, которое столбец получает, если при вставке его не указали. У каждого типа своё: 0, пустая строка, 1970-01-01.</p>
-              <p class="gl__ex"><b>Пример</b><code>qty UInt16</code> без значения → <code>0</code>.</p>
-              <p class="gl__where"><b>Где</b>§2, §6</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Пропущенное значение превращается в ноль"><rect class="sc-soft" x="20" y="40" width="90" height="48" rx="4"/><text class="t tc" x="65" y="69">не указано</text><path class="sc-arrow" d="M114 64 L146 64 M139 58 L146 64 L139 70"/><rect class="sc-acc" x="150" y="40" width="90" height="48" rx="4"/><text class="tb tc" x="195" y="69">0</text></svg></figure>
-          </article>
-          <article class="gl" id="g-defaultexpr">
-            <div class="gl__text">
-              <h3>DEFAULT</h3>
-              <p class="gl__def">Часть описания столбца, которая задаёт своё значение по умолчанию — число, строку или выражение.</p>
-              <p class="gl__ex"><b>Пример</b><code>city String DEFAULT 'не указан'</code>, <code>created DateTime DEFAULT now()</code>.</p>
-              <p class="gl__where"><b>Где</b>§6</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Пропущенный город становится не указан"><rect class="sc-soft" x="14" y="40" width="80" height="48" rx="4"/><text class="t tc" x="54" y="69">city: —</text><path class="sc-arrow" d="M98 64 L126 64 M119 58 L126 64 L119 70"/><rect class="sc-warm" x="130" y="40" width="116" height="48" rx="4"/><text class="tm tc" x="188" y="69">не указан</text></svg></figure>
-          </article>
-          <article class="gl" id="g-ifnull">
-            <div class="gl__text">
-              <h3>ifNull и coalesce</h3>
-              <p class="gl__def">Функции, которые подставляют значение вместо NULL. <code>ifNull</code> берёт одну замену, <code>coalesce</code> — первое непустое из списка.</p>
-              <p class="gl__ex"><b>Пример</b><code>ifNull(discount, 0)</code> вернул цену товарам без скидки.</p>
-              <p class="gl__where"><b>Где</b>§5</p>
-            </div>
-            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="NULL заменяется на 0"><rect class="sc-soft" x="20" y="40" width="90" height="48" rx="4"/><text class="tb tc" x="65" y="69">NULL</text><path class="sc-arrow" d="M114 64 L146 64 M139 58 L146 64 L139 70"/><rect class="sc-acc" x="150" y="40" width="90" height="48" rx="4"/><text class="tb tc" x="195" y="69">0</text></svg></figure>
-          </article>
-        </div>
-        </details>
+SELECT avg(ifNull(discount, 0)) AS mean_assuming_zero
+FROM sandbox.null_lesson
+SETTINGS aggregate_functions_null_for_empty = 0;
+-- 3.3333333333333335</pre></figure>
+      <p>Первый запрос находит строку, для которой нет исходного значения скидки. Во втором ноль учитывается как известное значение. Последний запрос меняет только выражение расчёта, не столбец; подпись отчёта должна сообщать «неизвестные скидки приняты за 0».</p>
+    </details>
 
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>Обычный столбец вместо пустоты хранит значение по умолчанию: 0, <code>''</code>, 1970-01-01. Своё задают через <code>DEFAULT</code>.</li>
-          <li><code>Nullable</code> хранит NULL — «значения нет», отдельно от нуля.</li>
-          <li>Операция с NULL даёт NULL, даже <code>NULL = NULL</code>. Пустоту проверяют <code>isNull</code> и <code>IS NULL</code>.</li>
-          <li><code>count(x)</code> и <code>avg(x)</code> пропускают NULL — решите, какой ответ нужен.</li>
-          <li><code>ifNull</code> и <code>coalesce</code> подставляют замену, <code>nullIf</code> делает NULL из значения.</li>
-          <li>Nullable — это маска рядом со столбцом: +25 % в памяти на ценах <code>web.events</code>. Ставьте его там, где пустота что-то значит.</li>
-        </ul>
-        <p>Дальше — глава <a href="../14-create-table/index.html">1.4</a>: как устроен <code>CREATE TABLE</code>, которым мы уже создали <code>sandbox.visits</code>, и что такое движок таблицы.</p>
-
-        <div class="pager"><a href="../12-tipy/index.html">← 1.2 Типы данных</a><a href="../14-create-table/index.html">1.4 CREATE TABLE и движок →</a></div>
-
-        <div class="colophon">
-          <span>Глава 1.3 · Пустое значение: DEFAULT и Nullable · Справочник по ClickHouse</span>
-          <span class="author-line">Автор: Макаров Максим Николаевич</span>
-        </div>
-      </main>
-    </div>
-  </div>
-  <script src="../../book.js"></script>
+    <h2 id="s10"><span class="sec">§10</span>Краткая шпаргалка</h2>
+    <div class="table-scroll"><table><thead><tr><th>Задача</th><th>Запись</th><th>Проверка смысла</th></tr></thead><tbody>
+      <tr><td>Хранить неизвестное число</td><td><code>Nullable(UInt8)</code></td><td>Ноль остаётся отдельным известным значением.</td></tr>
+      <tr><td>Заполнить пропуск при вставке</td><td><code>city String DEFAULT 'не указан'</code></td><td>Способ вставки и настройки должны применять DEFAULT.</td></tr>
+      <tr><td>Найти отсутствие</td><td><code>x IS NULL</code></td><td>Не <code>x = NULL</code>.</td></tr>
+      <tr><td>Оценить полноту</td><td><code>count()</code>, <code>count(x)</code></td><td>Все строки и известные значения.</td></tr>
+      <tr><td>Подставить одну замену</td><td><code>ifNull(x, replacement)</code></td><td>Замена — явно обоснованное правило.</td></tr>
+      <tr><td>Выбрать первый известный источник</td><td><code>coalesce(a, b, c)</code></td><td>Пустая строка не пропускается.</td></tr>
+      <tr><td>Превратить специальную метку в NULL</td><td><code>nullIf(x, marker)</code></td><td>marker не должен быть значимым фактом.</td></tr>
+    </tbody></table></div>
+    <details class="more"><summary>Справка: missing и null при переносе из документов</summary><p>Отсутствующее поле документа и поле со значением null могут означать разные состояния. В строке ClickHouse столбец существует всегда. Загрузчик должен явно решить, как представить каждое состояние: одним NULL, разными признаками или другим соглашением. Их объединение не является обязательным свойством переноса.</p></details>
+    <details class="more"><summary>Воспроизводимость и источники</summary><p>Все численные результаты и примеры ошибок проверены на отдельном ClickHouse 26.8.36.3, UTC. <a href="assets/setup.sql">Подготовка таблиц</a>; <a href="assets/verified-results.json">запросы, фактический вывод и ошибки</a>. В сохранённом выводе TSV NULL обозначен <code>\N</code>, пустая строка — пустым полем. Условия запуска и дополнительные проверки находятся в <a href="assets/CHECKS.md">протоколе главы</a>.</p><ul><li><a href="https://clickhouse.com/docs/sql-reference/data-types/nullable">Nullable</a></li><li><a href="https://clickhouse.com/docs/sql-reference/statements/insert-into">INSERT INTO</a></li><li><a href="https://clickhouse.com/docs/operations/settings/formats">Настройки форматов</a></li><li><a href="https://clickhouse.com/docs/sql-reference/aggregate-functions#null-processing">Обработка NULL в агрегатных функциях</a></li><li><a href="https://clickhouse.com/docs/sql-reference/functions/functions-for-nulls">Функции для NULL</a></li></ul></details>
+    <p>Дальше — устройство CREATE TABLE и движки хранения. Здесь достаточно уметь проследить путь: что передал клиент → что сохранено → какие строки и значения участвовали в расчёте.</p>
+    <div class="pager"><a href="../12-tipy/index.html">← 1.2 Типы данных</a><a href="../../index.html#modules">К оглавлению модуля 1 →</a></div>
+    <div class="colophon"><span>Глава 1.3 · Пустое значение · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
+  </main>
+</div></div>
+<script src="../../book.js"></script>
 </body>
 </html>
