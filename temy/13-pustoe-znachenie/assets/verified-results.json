@@ -1,0 +1,200 @@
+{
+  "rows": {
+    "query": "SELECT * FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t100\t0\t\n2\t100\t10\tsale\n3\t100\t\\N\t\\N",
+    "stderr": ""
+  },
+  "nulls": {
+    "query": "SELECT id, discount, isNull(discount) AS unknown, label, length(label) AS chars FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t0\t0\t\t0\n2\t10\t0\tsale\t4\n3\t\\N\t1\t\\N\t\\N",
+    "stderr": ""
+  },
+  "defaults": {
+    "query": "SELECT defaultValueOfTypeName('UInt8') AS number, defaultValueOfTypeName('String') AS text, defaultValueOfTypeName('Nullable(UInt8)') AS nullable",
+    "code": 0,
+    "stdout": "0\t\t\\N",
+    "stderr": ""
+  },
+  "inserted": {
+    "query": "SELECT * FROM sandbox.null_insert ORDER BY id",
+    "code": 0,
+    "stdout": "1\t\\N\t0\tне указан\n2\t\\N\t0\t\n3\t0\t0\tне указан",
+    "stderr": ""
+  },
+  "expressions": {
+    "query": "SELECT id, discount, price * (100 - discount) / 100 AS final, discount = 0 AS eq_zero, discount = NULL AS eq_null FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t0\t100\t1\t\\N\n2\t10\t90\t0\t\\N\n3\t\\N\t\\N\t\\N\t\\N",
+    "stderr": ""
+  },
+  "where_bad": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount = NULL ORDER BY id",
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "where_null": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount IS NULL ORDER BY id",
+    "code": 0,
+    "stdout": "3",
+    "stderr": ""
+  },
+  "where_ne": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount != 0 ORDER BY id",
+    "code": 0,
+    "stdout": "2",
+    "stderr": ""
+  },
+  "where_or": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount != 0 OR discount IS NULL ORDER BY id",
+    "code": 0,
+    "stdout": "2\n3",
+    "stderr": ""
+  },
+  "logic": {
+    "query": "SELECT NULL + 1 AS arithmetic, NULL = NULL AS equality, isNull(NULL) AS empty, 0 AND NULL AS logical_and, 1 OR NULL AS logical_or",
+    "code": 0,
+    "stdout": "\\N\t\\N\t1\t0\t1",
+    "stderr": ""
+  },
+  "agg": {
+    "query": "SELECT count() AS rows, count(discount) AS known, sum(discount) AS total, avg(discount) AS mean FROM sandbox.null_lesson SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "3\t2\t10\t5",
+    "stderr": ""
+  },
+  "all_null": {
+    "query": "SELECT count() AS rows, count(discount) AS known, sum(discount) AS total, avg(discount) AS mean FROM sandbox.null_lesson WHERE id = 3 SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "1\t0\t\\N\t\\N",
+    "stderr": ""
+  },
+  "empty": {
+    "query": "SELECT count() AS rows, count(discount) AS known, sum(discount) AS total, avg(discount) AS mean FROM sandbox.null_lesson WHERE id > 3 SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "0\t0\t\\N\t\\N",
+    "stderr": ""
+  },
+  "ifnull": {
+    "query": "SELECT id, discount, ifNull(discount, 0) AS assumed, price * (100 - ifNull(discount, 0)) / 100 AS estimated FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t0\t0\t100\n2\t10\t10\t90\n3\t\\N\t0\t100",
+    "stderr": ""
+  },
+  "avg_replaced": {
+    "query": "SELECT avg(discount) AS known_mean, avg(ifNull(discount, 0)) AS assumed_mean FROM sandbox.null_lesson SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "5\t3.3333333333333335",
+    "stderr": ""
+  },
+  "coalesce": {
+    "query": "SELECT id, label, coalesce(label, 'без подписи') AS caption, coalesce(nullIf(label, ''), 'без подписи') AS normalized FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t\t\tбез подписи\n2\tsale\tsale\tsale\n3\t\\N\tбез подписи\tбез подписи",
+    "stderr": ""
+  },
+  "nullif": {
+    "query": "SELECT id, discount, nullIf(discount, 0) AS without_zero FROM sandbox.null_lesson ORDER BY id",
+    "code": 0,
+    "stdout": "1\t0\t\\N\n2\t10\t10\n3\t\\N\t\\N",
+    "stderr": ""
+  },
+  "values_strict": {
+    "query": "INSERT INTO sandbox.null_insert (id, city) SETTINGS input_format_null_as_default=0 VALUES (4, NULL)",
+    "code": 53,
+    "stdout": "",
+    "stderr": "Received exception from server (version 26.8.36):\nCode: 53. DB::Exception: Received from localhost:9000. DB::Exception: Cannot insert NULL value into a column of type 'String' at: NULL): While executing WaitForAsyncInsert. (TYPE_MISMATCH)\n(query: INSERT INTO sandbox.null_insert (id, city) SETTINGS input_format_null_as_default=0 VALUES (4, NULL))"
+  },
+  "values_default": {
+    "query": "INSERT INTO sandbox.null_insert (id, city) SETTINGS input_format_null_as_default=1 VALUES (4, NULL); SELECT * FROM sandbox.null_insert WHERE id=4",
+    "code": 0,
+    "stdout": "4\t\\N\t0\tне указан",
+    "stderr": ""
+  },
+  "select_strict": {
+    "query": "INSERT INTO sandbox.null_insert (id, city) SELECT 5, CAST(NULL AS Nullable(String)) SETTINGS insert_null_as_default=0",
+    "code": 93,
+    "stdout": "",
+    "stderr": "Received exception from server (version 26.8.36):\nCode: 349. DB::Exception: Received from localhost:9000. DB::Exception: Cannot convert NULL value to non-Nullable type: while converting source column `CAST(NULL, 'Nullable(String)')` to destination column city. (CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN)\n(query: INSERT INTO sandbox.null_insert (id, city) SELECT 5, CAST(NULL AS Nullable(String)) SETTINGS insert_null_as_default=0)"
+  },
+  "select_default": {
+    "query": "INSERT INTO sandbox.null_insert (id, city) SELECT 5, CAST(NULL AS Nullable(String)) SETTINGS insert_null_as_default=1; SELECT * FROM sandbox.null_insert WHERE id=5",
+    "code": 0,
+    "stdout": "5\t\\N\t0\tне указан",
+    "stderr": ""
+  },
+  "json_omit0": {
+    "query": "INSERT INTO sandbox.null_insert SETTINGS input_format_defaults_for_omitted_fields=0 FORMAT JSONEachRow\n{\"id\":6}\n",
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "json_omit1": {
+    "query": "INSERT INTO sandbox.null_insert SETTINGS input_format_defaults_for_omitted_fields=1 FORMAT JSONEachRow\n{\"id\":7}\n",
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "json_result": {
+    "query": "SELECT * FROM sandbox.null_insert WHERE id >= 6 ORDER BY id",
+    "code": 0,
+    "stdout": "6\t\\N\t0\t\n7\t\\N\t0\tне указан",
+    "stderr": ""
+  },
+  "version": {
+    "query": "SELECT version(), timezone()",
+    "code": 0,
+    "stdout": "26.8.36.3\tUTC",
+    "stderr": ""
+  },
+  "settings": {
+    "query": "SELECT name,value FROM system.settings WHERE name IN ('input_format_null_as_default','insert_null_as_default','input_format_defaults_for_omitted_fields') ORDER BY name",
+    "code": 0,
+    "stdout": "input_format_defaults_for_omitted_fields\t1\ninput_format_null_as_default\t1\ninsert_null_as_default\t1",
+    "stderr": ""
+  },
+  "ordinary_empty": {
+    "query": "SELECT count(), count(qty), sum(qty), avg(qty) FROM sandbox.null_insert WHERE id > 10 SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "0\t0\t0\tnan",
+    "stderr": ""
+  },
+  "selfcheck_ne10": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount != 10 ORDER BY id",
+    "code": 0,
+    "stdout": "1",
+    "stderr": ""
+  },
+  "selfcheck_ne10_or": {
+    "query": "SELECT id FROM sandbox.null_lesson WHERE discount != 10 OR discount IS NULL ORDER BY id",
+    "code": 0,
+    "stdout": "1\n3",
+    "stderr": ""
+  },
+  "exercise_missing": {
+    "query": "SELECT id, price, discount FROM sandbox.null_lesson WHERE discount IS NULL ORDER BY id",
+    "code": 0,
+    "stdout": "3\t100\t\\N",
+    "stderr": ""
+  },
+  "exercise_counts": {
+    "query": "SELECT count() AS rows,count(discount) AS known,sum(discount) AS total FROM sandbox.null_lesson SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "3\t2\t10",
+    "stderr": ""
+  },
+  "exercise_assumption": {
+    "query": "SELECT avg(ifNull(discount,0)) AS mean_assuming_zero FROM sandbox.null_lesson SETTINGS aggregate_functions_null_for_empty=0",
+    "code": 0,
+    "stdout": "3.3333333333333335",
+    "stderr": ""
+  },
+  "inserted_stage": {
+    "query": "SELECT * FROM sandbox.null_insert ORDER BY id",
+    "code": 0,
+    "stdout": "1\t\\N\t0\tне указан\n2\t\\N\t0\t\n3\t0\t0\tне указан",
+    "stderr": ""
+  }
+}
