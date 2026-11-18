@@ -9,318 +9,257 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../styles.css">
-  <script>
-    /* Система проставляется до отрисовки: без сохранённого выбора определяется по браузеру. */
-    (function () {
-      var os = null;
-      try { os = localStorage.getItem('clickhouse-book-os'); } catch (e) {}
-      if (!os) {
-        var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
-        os = /win/i.test(p) ? 'win' : /mac|iphone|ipad/i.test(p) ? 'mac' : 'linux';
-      }
-      document.documentElement.dataset.os = os;
-    })();
-  </script>
+  <style>
+    .layers {display:grid;gap:.65rem;list-style:none;padding:0;margin:1rem 0}
+    .layers li {border:1px solid var(--line,#ccc);border-radius:8px;padding:.8rem 1rem;min-width:0}
+    .layers li + li::before {content:'↓ требуется следующему слою';display:block;font-size:.78rem;margin-bottom:.4rem;color:var(--muted,#666)}
+    .layers b {display:block;margin-bottom:.25rem}
+    .layers p {margin:0}
+    .decision {border-left:3px solid var(--accent,#5B3DA8);padding-left:1rem;margin:1.5rem 0}
+    .decision h3 {margin-top:0}
+    .diagnostic-layers li + li::before {content:'↓ при успехе — следующая проверка'}
+    .route-options {display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .route-options > div {border:2px solid var(--ink);padding:1rem;min-width:0}
+    .route-options b,.route-options span {display:block}
+    @media(max-width:600px) {
+      .route-options {grid-template-columns:1fr}
+      .prep-table,.prep-table tbody,.prep-table tr,.prep-table td {display:block;width:auto;min-width:0}
+      .prep-table thead {display:none}
+      .prep-table td::before {content:attr(data-label);display:block;font-weight:700;font-size:.8rem}
+      .prep-table tr + tr {border-top:2px solid var(--ink)}
+    }
+    .chapter-note {border:1px solid var(--line,#ccc);padding:1rem;border-radius:8px}
+    .leaf code,.leaf a {overflow-wrap:anywhere}
+    .code pre {max-width:100%;overflow-x:auto}
+    figure.code figcaption {flex-wrap:wrap}
+    figure.code figcaption span {min-width:0;overflow-wrap:anywhere}
+    figure.code .copy {margin:0;padding:.5rem;border:1px solid currentColor}
+  </style>
 </head>
 <body>
-  <div class="book">
-    <div class="book__body">
-      <div class="spine"><span>Модуль 0 · Рабочее место</span></div>
-
-      <main class="leaf">
-        <div class="running">
-          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 0 · рабочее место</p>
-          <p class="running__folio">Глава 0.1а</p>
-        </div>
-
-        <header class="chapter-head">
-          <span class="chapter-num">0.1а</span>
-          <h1>Windows: Docker Desktop<br>и WSL 2</h1>
-          <p class="lead">Глава для тех, у кого на Windows не запускается Docker Desktop. Проверяем по порядку четыре вещи снизу вверх, а если не поможет — поднимаем стенд в Ubuntu внутри Windows.</p>
-        </header>
-
-        <dl class="passport">
-          <div><dt>Категория</dt><dd>Подготовка рабочего места · запасная глава</dd></div>
-          <div><dt>Уровень</dt><dd>Начальный</dd></div>
-          <div><dt>Связанные темы</dt><dd>0.1 Стенд: Docker и базы</dd></div>
-          <div><dt>Понадобится</dt><dd>права администратора, одна-две перезагрузки</dd></div>
-        </dl>
-
-        <section class="gist" aria-label="Суть главы">
-          <p class="gist__head">Суть за две минуты</p>
-          <div class="gist__cards">
-            <div><b data-n="1">Docker Desktop стоит на WSL 2</b><p>WSL 2 — маленький Linux, встроенный в Windows. В нём и работают контейнеры.</p><p>Нет WSL 2 — Docker Desktop не стартует.</p></div>
-            <div><b data-n="2">WSL 2 нужна виртуализация</b><p>Это переключатель в BIOS компьютера. Выключен — не работает ни WSL 2, ни Docker.</p><p>Проверка — в диспетчере задач.</p></div>
-            <div><b data-n="3">Проверяем снизу вверх</b><p>Windows → виртуализация → WSL → Docker Desktop. Нашли поломку — чиним и запускаем снова.</p><p>Не помогло — Docker прямо в Ubuntu.</p></div>
-          </div>
-          <ol class="route" aria-label="Шаги главы">
-            <li><a href="#s2"><b>Windows</b><small>версия</small></a></li>
-            <li><a href="#s3"><b>Виртуализация</b><small>в BIOS</small></a></li>
-            <li><a href="#s4"><b>WSL</b><small>есть и свежая</small></a></li>
-            <li><a href="#s5"><b>Docker Desktop</b><small>окно ошибки</small></a></li>
-            <li><a href="#s6"><b>План Б</b><small>Docker в Ubuntu</small></a></li>
-          </ol>
-        </section>
-
-        <nav class="contents">
-          <b>В этой главе</b>
-          <ol>
-            <li><a href="#s1">На чём стоит Docker Desktop</a></li>
-            <li><a href="#s2">Проверка 1. Версия Windows</a></li>
-            <li><a href="#s3">Проверка 2. Виртуализация</a></li>
-            <li><a href="#s4">Проверка 3. WSL</a></li>
-            <li><a href="#s5">Проверка 4. Окно ошибки Docker Desktop</a></li>
-            <li><a href="#s6">План Б. Docker прямо в Ubuntu</a></li>
-            <li><a href="#s7">Если не получилось</a></li>
-            <li><a href="#s8">Проверьте себя</a></li>
-            <li><a href="#s9">Шпаргалка</a></li>
-          </ol>
-        </nav>
-
-        <h2 id="s1"><span class="sec">§1</span>На чём стоит Docker Desktop</h2>
-        <p class="purpose"><b>Зачем это знать</b>Чтобы искать поломку по порядку: от самого нижнего слоя к верхнему.</p>
-        <p>Контейнерам нужен Linux. На Windows его даёт <b>WSL 2</b> — встроенная подсистема Windows для Linux. А WSL 2 — это маленькая виртуальная машина, и ей нужна <b>аппаратная виртуализация</b> процессора. Получается стопка из четырёх слоёв:</p>
-        <figure class="pic">
-          <svg viewBox="0 0 880 300" role="img" aria-label="Четыре слоя снизу вверх: процессор с виртуализацией, Windows, WSL 2, Docker Desktop и контейнер стенда">
-            <rect class="sc-ink" x="120" y="230" width="460" height="50" rx="6"/><text class="tw tc" x="350" y="252" style="font:700 14px var(--body)">процессор и BIOS</text><text class="tw tc" x="350" y="270" style="font:500 12px var(--body)">виртуализация: Intel VT-x или AMD-V</text>
-            <rect class="sc-box" x="140" y="172" width="420" height="50" rx="6"/><text class="tb tc" x="350" y="194">Windows 10 22H2 или Windows 11</text><text class="t tc" x="350" y="212">компонент «Платформа виртуальной машины»</text>
-            <rect class="sc-acc" x="160" y="114" width="380" height="50" rx="6"/><text class="tb tc" x="350" y="136">WSL 2</text><text class="t tc" x="350" y="154">маленький Linux внутри Windows</text>
-            <rect class="sc-box" x="180" y="56" width="340" height="50" rx="6"/><text class="tb tc" x="350" y="78">Docker Desktop</text><text class="t tc" x="350" y="96">движок Docker внутри WSL 2</text>
-            <rect class="sc-warm" x="220" y="10" width="260" height="38" rx="6"/><text class="tm tc" x="350" y="34">контейнер course-clickhouse</text>
-            <text class="tb" x="620" y="260">проверка 2</text>
-            <text class="tb" x="620" y="202">проверка 1</text>
-            <text class="tb" x="620" y="144">проверка 3</text>
-            <text class="tb" x="620" y="86">проверка 4</text>
-            <path class="sc-arrow" d="M760 270 L760 40 M754 47 L760 40 L766 47"/>
-            <text class="t" x="772" y="160">смотрим</text><text class="t" x="772" y="178">снизу</text><text class="t" x="772" y="196">вверх</text>
-          </svg>
-          <figcaption>Слои под Docker Desktop на Windows</figcaption>
-        </figure>
-        <p>Каждый слой держит тот, что выше. Если внизу поломка, верхние не заработают, сколько бы вы ни переустанавливали Docker Desktop. Поэтому проверяем снизу вверх.</p>
-
-        <details class="simple">
-          <summary>слои на примере лампы, удлинителя и розетки</summary>
-          <div class="vsteps">
-            <div class="vcard is-dark"><i>🔌</i><h5>виртуализация</h5><b>Розетка</b><small>Нет тока в розетке — ничего не загорится.</small></div>
-            <div class="varr">ток</div>
-            <div class="vcard is-hot"><i>🧵</i><h5>WSL 2</h5><b>Удлинитель</b><small>Передаёт ток дальше. Порван — до лампы не дойдёт.</small></div>
-            <div class="varr">ток</div>
-            <div class="vcard"><i>💡</i><h5>Docker Desktop</h5><b>Лампа</b><small>Не горит? Меняют лампу последней.</small></div>
-          </div>
-          <p class="simple__map"><b>Что есть что:</b> розетка — виртуализация в BIOS; удлинитель — WSL 2; лампа — Docker Desktop. Новая лампа в розетке без тока тоже не загорится: переустановка Docker Desktop не поможет, если выключена виртуализация.</p>
-        </details>
-
-        <h2 id="s2"><span class="sec">§2</span>Проверка 1. Версия Windows</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Docker Desktop работает не на любой Windows. Убедимся, что ваша подходит.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps">
-          <li><b>Нажмите <kbd>Win</kbd> + <kbd>R</kbd>, наберите <code>winver</code> и нажмите <kbd>Enter</kbd></b>Откроется окно «Windows: сведения». Во второй строке — версия и номер сборки.</li>
+  <div class="book"><div class="book__body">
+    <div class="spine"><span>Модуль 0 · Рабочее место</span></div>
+    <main class="leaf">
+      <div class="running">
+        <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 0 · рабочее место</p>
+        <p class="running__folio">Глава 0.1а</p>
+      </div>
+      <header class="chapter-head">
+        <span class="chapter-num">0.1а</span>
+        <h1>Windows: Docker Desktop<br>и WSL 2</h1>
+        <p class="lead">Команда запуска стенда не сработала на Windows. Определим, какой компонент ещё не готов, и подготовим среду для запуска ClickHouse.</p>
+      </header>
+      <dl class="passport">
+        <div><dt>Категория</dt><dd>Подготовка рабочего места</dd></div>
+        <div><dt>Уровень</dt><dd>Первое знакомство с Windows и WSL</dd></div>
+        <div><dt>До главы</dt><dd><a href="../01-stend/index.html">0.1 · Стенд и базы стенда</a></dd></div>
+        <div><dt>Понадобится</dt><dd>интернет; разрешение администратора на установку WSL; возможна перезагрузка</dd></div>
+      </dl>
+      <section class="gist" aria-label="Маршрут главы">
+        <p class="gist__head">Выберите один маршрут</p>
+        <p><b>Основной — Docker Desktop с WSL 2.</b> Команды выполняем в PowerShell Windows. Отдельная Ubuntu не нужна.</p>
+        <p><b>Запасной — Docker Engine в Ubuntu WSL.</b> Это отдельная установка с Linux-командами и обслуживанием службы. Она подходит, если Desktop нельзя использовать, но сама WSL 2 работает; это не исправление неработающей виртуализации.</p>
+        <ol class="route" aria-label="Шаги основного маршрута">
+          <li><a href="#s1"><b>Слои</b><small>что запускаем</small></a></li>
+          <li><a href="#s2"><b>Основание</b><small>Windows и WSL</small></a></li>
+          <li><a href="#s3"><b>Desktop</b><small>проверка Engine</small></a></li>
+          <li><a href="#s4"><b>Диагностика</b><small>до готовой базы</small></a></li>
         </ol>
-        <div class="vsteps" aria-label="Подходящие версии Windows">
-          <div class="vcard"><h5>Windows 10</h5><b>версия 22H2</b><small>сборка 19045</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-hot"><h5>Windows 11</h5><b>версия 23H2 и новее</b><small>сборка 22631 и выше</small></div>
-        </div>
-        <p class="check">версия не ниже указанной. Ниже — обновите Windows: «Параметры» → «Центр обновления Windows».</p>
-        <details class="more">
-          <summary>что ещё требует Docker</summary>
-          <p>По <a href="https://docs.docker.com/desktop/setup/install/windows-install/">документации Docker</a>: 64-битная Windows, 64-битный процессор, 8 ГБ оперативной памяти и включённая в BIOS виртуализация. WSL — версии 2.1.5 или новее.</p>
-        </details>
+      </section>
+      <nav class="contents"><b>В этой главе</b><ol>
+        <li><a href="#s1">Из чего состоит среда</a></li>
+        <li><a href="#s2">Подготовить Windows и WSL 2</a></li>
+        <li><a href="#s3">Запустить Docker Desktop</a></li>
+        <li><a href="#s4">Дерево диагностики: на каком шаге остановились</a></li>
+        <li><a href="#s6">Когда нужен Docker Engine в Ubuntu</a></li>
+        <li><a href="#s7">Частые ошибки</a></li>
+        <li><a href="#s8">Самопроверка и самостоятельная задача</a></li>
+        <li><a href="#s9">Шпаргалка</a></li>
+      </ol></nav>
 
-        <h2 id="s3"><span class="sec">§3</span>Проверка 2. Виртуализация</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>На части компьютеров виртуализация выключена в BIOS с завода. Проверяем её сразу после версии Windows.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps">
-          <li><b>Откройте диспетчер задач</b><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>.</li>
-          <li><b>Вкладка «Производительность» → «ЦП»</b>Справа внизу найдите строку <b>«Виртуализация»</b>. В английской Windows — <b>Virtualization</b>.</li>
+      <h2 id="s1"><span class="sec">§1</span>Из чего состоит среда</h2>
+      <p class="purpose"><b>Зачем это знать</b>Ошибка подключения к Docker ещё не означает ошибку ClickHouse: запрос мог вообще не дойти до контейнера.</p>
+      <p><b>Контейнер</b> — изолированная среда процесса с его файлами и настройками. Образ ClickHouse в стенде рассчитан на Linux: ему нужно ядро Linux — часть операционной системы, которая управляет процессами, памятью и устройствами. Ядро Windows его не заменяет.</p>
+      <p><b>WSL</b> (Windows Subsystem for Linux) — подсистема для работы с Linux в Windows. В режиме <b>WSL 2</b> настоящее ядро Linux работает в облегчённой виртуальной машине. <b>Аппаратная виртуализация</b> — возможности процессора для выполнения таких машин под управлением гипервизора, системного слоя виртуализации.</p>
+      <p>Проследим зависимость от Windows до процесса базы. Стрелки ниже показывают зависимость: каждому следующему слою нужен предыдущий.</p>
+      <figure class="pic">
+        <ol class="layers" aria-label="Зависимости основного маршрута">
+          <li><b>1 · Windows</b><p>Запускает приложения пользователя и компоненты WSL.</p></li>
+          <li><b>2 · Виртуализация</b><p>Процессор поддерживает её, прошивка разрешает, гипервизор Windows может запускаться.</p></li>
+          <li><b>3 · WSL 2</b><p>Создаёт управляемую виртуальную машину с ядром Linux.</p></li>
+          <li><b>4 · Linux-среда Docker Desktop</b><p>Служебная среда <code>docker-desktop</code>, не ваша Ubuntu. Даёт Linux-процессам системные ресурсы.</p></li>
+          <li><b>5 · Docker Engine</b><p>Служба, которая создаёт и запускает контейнеры. Docker Desktop устанавливает и обслуживает её.</p></li>
+          <li><b>6 · Контейнер ClickHouse</b><p>Внутри работает сервер базы; он ещё должен запуститься и принять подключение.</p></li>
         </ol>
-        <div class="vsteps" aria-label="Два варианта строки Виртуализация">
-          <div class="vcard is-hot"><h5>написано</h5><b>Виртуализация: Включено</b><small>Всё в порядке, переходите к проверке 3.</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-bad"><h5>написано</h5><b>Виртуализация: Отключено</b><small>Включите её в BIOS — шаги ниже.</small></div>
-        </div>
-        <details class="more">
-          <summary>проверка той же строки командой</summary>
-          <p>По <a href="https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/topics/">документации Docker</a> виртуализацию можно проверить и в PowerShell командой <code>systeminfo</code>. Если в конце ответа есть такая строка, всё в порядке:</p>
-          <figure class="code code--out"><figcaption><span>Вывод systeminfo</span><span>последняя строка; снято на Windows в GitHub Actions</span></figcaption>
-<pre>Hyper-V Requirements:          A hypervisor has been detected. Features required for Hyper-V will not be displayed.</pre></figure>
-        </details>
-        <h3>Как включить в BIOS</h3>
-        <p><b>BIOS</b> (на новых компьютерах — <b>UEFI</b>) — настройки компьютера, которые работают ещё до Windows. Попасть в них можно из самой Windows:</p>
-        <ol class="steps">
-          <li><b>«Параметры» → «Система» → «Восстановление»</b>У пункта «Расширенные параметры запуска» нажмите <b>«Перезагрузить сейчас»</b>. В Windows 10 путь другой: «Параметры» → «Обновление и безопасность» → «Восстановление» → «Особые варианты загрузки».</li>
-          <li><b>«Поиск и устранение неисправностей» → «Дополнительные параметры» → «Параметры встроенного ПО UEFI»</b>Нажмите <b>«Перезагрузить»</b>. Компьютер откроет настройки BIOS.</li>
-          <li><b>Найдите и включите виртуализацию</b>Название зависит от производителя. Ищите на вкладках Advanced, CPU Configuration или Security:
-            <div class="vsteps">
-              <div class="vcard"><h5>процессор Intel</h5><b>Intel Virtualization Technology</b><small>или Intel VT-x, VT-x</small></div>
-              <div class="varr">или</div>
-              <div class="vcard"><h5>процессор AMD</h5><b>SVM Mode</b><small>или AMD-V, Virtualization</small></div>
-            </div>
-            Переключите в <b>Enabled</b>.</li>
-          <li><b>Сохраните и выйдите</b>Обычно клавиша <kbd>F10</kbd> → <b>Save &amp; Exit</b>. Компьютер загрузит Windows.</li>
+        <figcaption>Основной маршрут с WSL 2 backend — так называется Linux-основа Docker Desktop. Другие варианты backend здесь не рассматриваем.</figcaption>
+      </figure>
+      <p>Ubuntu в этой цепочке нет: Desktop использует собственную Linux-среду. Установка Ubuntu «на всякий случай» добавит ещё один дистрибутив — набор Linux-программ и файлов, — но не починит нижние слои.</p>
+      <p>Отдельно от Engine работает <b>Docker CLI</b> — клиент командной строки <code>docker</code>. Он передаёт команды службе. <b>Compose</b> — плагин этого клиента: читает описание нескольких сервисов из файла проекта и отправляет Engine команды их запуска. Поэтому наличие команды <code>docker</code> ещё не доказывает, что служба доступна.</p>
+      <details class="simple">
+        <summary>По-простому: бланк заказа и работающая мастерская</summary>
+        <p>Можно получить бланк заказа, когда мастерская закрыта. Можно открыть мастерскую, но ещё не начать работу над заказом. Можно начать работу, но не получить готовое изделие.</p>
+        <p class="simple__map"><b>Что есть что:</b> бланк — установленный CLI; открытая мастерская — доступный Engine; работа над заказом — запущенный контейнер; проверенное изделие — ответ сервера базы. <b>Граница аналогии:</b> она помогает различать состояния готовности. Устройство Linux в ней не отражено. Контейнер использует ядро своей среды и не является отдельным физическим компьютером.</p>
+      </details>
+
+      <h2 id="s2"><span class="sec">§2</span>Подготовить Windows и WSL 2</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Проверить требования до установки Desktop и не менять настройки компьютера без установленной причины.</p>
+      <h3>Версия Windows и разрешения</h3>
+      <p>Откройте окно «Выполнить» сочетанием <kbd>Win</kbd> + <kbd>R</kbd>, введите <code>winver</code> и нажмите <kbd>Enter</kbd>. Запишите редакцию, версию и сборку Windows. Это действие в интерфейсе Windows, не команда Ubuntu.</p>
+      <p>В <a href="https://docs.docker.com/desktop/setup/install/windows-install/">требованиях Docker Desktop</a> указаны 64-битная Windows и процессор с поддержкой виртуализации и SLAT (аппаратной трансляции памяти). Требуется не менее 8 ГБ оперативной памяти и WSL версии 2.1.5 или новее. Для Windows 11 указан минимум 23H2, сборка 22631; для Windows 10 — 22H2, сборка 19045. <b>Одного номера сборки недостаточно:</b> Docker ограничивает поддержку также сроком обслуживания Windows у Microsoft; старый минимум не гарантирует поддержку вашей редакции сегодня. Windows Server этим маршрутом не поддерживается.</p>
+      <p>Если система не подходит или установка ограничена организацией, передайте сведения администратору. Не обходите ограничения и не отключайте антивирус, защиту памяти или другие средства безопасности ради установки.</p>
+      <p>Порядок проверки ниже отделяет совместимость системы от готовности WSL. При первом неуспешном результате остановитесь на соответствующей строке.</p>
+      <figure class="pic">
+        <div class="table-scroll"><table class="prep-table"><thead><tr><th>Проверка</th><th>Что устанавливаем</th><th>Если требование не выполнено</th></tr></thead><tbody>
+          <tr><td data-label="Проверка">winver и требования Docker</td><td data-label="Что устанавливаем">Подходит ли версия Windows</td><td data-label="Если требование не выполнено">Согласовать поддерживаемую систему</td></tr>
+          <tr><td data-label="Проверка">Диспетчер задач → ЦП</td><td data-label="Что устанавливаем">Разрешена ли виртуализация</td><td data-label="Если требование не выполнено">Обратиться к владельцу или администратору</td></tr>
+          <tr><td data-label="Проверка">wsl --version</td><td data-label="Что устанавливаем">Установлен ли нужный выпуск WSL</td><td data-label="Если требование не выполнено">Установить или обновить WSL с разрешения</td></tr>
+        </tbody></table></div>
+        <figcaption>Проверки основания до запуска Docker Desktop</figcaption>
+      </figure>
+      <p>Требования проверяются по отдельности: подходящая сборка Windows ещё не подтверждает включённую виртуализацию. Начнём со строки процессора.</p>
+      <h3>Разрешена ли виртуализация</h3>
+      <p>В диспетчере задач (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>) откройте сведения о производительности процессора и найдите строку «Виртуализация» / <b>Virtualization</b>. В разных версиях Windows раздел может быть вкладкой или пунктом боковой панели.</p>
+      <ul>
+        <li><b>Включено:</b> прошивка разрешает виртуализацию. Это ещё не проверка работоспособности WSL; переходите к командам ниже.</li>
+        <li><b>Отключено:</b> остановитесь. Нужна проверка настроек прошивки BIOS/UEFI владельцем или администратором по инструкции производителя. Здесь мы их не меняем.</li>
+        <li><b>Windows сама запущена в виртуальной машине:</b> может потребоваться вложенная виртуализация со стороны её владельца. Установка Ubuntu внутри этой Windows требование не обходит.</li>
+      </ul>
+      <h3>Проверка и установка WSL</h3>
+      <p>Откройте <b>PowerShell Windows</b>. Если используете приложение «Терминал», выберите профиль PowerShell, а не Ubuntu и не «Командная строка» (cmd). Для чтения версии права администратора обычно не нужны.</p>
+      <figure class="code"><figcaption><span>PowerShell Windows</span><span>только проверка</span></figcaption><pre>wsl --version</pre></figure>
+      <p>Найдите версию пакета WSL в первой строке. Если она не ниже 2.1.5, переходите к Desktop. Если команда не поддерживает ключ <code>--version</code>, это может быть старая WSL, а не полное отсутствие подсистемы.</p>
+      <p>Для старой WSL выполните обновление. Для отсутствующей WSL — установку без пользовательского дистрибутива. <b>Выберите только подходящий случай</b>; для изменения компонентов Windows откройте PowerShell от имени администратора с разрешения владельца компьютера.</p>
+      <figure class="code"><figcaption><span>PowerShell Windows · администратор</span><span>если WSL установлена, но устарела</span></figcaption><pre>wsl --update</pre></figure>
+      <figure class="code"><figcaption><span>PowerShell Windows · администратор</span><span>если WSL ещё не установлена</span></figcaption><pre>wsl --install --no-distribution</pre></figure>
+      <p>Ключ <code>--no-distribution</code> не устанавливает Ubuntu: Desktop она не нужна. Выполните предложенную Windows перезагрузку, предварительно сохранив работу, затем повторите <code>wsl --version</code>. Если команда <code>wsl</code> вообще не распознаётся, а система удовлетворяет требованиям, не перебирайте команды настройки загрузки: передайте сообщение администратору и используйте <a href="https://learn.microsoft.com/ru-ru/windows/wsl/install">инструкцию установки Microsoft</a>.</p>
+      <p class="check">Получилось, если поддерживаемая Windows разрешает виртуализацию, установка WSL завершилась, а её версия соответствует требованиям. Окончательную работоспособность Linux-основы проверим запуском Engine.</p>
+
+      <h2 id="s3"><span class="sec">§3</span>Запустить Docker Desktop</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Получить доступную службу для запуска Linux-контейнеров.</p>
+      <ol class="steps">
+        <li><b>Установите Docker Desktop по <a href="https://docs.docker.com/desktop/setup/install/windows-install/">инструкции Docker для Windows</a>.</b>Выберите установщик под архитектуру своего компьютера и backend WSL 2, если установщик предлагает выбор. Ознакомьтесь с условиями лицензии; не считайте любой вариант использования бесплатным.</li>
+        <li><b>Запустите Docker Desktop.</b>Открытие PowerShell само по себе его не запускает. В настройках проверьте использование WSL 2: в документации параметр называется <b>Use WSL 2 based engine</b>. Если настройки интеграции WSL отсутствуют, проверьте, не выбран ли режим Windows containers: для образа ClickHouse нужен режим Linux containers.</li>
+        <li><b>Дождитесь готовности Engine.</b>Затем откройте новое окно PowerShell, чтобы оно получило обновлённые пути к установленным программам, и выполните проверку ниже.</li>
+      </ol>
+      <figure class="code"><figcaption><span>PowerShell Windows</span><span>клиент и доступная ему служба</span></figcaption><pre>docker version
+docker compose version</pre></figure>
+      <p>В результате первой команды нужны два раздела: <code>Client</code> и <code>Server</code>. Первый описывает CLI, второй — ответивший Engine. Ошибка после раздела Client означает, что CLI установлен, но выбранный им Engine не ответил. Вторая команда проверяет наличие плагина Compose. Работа контейнера проверяется отдельно.</p>
+      <figure class="shot"><img src="../../shots/w-dd-01-config.png" alt="Сохранённый кадр установщика Docker Desktop: выбран WSL 2 в разделе Per-user installation" loading="lazy"><figcaption>Исторический кадр установщика Windows: выбран WSL 2. Он иллюстрирует выбор backend; состав опций текущего установщика может отличаться.</figcaption></figure>
+      <h3>Как читать имеющиеся кадры</h3>
+      <p>Ниже — сохранённые кадры Windows из предыдущей редакции главы. На кадре с работающим Engine виден номер Docker Desktop <b>4.99.0</b>; экран приветствия относится к той же прежней серии съёмки. Это <b>исторические иллюстрации</b>: расположение кнопок в вашей версии может отличаться. На текущей Windows эти окна в данной редакции не пересняты.</p>
+      <figure class="shot"><img src="../../shots/w-dd-04-welcome.png" alt="Сохранённый кадр экрана приветствия Docker Desktop со ссылкой Skip" loading="lazy"><figcaption>Экран приветствия: отметка 1 у ссылки Skip для пропуска входа в аккаунт. Принятие лицензионных условий — отдельный этап установки.</figcaption></figure>
+      <figure class="shot"><img src="../../shots/w-dd-05-engine-running.png" alt="Сохранённый кадр Docker Desktop с индикатором Engine running в нижней части окна" loading="lazy"><figcaption>Docker Desktop 4.99.0 · отметка 1 у Engine running — индикатора службы. Состояние контейнера ClickHouse и баз стенда здесь не показано; проверьте их командами.</figcaption></figure>
+      <p class="check">Получилось, если <code>docker version</code> получает раздел Server, а <code>docker compose version</code> сообщает версию Compose. Теперь выполните <a href="../01-stend/index.html#s5">запуск проекта из главы 0.1</a> в PowerShell Windows. Само получение проекта и загрузку данных здесь не повторяем.</p>
+
+      <h2 id="s4"><span class="sec">§4</span>Дерево диагностики: на каком шаге остановились</h2>
+      <p class="purpose"><b>Зачем этот шаг</b>Каждая проверка ниже отделяет один подтверждённый факт от предположений. Идите сверху вниз и выбирайте ветку по своему результату.</p>
+      <p>Пройдём цепочку проверок. Из каждого узла есть два выхода: результат подтверждён — переход дальше; результат не получен — разбор соответствующей ветви ниже.</p>
+      <figure class="pic">
+        <ol class="layers diagnostic-layers" aria-label="Проверки готовности и выходы при ошибке">
+          <li><b>CLI найден?</b><p>Да → проверка службы. Нет → ветвь 1: установка и новое окно PowerShell.</p></li>
+          <li><b>Server отвечает?</b><p>Да → проверка проекта. Нет → ветвь 2: Desktop, WSL и адрес Engine.</p></li>
+          <li><b>Контейнер проекта работает?</b><p>Да → проверка SQL. Нет → ветвь 3: папка, запуск Compose и журнал.</p></li>
+          <li><b>SQL вернул результат?</b><p>Да → проверка данных по 0.1. Нет → ветвь 4: учётные данные, порт и журнал сервера.</p></li>
         </ol>
-        <p class="check">после перезагрузки в диспетчере задач написано «Виртуализация: Включено».</p>
-        <details class="more">
-          <summary>в BIOS включено, а в диспетчере всё равно «Отключено»</summary>
-          <p>Некоторые программы при установке отключают запуск гипервизора — части Windows, которая отвечает за виртуальные машины. Так делают, например, отдельные эмуляторы Android. По <a href="https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/topics/">документации Docker</a> лечится одной командой в PowerShell от имени администратора и перезагрузкой:</p>
-          <figure class="code"><figcaption><span>PowerShell</span><span>от имени администратора</span></figcaption>
-<pre>bcdedit /set hypervisorlaunchtype auto</pre></figure>
-        </details>
+        <figcaption>Порядок проверок и ветви диагностики</figcaption>
+      </figure>
+      <p>Успех на одном узле разрешает следующую проверку. Он не заменяет её: ответ Server ещё не подтверждает наличие контейнера.</p>
+      <p>Все команды этого раздела — <b>в PowerShell Windows</b>. Начиная с проверки Compose, текущей папкой должна быть папка проекта <code>clickhouse-practice</code>, где находится его файл <code>compose.yaml</code>. Диагностика не сбрасывает данные и не перезапускает службы.</p>
+      <section class="decision" aria-label="Ветвь CLI">
+        <h3>1 · Команда docker не распознана</h3>
+        <p><b>Проверка:</b> выполните <code>docker version</code> в новом PowerShell после установки Desktop.</p>
+        <p><b>Если по-прежнему не распознана:</b> подтверждено отсутствие доступного CLI в этом окне. Состояние WSL пока неизвестно. Проверьте, завершилась ли установка Desktop, и передайте администратору её результат. <b>Если появился Client:</b> CLI найден → ветвь 2.</p>
+      </section>
+      <section class="decision" aria-label="Ветвь Engine">
+        <h3>2 · Есть Client, но нет ответа Server</h3>
+        <p><b>Проверка:</b> запущен ли Desktop и какое сообщение он показывает? Повторите <code>wsl --version</code>; если Desktop сообщает об устаревшей WSL, обновите её по §2. При сообщении о виртуализации вернитесь к проверке процессора.</p>
+        <p>Если Desktop сообщает о готовности, проверьте <b>контекст</b> — сохранённый адрес Engine, к которому CLI отправляет команды.</p>
+        <figure class="code"><figcaption><span>PowerShell Windows</span><span>чтение адреса подключения</span></figcaption><pre>docker context show
+docker context ls
+Get-ChildItem Env:DOCKER*</pre></figure>
+        <p>В списке контекстов звёздочка показывает выбранный. Переменные <code>DOCKER_HOST</code> и <code>DOCKER_CONTEXT</code>, если они заданы, могут переопределять подключение. Отсутствие вывода последней команды означает, что таких переменных в этом процессе нет. Не переключайте адрес вслепую: проверьте, относится ли он к вашему Desktop, а не к другому локальному или удалённому серверу.</p>
+        <p><b>Подтверждённая причина:</b> только если адрес указывает на другой Engine, установлено несоответствие подключения. Используйте согласованный с преподавателем контекст Desktop. Если адрес правильный, но есть ошибка доступа, сохраните её текст и диагностику Desktop для администратора: одного <code>Access is denied</code> недостаточно, чтобы доказать наличие второго Docker. <b>Server ответил:</b> служба доступна → ветвь 3.</p>
+      </section>
+      <section class="decision" aria-label="Ветвь Compose и контейнер">
+        <h3>3 · Engine отвечает, но стенд не появился</h3>
+        <p><b>Проверка:</b> если не распознаётся <code>docker compose</code>, не установлен или недоступен плагин Compose — исправьте установку Desktop. Если Compose сообщает об отсутствии конфигурационного файла, вы не в папке проекта. При доступном Compose выполните:</p>
+        <figure class="code"><figcaption><span>PowerShell Windows · папка clickhouse-practice</span><span>все контейнеры проекта, в том числе остановленные</span></figcaption><pre>docker compose ps -a</pre></figure>
+        <p>Среди строк <code>docker compose ps -a</code> найдите сервис <code>clickhouse</code> — контейнер <code>course-clickhouse</code>. Сервис <code>seed</code> загружает данные и затем завершается: его состояние <code>Exited (0)</code> штатное. Следующие развилки относятся к <b>clickhouse</b>.</p>
+        <p><b>Нет сервиса ClickHouse:</b> в этом Compose-проекте его контейнер ещё не создан либо выбран не тот проект. Сверьте папку и запуск с 0.1. <b>Состояние Exited или Restarting:</b> контейнер завершился или перезапускается; причина пока не установлена. Читайте журнал следующей командой, не удаляя тома с данными.</p>
+        <figure class="code"><figcaption><span>PowerShell Windows · папка clickhouse-practice</span><span>последние сообщения проекта</span></figcaption><pre>docker compose logs --tail 60</pre></figure>
+        <p>Ошибка занятого порта при запуске подтверждает конфликт публикации порта, но не говорит, какой процесс его занял. Выясните это с администратором; не останавливайте неизвестные процессы. <b>Контейнер Running/Up:</b> процесс запущен, но готовность базы ещё не доказана → ветвь 4.</p>
+      </section>
+      <section class="decision" aria-label="Ветвь готовность сервера">
+        <h3>4 · Контейнер работает, но база не отвечает или данных нет</h3>
+        <p><b>Проверка:</b> откройте в браузере Windows <a href="http://localhost:8123/play">http://localhost:8123/play</a>. Это локальный адрес сервера, не сайт Docker. Используйте логин и пароль стенда из 0.1. Выполните SQL-запрос — обращение к серверу на языке базы данных:</p>
+        <figure class="code"><figcaption><span>Play UI · поле SQL в браузере Windows</span><span>проверка выполнения запроса, не загрузки данных стенда</span></figcaption><pre>SELECT 1;</pre></figure>
+        <p><b>Получена одна строка со значением 1:</b> сервер принял подключение и выполнил запрос. Теперь <a href="../01-stend/index.html#s7">проверьте базы стенда по 0.1</a>: работающий сервер может ещё не иметь загруженных данных. <b>Отказ аутентификации:</b> сервер доступен, но не принял учётные данные. Сверьте их с настройками стенда.</p>
+        <p><b>Страница недоступна:</b> результат ещё не различает неготовый сервер и проблему доступа к порту. Сопоставьте опубликованные порты в <code>docker compose ps -a</code> и сообщения сервера в журнале. Только после конкретной ошибки выбирайте действие; не делайте сброс всего стенда «для проверки».</p>
+      </section>
 
-        <h2 id="s4"><span class="sec">§4</span>Проверка 3. WSL</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Убедиться, что WSL установлена и не устарела. Docker Desktop нужна WSL версии 2.1.5 или новее.</p>
-        <span class="phase">Делаем</span>
-        <p>Откройте PowerShell <b>от имени администратора</b>: <kbd>Win</kbd> + <kbd>X</kbd> → «Терминал (администратор)», в Windows 10 — «Windows PowerShell (администратор)». Выполните:</p>
-        <figure class="code"><figcaption><span>PowerShell</span><span>какая WSL стоит</span></figcaption>
-<pre>wsl --version</pre></figure>
-        <figure class="code code--out"><figcaption><span>Вывод</span><span>снято на Windows в GitHub Actions; у вас номера свои, в русской Windows подписи по-русски</span></figcaption>
-<pre>WSL version: 3.0.3.0
-Kernel version: 6.18.54.1-1
-WSLg version: 1.0.79
-MSRDC version: 1.2.7391
-Direct3D version: 1.611.1-81528511
-DXCore version: 10.0.26100.1-240331-1435.ge-release
-Windows version: 10.0.26100.33674</pre></figure>
-        <p>Нужна первая строка — <code>WSL version</code>. Здесь 3.0.3.0, это больше, чем 2.1.5.</p>
-        <div class="vsteps" aria-label="Три исхода проверки WSL">
-          <div class="vcard is-hot"><h5>версия 2.1.5 и новее</h5><b>Всё в порядке</b><small>Переходите к проверке 4.</small></div>
-          <div class="varr">или</div>
-          <div class="vcard"><h5>версия старее</h5><b><code>wsl --update</code></b><small>Обновит WSL за минуту.</small></div>
-          <div class="varr">или</div>
-          <div class="vcard is-bad"><h5>команда не найдена</h5><b><code>wsl --install</code></b><small>Поставит WSL. Затем перезагрузка.</small></div>
+      <h2 id="s6"><span class="sec">§5</span>Когда нужен Docker Engine в Ubuntu</h2>
+      <p class="purpose"><b>Зачем этот раздел</b>Отделить другой способ установки от исправления основного маршрута.</p>
+      <p>Сравним, какая Linux-среда содержит Engine в каждом маршруте. Это объясняет, почему контейнеры одной установки могут отсутствовать в другой.</p>
+      <figure class="pic">
+        <p><b>Общее основание: Windows → WSL 2</b></p>
+        <div class="route-options" aria-label="Альтернативные маршруты после WSL 2">
+          <div><b>Вариант А · основной</b><p>docker-desktop → Engine → контейнер</p><span>Средой и службой управляет Docker Desktop.</span></div>
+          <div><b>Вариант Б · запасной</b><p>Ubuntu → свой Engine → контейнер</p><span>Среду и службу обслуживаете вы.</span></div>
         </div>
-        <p class="check"><code>wsl --version</code> печатает строку <code>WSL version</code> (в русской Windows — «Версия WSL») с номером 2.1.5 или больше.</p>
-        <details class="more">
-          <summary>что ещё показывает WSL и как её перезапустить</summary>
-          <p>Какие системы Linux живут в WSL, показывает <code>wsl -l -v</code>. После запуска Docker Desktop в списке появляется его собственная система <code>docker-desktop</code>:</p>
-          <figure class="code"><figcaption><span>PowerShell</span><span>системы Linux в WSL</span></figcaption>
-<pre>wsl -l -v</pre></figure>
-          <figure class="code code--out"><figcaption><span>Вывод</span><span>Docker Desktop запущен</span></figcaption>
-<pre>  NAME              STATE           VERSION
-* docker-desktop    Running         2</pre></figure>
-          <p>Столбец <code>VERSION</code> — версия WSL для этой системы: нужна 2.</p>
-          <p>Если WSL ведёт себя странно, её можно перезапустить целиком. Команда останавливает всё, что работает в WSL, включая Docker Desktop:</p>
-          <figure class="code"><figcaption><span>PowerShell</span><span>перезапуск WSL</span></figcaption>
-<pre>wsl --shutdown</pre></figure>
-          <p>После неё снова запустите Docker Desktop.</p>
-        </details>
-
-        <h2 id="s5"><span class="sec">§5</span>Проверка 4. Окно ошибки Docker Desktop</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Если три нижних слоя в порядке, а Docker Desktop всё равно падает, он сам пишет причину. Учимся её читать.</p>
-        <p>При первом запуске Docker Desktop предлагает войти в учётную запись. Для стенда она не нужна — нажмите <b>Skip</b>:</p>
-        <figure class="shot"><img src="../../shots/w-dd-04-welcome.png" alt="Окно Welcome to Docker, выделена ссылка Skip"><figcaption>Docker Desktop 4.99 · первый запуск · 1 — Skip · снято на Windows</figcaption></figure>
-        <p>Если всё в порядке, через минуту внизу слева появится <b>Engine running</b>:</p>
-        <figure class="shot"><img src="../../shots/w-dd-05-engine-running.png" alt="Главное окно Docker Desktop на Windows, внизу слева Engine running"><figcaption>Docker Desktop на Windows · 1 — Engine running: движок работает</figcaption></figure>
-        <p>Когда Docker Desktop запуститься не может, вместо этого он показывает окно ошибки:</p>
-        <figure class="shot"><img src="../../shots/w-dd-03-error.png" alt="Окно Docker Desktop: An unexpected error occurred, причина в сером поле, кнопки Gather diagnostics, Reset to factory defaults и Quit"><figcaption>Docker Desktop 4.99 · окно ошибки · снято на Windows, где уже работал ещё один Docker</figcaption></figure>
-        <div class="vsteps" aria-label="Что делать в окне ошибки">
-          <div class="vcard is-hot"><h5>1 · серое поле</h5><b>Причина</b><small>Скопируйте первую строку и найдите её в таблице ниже или в поиске.</small></div>
-          <div class="varr">потом</div>
-          <div class="vcard"><h5>2 · Quit</h5><b>Закрыть и починить</b><small>Исправьте причину и запустите Docker Desktop снова.</small></div>
-          <div class="varr">крайний случай</div>
-          <div class="vcard is-bad"><h5>3 · Reset to factory defaults</h5><b>Сброс всего</b><small>Стирает настройки, образы и тома. Стенд потом загрузится заново.</small></div>
-        </div>
-        <p>На кадре причина — <code>Access is denied</code> у <code>\\.\pipe\docker_engine</code>: на компьютере уже работал другой Docker и занял его канал связи. Такое бывает, если раньше ставили Docker другим способом. Удалите старый Docker через «Параметры» → «Приложения» и перезагрузитесь.</p>
-        <p class="check">в нижнем левом углу окна Docker Desktop написано <b>Engine running</b>. Возвращайтесь в главу <a href="../01-stend/index.html#s3">0.1</a>.</p>
-
-        <h2 id="s6"><span class="sec">§6</span>План Б. Docker прямо в Ubuntu</h2>
-        <p class="purpose"><b>Зачем этот шаг</b>Виртуализация и WSL работают, а Docker Desktop так и не запустился. Тогда ставим Docker внутрь Ubuntu в WSL — так же, как на обычный Linux.</p>
-        <div class="vsteps" aria-label="План Б: Windows, Ubuntu в WSL, Docker Engine, стенд, браузер Windows">
-          <div class="vcard"><h5>Windows</h5><b>браузер</b><small>localhost:8123/play</small></div>
-          <div class="varr">WSL пробрасывает</div>
-          <div class="vcard is-hot"><h5>WSL 2</h5><b>Ubuntu</b><small>Docker Engine вместо Docker Desktop</small></div>
-          <div class="varr">внутри</div>
-          <div class="vcard is-dark"><h5>контейнер</h5><b>course-clickhouse</b><small>тот же стенд</small></div>
-        </div>
-        <p>Мы проверили этот путь на Windows с Ubuntu 26.04: стенд загрузился, и браузер Windows получил те же числа. Стенд тот же, команды те же. Отличие одно: все команды набираются в окне Ubuntu. Браузер в Windows по-прежнему открывает <code>localhost:8123/play</code> — WSL сама передаёт такие запросы в Ubuntu.</p>
-        <span class="phase">Делаем</span>
-        <ol class="steps">
-          <li><b>Поставьте Ubuntu</b>В PowerShell от имени администратора:
-            <figure class="code"><figcaption><span>PowerShell</span><span>от имени администратора</span></figcaption>
-<pre>wsl --install -d Ubuntu</pre></figure>
-            Когда откроется окно Ubuntu, придумайте имя пользователя и пароль. Пароль при наборе не отображается — так и должно быть.</li>
-          <li><b>Поставьте Docker в Ubuntu</b>В окне Ubuntu — те же три команды, что для Linux в главе 0.1:
-            <figure class="code"><figcaption><span>Ubuntu</span><span>установка Docker Engine</span></figcaption>
-<pre>curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER</pre></figure>
-            Скрипт напишет <code>WSL DETECTED: We recommend using Docker Desktop for Windows.</code> и подождёт 20 секунд. Не нажимайте <kbd>Ctrl</kbd> + <kbd>C</kbd>: после паузы установка продолжится сама.</li>
-          <li><b>Закройте окно Ubuntu и откройте снова</b>Так вступит в силу группа <code>docker</code> из последней команды.</li>
-          <li><b>Скачайте репозиторий в домашнюю папку Ubuntu и поднимите стенд</b>
-            <figure class="code"><figcaption><span>Ubuntu</span><span>стенд</span></figcaption>
-<pre>cd ~
-git clone https://github.com/MaximBytecamp/clickhouse-practice.git
-cd clickhouse-practice
-docker compose up -d</pre></figure>
-          </li>
+        <figcaption>Два независимых места установки Engine поверх WSL 2</figcaption>
+      </figure>
+      <p>В обеих ветвях нужен Linux. Меняется место установки службы и набор её локальных данных.</p>
+      <p>Если Desktop нельзя использовать по условиям организации или выбран отдельный Linux-маршрут с преподавателем, Engine можно установить в Ubuntu WSL 2. Требования к виртуализации остаются. Ваша Ubuntu заменяет служебную Linux-среду Desktop; её службой Docker теперь управляете вы.</p>
+      <p><b>Не устанавливайте второй Engine в Ubuntu, пока пытаетесь исправить Desktop.</b> Не включайте интеграцию Desktop для той же Ubuntu с самостоятельным Engine. Две установки могут дать разные контейнеры, тома и адреса подключения; <a href="https://docs.docker.com/desktop/features/wsl/">Docker предупреждает о конфликтах</a>.</p>
+      <details class="more"><summary>Границы запасного маршрута и порядок действий</summary>
+        <p>Этот вариант требует отдельной проверки на вашей Windows; здесь он не представлен как второй гарантированно проверенный рецепт. До начала согласуйте переход, сохранение данных и прекращение использования прежнего Engine. Остановка Desktop может затронуть другие проекты.</p>
+        <ol>
+          <li><b>PowerShell Windows:</b> выберите поддерживаемую Ubuntu через <code>wsl --list --online</code>, установите выбранный дистрибутив по <a href="https://learn.microsoft.com/ru-ru/windows/wsl/install">инструкции Microsoft</a>. После создания пользователя проверьте <code>wsl -l -v</code>: у вашей Ubuntu в столбце VERSION должно быть 2. Этот столбец показывает режим дистрибутива. Выпуск пакета отдельно показывает <code>wsl --version</code>.</li>
+          <li><b>Терминал Ubuntu:</b> установите Engine и Compose plugin по <a href="https://docs.docker.com/engine/install/ubuntu/">официальной инструкции Docker для выбранной версии Ubuntu</a>. Не выполняйте Linux-команды в PowerShell. Загрузку и выполнение установочного скрипта одной неразобранной командой здесь не используем.</li>
+          <li><b>Терминал Ubuntu:</b> убедитесь, что запущена служба Docker. Для дистрибутива с systemd — системой управления службами Linux — команда <code>sudo systemctl status docker</code> читает её состояние. Если systemd не работает, не копируйте команды запуска службы: сначала проверьте <a href="https://learn.microsoft.com/en-us/windows/wsl/systemd">поддержку systemd в WSL</a>. Права на Docker настраивайте по инструкции; группа docker даёт полномочия уровня администратора Linux.</li>
+          <li><b>Терминал Ubuntu:</b> после проверки Engine выполняйте Linux-маршрут главы 0.1. Храните копию проекта в домашнем каталоге Linux; это отдельный путь, не прежняя Windows-папка. Команды Docker могут требовать <code>sudo</code>, если доступ без него не настроен.</li>
+          <li><b>Браузер Windows:</b> проверьте доступ к опубликованному порту и запрос из §4. В обычной конфигурации WSL доступ по localhost поддерживается, но зависит от сетевого режима и правил компьютера; при отказе нужна диагностика доступа к порту.</li>
         </ol>
-        <p class="check">в браузере Windows открывается <a href="http://localhost:8123/play">localhost:8123/play</a>, а проверочный запрос из главы 0.1 показывает 10&nbsp;324&nbsp;592 строки в <code>web.events</code>.</p>
-        <details class="more">
-          <summary>почему репозиторий лежит в домашней папке Ubuntu</summary>
-          <p>Диски Windows доступны в Ubuntu по адресу <code>/mnt/c</code>, но файлы там читаются через мост между двумя системами и медленнее. Docker в Ubuntu работает быстрее с файлами из её собственной папки <code>~</code>. Открыть эту папку в Проводнике Windows можно по адресу <code>\\wsl$\Ubuntu\home\ваше_имя</code>.</p>
-          <p>После перезагрузки компьютера стенд сам не поднимается. Откройте окно Ubuntu, перейдите в <code>~/clickhouse-practice</code> и выполните <code>docker compose up -d</code>.</p>
-        </details>
+        <p>После перезагрузки проверяйте отдельно службу Docker, контейнер и готовность сервера. Их автозапуск зависит от systemd, настроек WSL и политики перезапуска контейнеров; обещать обязательный ручной запуск или автоматический подъём всего стенда нельзя.</p>
+      </details>
 
-        <h2 id="s7"><span class="sec">§7</span>Если не получилось</h2>
-        <p>Найдите сообщение, похожее на ваше, и раскройте его.</p>
-        <details class="err"><summary>Docker Desktop не запущен<small>failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.</small></summary><p>Так отвечает <code>docker version</code>, пока движок Docker Desktop не запущен. Запустите Docker Desktop и дождитесь <b>Engine running</b>. Падает с окном ошибки — <a href="#s5">проверка 4</a>.</p></details>
-        <details class="err"><summary>Канал Docker занят другим Docker<small>setting up docker api proxy listener: open \\.\pipe\docker_engine: Access is denied.</small></summary><p>На компьютере есть ещё один Docker — например, поставленный раньше отдельно. Удалите его через «Параметры» → «Приложения», перезагрузитесь и запустите Docker Desktop.</p></details>
-        <details class="err"><summary>Установка Ubuntu зависла на 0,0%<small>wsl --install -d Ubuntu: Downloading … 0.0%</small></summary><p>По <a href="https://learn.microsoft.com/ru-ru/windows/wsl/install">документации Microsoft</a> помогает загрузка напрямую: <code>wsl --install --web-download -d Ubuntu</code>.</p></details>
+      <h2 id="s7"><span class="sec">§6</span>Частые ошибки</h2>
+      <details class="err"><summary>«В списке WSL нет Ubuntu — значит, Desktop не заработает»</summary><p>Ubuntu требуется только запасному маршруту. В основном Desktop создаёт собственную среду. Проверяйте запуск Engine.</p></details>
+      <details class="err"><summary>«Access is denied — нужно удалить старый Docker»</summary><p>Это сообщение об отказе доступа, не установленная причина. Сохраните точный текст, проверьте выбранное подключение и передайте диагностику администратору. Не удаляйте программы по одной строке ошибки.</p></details>
+      <details class="err"><summary>«Для исправления достаточно перезапустить всю WSL»</summary><p>Команда <code>wsl --shutdown</code> в PowerShell немедленно останавливает все дистрибутивы и WSL-машину, затрагивая другие проекты и Docker Desktop. Это не первая диагностическая проверка. Такой перезапуск допустим только по установленной причине и после согласования остановки работ.</p></details>
+      <details class="err"><summary>«Factory reset — безопасный способ проверить гипотезу»</summary><p>Сброс может удалить настройки и локальные данные Docker. Не применяйте его как диагностический шаг и не удаляйте тома: сначала установите причину по журналам и сохраните данные.</p></details>
+      <details class="err"><summary>«Два номера версии WSL должны совпасть»</summary><p><code>wsl --version</code> показывает выпуск пакета WSL и компонентов. <code>wsl -l -v</code> показывает режим каждого дистрибутива: 1 или 2. Например, пакет может иметь номер выше 2, а дистрибутив всё равно использовать режим WSL 2.</p></details>
 
-        <h2 id="s8"><span class="sec">§8</span>Проверьте себя</h2>
-        <details>
-          <summary>Docker Desktop падает при запуске. Вы переустановили его трижды — не помогло. Что проверить?</summary>
-          <p>Слои ниже: версию Windows, виртуализацию в диспетчере задач и <code>wsl --version</code>. Если выключена виртуализация, переустановка Docker Desktop ничего не изменит — как новая лампа в розетке без тока.</p>
-        </details>
-        <details>
-          <summary>Где смотреть, включена ли виртуализация?</summary>
-          <p>Диспетчер задач → «Производительность» → «ЦП», строка «Виртуализация». Включают её в BIOS: у Intel — Intel Virtualization Technology, у AMD — SVM Mode.</p>
-        </details>
-        <details>
-          <summary>В плане Б стенд работает в Ubuntu. Почему браузер в Windows открывает Play UI?</summary>
-          <p>WSL 2 передаёт обращения к <code>localhost</code> из Windows в Ubuntu. Поэтому <code>localhost:8123</code> в браузере Windows попадает на сервер, который работает в Ubuntu.</p>
-        </details>
+      <h2 id="s8"><span class="sec">§7</span>Самопроверка и самостоятельная задача</h2>
+      <details><summary>docker compose version отвечает, а docker version показывает только Client и ошибку. Можно запускать стенд?</summary><p>Нет. Проверен плагин Compose, но не связь с Engine. Следующий шаг — ветвь 2: состояние Desktop и адрес подключения. Плагин не заменяет службу, которая создаёт контейнеры.</p></details>
+      <details><summary>В диспетчере задач виртуализация выключена. Поможет ли переход с Desktop на Ubuntu WSL 2?</summary><p>Нет: оба маршрута зависят от WSL 2 и аппаратной виртуализации. Нужна проверка основания владельцем компьютера.</p></details>
+      <details><summary>Контейнер Up, SELECT 1 вернул 1, но таблица стенда не найдена. Какой слой уже проверен и куда идти?</summary><p>Процесс сервера работает и выполняет SQL; проблема не доказывает неисправность Docker или WSL. Вернитесь к проверке загрузки баз стенда в 0.1 и журналам инициализации. Сам запрос SELECT 1 не обращается к таблицам стенда.</p></details>
+      <h3>Самостоятельная задача: составьте карточку диагностики</h3>
+      <p>Службы и данные оставьте без изменений. Запишите четыре факта: доступен ли CLI, отвечает ли Server, есть ли контейнер проекта и выполняется ли запрос. Для каждого укажите среду выполнения, использованную проверку и наблюдаемый результат. Если ранняя проверка не прошла, следующие отметьте «не проверено», а не «не работает». Уберите из карточки пароли и токены.</p>
+      <details><summary>Как оценить результат</summary><p>Карточка должна позволять другому человеку выбрать конкретную ветвь §4. Запись «Docker установлен, но всё сломалось» не подходит: она не различает клиент и службу. Правильная запись может закончиться уже на отсутствии Server — незапущенные следующие проверки не надо имитировать.</p></details>
 
-        <h2 id="s9"><span class="sec">§9</span>Шпаргалка</h2>
-        <div class="cheat">
-          <div>
-            <b>Проверить</b>
-            <code>winver                 # версия Windows</code>
-            <code>Ctrl+Shift+Esc → ЦП     # виртуализация</code>
-            <code>wsl --version          # версия WSL</code>
-          </div>
-          <div>
-            <b>Починить WSL</b>
-            <code>wsl --install          # поставить</code>
-            <code>wsl --update           # обновить</code>
-            <code>wsl --shutdown         # перезапустить</code>
-          </div>
-          <div>
-            <b>План Б</b>
-            <code>wsl --install -d Ubuntu</code>
-            <code>sudo sh get-docker.sh   # в Ubuntu</code>
-            <code>docker compose up -d    # в ~/clickhouse-practice</code>
-          </div>
-        </div>
-
-        <h3>Итог главы</h3>
-        <ul class="short">
-          <li>Docker Desktop стоит на WSL 2, а WSL 2 — на виртуализации процессора.</li>
-          <li>Проверяем снизу вверх: версия Windows → виртуализация в диспетчере задач → <code>wsl --version</code> → окно ошибки Docker Desktop.</li>
-          <li>Виртуализацию включают в BIOS: Intel Virtualization Technology или SVM Mode у AMD.</li>
-          <li>Если Docker Desktop так и не заработал, Docker ставят прямо в Ubuntu в WSL, и стенд открывается в браузере Windows по тому же адресу.</li>
-        </ul>
-        <p>Стенд поднялся — возвращайтесь в главу <a href="../01-stend/index.html#s7">0.1, шаг 4</a> и проверьте базы в браузере.</p>
-
-        <div class="pager"><a href="../01-stend/index.html">← 0.1 Стенд: Docker и базы</a><a href="../02-klienty/index.html">0.2 Клиенты →</a></div>
-
-        <div class="colophon">
-          <span>Глава 0.1а · Windows: Docker Desktop и WSL 2 · Справочник по ClickHouse</span>
-          <span class="author-line">Автор: Макаров Максим Николаевич</span>
-        </div>
-      </main>
-    </div>
-  </div>
+      <h2 id="s9"><span class="sec">§8</span>Шпаргалка</h2>
+      <ul class="short">
+        <li><b>PowerShell Windows, любая папка:</b> <code>wsl --version</code> — выпуск WSL; <code>docker version</code> — CLI и доступность Engine; <code>docker compose version</code> — плагин.</li>
+        <li><b>PowerShell Windows, папка проекта:</b> <code>docker compose ps -a</code> — состояние контейнеров; <code>docker compose logs --tail 60</code> — сообщения для установления причины.</li>
+        <li><b>Браузер Windows, Play UI:</b> <code>SELECT 1;</code> — выполнение запроса. Наличие данных стенда проверяется отдельно в 0.1.</li>
+        <li><b>Терминал Ubuntu:</b> только запасной Linux-маршрут. Не переносите туда Windows-команды из основного маршрута.</li>
+      </ul>
+      <aside class="chapter-note" aria-label="Границы проверки материала">
+        <b>Что проверено и что требует Windows</b>
+        <p>Команды WSL и варианты установки сверены с документацией Microsoft и Docker. Доступной Windows-среды при этой переработке нет. Не выполнены установка/обновление WSL, перезагрузка, проверка диспетчера задач, установка и запуск Desktop. Также не проверены команды PowerShell и полный запасной маршрут Ubuntu WSL. Исторические кадры не подтверждают нынешнюю версию интерфейса. Эти шаги требуют проверки на целевой Windows; глава не является отчётом об успешном сквозном запуске на ней.</p>
+      </aside>
+      <p>Когда сервер отвечает, продолжайте <a href="../01-stend/index.html#s7">проверку баз стенда в 0.1</a>. Выбор и использование клиентов — в <a href="../02-klienty/index.html">0.2</a>.</p>
+      <details class="more"><summary>Источники и область применимости</summary><ul>
+        <li><a href="https://docs.docker.com/desktop/setup/install/windows-install/">Docker Desktop: установка и актуальные требования Windows</a>.</li>
+        <li><a href="https://docs.docker.com/desktop/features/wsl/">Docker Desktop: WSL 2 backend, собственный дистрибутив и конфликты установок</a>.</li>
+        <li><a href="https://learn.microsoft.com/en-us/windows/wsl/basic-commands">Microsoft: команды WSL и их параметры</a>.</li>
+        <li><a href="https://docs.docker.com/engine/install/ubuntu/">Docker Engine: поддерживаемые версии Ubuntu и установка</a>.</li>
+      </ul><p>Сверено 18 ноября 2026 года. Требования, поддерживаемые версии и интерфейс могут меняться: перед установкой проверяйте актуальную документацию по ссылкам.</p></details>
+      <div class="pager"><a href="../01-stend/index.html">← 0.1 Стенд: Docker и базы</a><a href="../02-klienty/index.html">0.2 Клиенты →</a></div>
+      <div class="colophon"><span>Глава 0.1а · Windows: Docker Desktop и WSL 2 · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
+    </main>
+  </div></div>
   <script src="../../book.js"></script>
 </body>
 </html>
