@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1C1A24">
+  <title>1.5 INSERT: строки и пачки · Справочник по ClickHouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400;1,7..72,700&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    .insert-flow { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1.15fr) auto minmax(0,1fr); gap:12px; align-items:center; padding:20px; border:1px solid var(--rule); background:var(--leaf-pale); border-radius:8px; }
+    .insert-flow > div { min-width:0; padding:12px; background:var(--page); border:1px solid var(--rule); border-radius:6px; }
+    .insert-flow b,.insert-flow code,.insert-flow small { display:block; overflow-wrap:anywhere; }
+    .insert-flow small { margin-top:7px; color:var(--ink-soft); }
+    .insert-flow .arrow { padding:0; border:0; background:transparent; font-size:24px; color:var(--leaf); text-align:center; }
+    .batch-table td { vertical-align:top; }
+    @media (max-width:600px) {
+      .insert-flow { grid-template-columns:minmax(0,1fr); padding:12px; }
+      .insert-flow .arrow { transform:rotate(90deg); }
+      figure.pic svg { min-width:0; }
+    }
+  </style>
+</head>
+<body>
+<div class="book"><div class="book__body">
+  <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+  <main class="leaf">
+    <div class="running"><p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 1 · первые данные</p><p class="running__folio">Глава 1.5</p></div>
+
+    <header class="chapter-head"><span class="chapter-num">1.5</span><h1>INSERT:<br>строки и пачки</h1><p class="lead">Добавим строки в созданную таблицу, скопируем результат запроса в другую таблицу и посмотрим, как вставки превращаются в части MergeTree.</p></header>
+
+    <dl class="passport">
+      <div><dt>Категория</dt><dd>Первые данные</dd></div><div><dt>Уровень</dt><dd>Начальный</dd></div>
+      <div><dt>Уже знаете</dt><dd>CREATE TABLE, MergeTree, ORDER BY, типы и DEFAULT</dd></div><div><dt>Понадобится</dt><dd>стенд 26.8.36.3, Play UI или clickhouse-client</dd></div>
+    </dl>
+
+    <section class="gist" aria-label="Задача главы"><p class="gist__head">Что предстоит решить</p><p>В таблицу корзины нужно добавить строки с одинаковыми столбцами. Сначала отправим одну строку, затем несколько строк одной командой. После этого скопируем часть данных запросом и сравним части MergeTree.</p><ol class="route" aria-label="Шаги главы"><li><a href="#s2"><b>Подготовить</b><small>таблица и DEFAULT</small></a></li><li><a href="#s3"><b>VALUES</b><small>одна строка</small></a></li><li><a href="#s4"><b>Пачка</b><small>три строки</small></a></li><li><a href="#s6"><b>SELECT</b><small>копия результата</small></a></li><li><a href="#s7"><b>Части</b><small>что записал MergeTree</small></a></li></ol></section>
+
+    <nav class="contents"><b>В этой главе</b><ol>
+      <li><a href="#s1">Что делает INSERT</a></li><li><a href="#s2">Подготовить таблицу</a></li><li><a href="#s3">Шаг 1. Вставить одну строку</a></li><li><a href="#s4">Шаг 2. Вставить пачку</a></li><li><a href="#s5">Как сервер сопоставляет столбцы</a></li><li><a href="#s6">Шаг 3. Вставить результат SELECT</a></li><li><a href="#s7">Одна вставка — одна часть</a></li><li><a href="#s8">Частые ошибки</a></li><li><a href="#s9">Проверьте себя</a></li><li><a href="#s10">Шпаргалка и итог</a></li>
+    </ol></nav>
+
+    <h2 id="s1"><span class="sec">§1</span>Что делает INSERT</h2>
+    <p class="purpose"><b>Зачем это знать</b>После создания таблицы в ней есть столбцы и правила, но нет строк. <code>INSERT</code> передаёт серверу новые значения.</p>
+    <p>В бумажной картотеке сначала выбирают пустую карточку, заполняют её поля и кладут карточку в шкаф. В ClickHouse похожий маршрут состоит из трёх частей: указать таблицу, передать значения и проверить сохранённые строки.</p>
+    <p><b>INSERT</b> — команда добавления строк. В форме <code>VALUES</code> строки записываются прямо в запросе. В форме <code>SELECT</code> источником новых строк становится результат другого запроса.</p>
+    <figure class="pic"><div class="insert-flow" role="img" aria-label="INSERT передаёт строки в таблицу: источник, проверка столбцов, новая часть MergeTree"><div><b>Источник</b><code>VALUES</code><small>или результат SELECT</small></div><span class="arrow" aria-hidden="true">→</span><div><b>Сопоставление</b><code>имя → тип</code><small>значения проходят правила столбцов</small></div><span class="arrow" aria-hidden="true">→</span><div><b>MergeTree</b><code>новая часть</code><small>строки сортируются по ключу</small></div></div><figcaption>Путь строки от INSERT до части MergeTree</figcaption></figure>
+    <p>На схеме источник передаёт значения в столбцы таблицы. Сервер проверяет типы и значения по структуре таблицы. Затем MergeTree создаёт часть, сортирует её по ключу и записывает на диск. Начнём с небольшой таблицы в базе <code>sandbox</code>.</p>
+
+    <h2 id="s2"><span class="sec">§2</span>Подготовить таблицу</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Создадим отдельную таблицу для опыта, чтобы не менять данные курса.</p>
+    <p>Имя таблицы <code>insert_lesson</code> будет использоваться во всех запросах главы. Поле <code>note</code> допускает пропуск: если его не передать, сработает <code>DEFAULT</code> из главы 1.3.</p>
+    <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>подготовка опыта</span></figcaption><pre>DROP TABLE IF EXISTS sandbox.insert_lesson;
+
+CREATE TABLE sandbox.insert_lesson (
+    id UInt32,
+    product_id String,
+    qty UInt16,
+    note Nullable(String) DEFAULT 'не указано'
+) ENGINE = MergeTree
+ORDER BY id;</pre></figure>
+    <p>Команда удаления нужна только для повторного запуска опыта. Она убирает старую таблицу и её строки. Новая таблица хранит четыре столбца. Ключ <code>id</code> задаёт порядок строк внутри частей.</p>
+    <figure class="pic"><svg viewBox="0 0 880 190" role="img" aria-label="Схема таблицы insert_lesson: id, product_id, qty и note с типами и значением по умолчанию"><rect class="sc-ink" x="18" y="28" width="220" height="120" rx="6"/><text class="tw tc" x="128" y="58">insert_lesson</text><text class="tw" x="38" y="86">MergeTree · ORDER BY id</text><text class="tw" x="38" y="111">4 столбца</text><text class="tw" x="38" y="136">пустая до INSERT</text><path class="sc-arrow" d="M252 88 L314 88 M307 82 L314 88 L307 94"/><rect class="sc-soft" x="330" y="16" width="230" height="144" rx="6"/><text class="tb" x="348" y="42">структура</text><text class="t" x="348" y="70">id UInt32</text><text class="t" x="348" y="94">product_id String</text><text class="t" x="348" y="118">qty UInt16</text><text class="t" x="348" y="142">note Nullable(String)</text><path class="sc-arrow" d="M574 88 L636 88 M629 82 L636 88 L629 94"/><rect class="sc-warm" x="652" y="42" width="210" height="92" rx="6"/><text class="tb tc" x="757" y="69">DEFAULT</text><text class="t tc" x="757" y="96">«не указано»</text><text class="t tc" x="757" y="118">если поле пропущено</text></svg><figcaption>Структура таблицы и правило для пропущенного note</figcaption></figure>
+    <p>Таблица готова. Следующий запрос добавит одну строку и покажет полный список полей.</p>
+
+    <h2 id="s3"><span class="sec">§3</span>Шаг 1. Вставить одну строку</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Проверим минимальную форму <code>INSERT … VALUES</code> на одной записи.</p>
+    <p>В скобках после имени таблицы перечислим столбцы. После <code>VALUES</code> передадим для них одну строку в том же порядке. Явный список столбцов защищает запрос от случайной зависимости от порядка всех полей таблицы.</p>
+    <figure class="code"><figcaption><span>Play UI</span><span>одна строка</span></figcaption><pre>INSERT INTO sandbox.insert_lesson (id, product_id, qty, note)
+VALUES (3, 'p-003', 1, 'одна строка');</pre></figure>
+    <p>Команда не возвращает строк результата. Проверим добавленную запись отдельным запросом:</p>
+    <figure class="code"><figcaption><span>Play UI</span><span>проверка</span></figcaption><pre>SELECT * FROM sandbox.insert_lesson
+ORDER BY id;</pre></figure>
+    <figure class="shot"><img loading="lazy" src="../../shots/15-01-values.png" alt="Три строки insert_lesson: id 1, 2 и 3; строка 3 добавлена одной вставкой"><figcaption>Результат после одиночной строки и пакетной вставки: строка id 3 помечена как «одна строка»</figcaption></figure>
+    <p>На кадре строка с <code>id = 3</code> содержит товар <code>p-003</code> и количество 1. Две другие строки появятся в следующем шаге. Сортировка в <code>SELECT</code> нужна для устойчивого порядка ответа.</p>
+    <p class="check">строка с id 3 сохранена, её четыре значения попали в правильные столбцы.</p>
+
+    <h2 id="s4"><span class="sec">§4</span>Шаг 2. Вставить пачку</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Добавим несколько записей одной командой и сравним их с одиночной вставкой.</p>
+    <p>Пачка — несколько строк, отправленных одним запросом. Каждая строка имеет круглые скобки, а строки разделяются запятыми. Все строки должны соответствовать одним и тем же столбцам и типам.</p>
+    <figure class="code"><figcaption><span>Play UI</span><span>две строки одной пачкой</span></figcaption><pre>INSERT INTO sandbox.insert_lesson (id, product_id, qty, note)
+VALUES
+    (1, 'p-001', 2, 'первая пачка'),
+    (2, 'p-002', 4, 'первая пачка');</pre></figure>
+    <p>После запроса в таблице три строки: одна добавлена отдельно, две — одной пачкой. На стенде итоговый запрос вернул <code>sum(qty) = 7</code>: 2 + 4 + 1.</p>
+    <figure class="pic"><svg viewBox="0 0 880 210" role="img" aria-label="Пачка из двух строк проходит одной стрелкой в MergeTree и становится частью из двух строк"><text class="tb" x="18" y="25">одна команда INSERT</text><rect class="sc-box" x="18" y="42" width="222" height="36" rx="4"/><text class="tm tc" x="129" y="65">1 · p-001 · 2</text><rect class="sc-box" x="18" y="88" width="222" height="36" rx="4"/><text class="tm tc" x="129" y="111">2 · p-002 · 4</text><path class="sc-arrow" d="M270 84 L370 84 M363 78 L370 84 L363 90"/><rect class="sc-acc" x="396" y="48" width="210" height="74" rx="6"/><text class="tb tc" x="501" y="76">MergeTree</text><text class="t tc" x="501" y="101">сортировка по id</text><path class="sc-arrow" d="M636 84 L724 84 M717 78 L724 84 L717 90"/><rect class="sc-warm" x="748" y="42" width="114" height="84" rx="6"/><text class="tb tc" x="805" y="68">часть</text><text class="tm tc" x="805" y="94">2 строки</text><text class="t tc" x="805" y="113">одна запись</text></svg><figcaption>Пачка из двух строк записывается одной частью</figcaption></figure>
+    <p>На схеме две входные строки идут одним маршрутом. MergeTree создаёт для этой вставки отдельную часть из двух строк. Это уменьшает число отдельных запросов и лучше соответствует пакетной записи.</p>
+    <p class="check">в таблице три строки; значения количества равны 2, 4 и 1; сумма равна 7.</p>
+
+    <h2 id="s5"><span class="sec">§5</span>Как сервер сопоставляет столбцы</h2>
+    <p class="purpose"><b>Зачем это знать</b>Понять, почему список столбцов в INSERT должен совпадать со значениями и как работает пропущенное поле.</p>
+    <p>Список после имени таблицы задаёт соответствие по позиции: первое значение идёт в первый названный столбец, второе — во второй. Значение проверяется типом столбца. Если столбец не назван, сервер применяет его значение по умолчанию.</p>
+    <div class="table-scroll"><table class="batch-table"><thead><tr><th>В запросе</th><th>Результат</th><th>Причина</th></tr></thead><tbody><tr><td><code>(id, product_id, qty, note)</code></td><td>четыре значения</td><td>все поля переданы явно</td></tr><tr><td><code>(id, product_id, qty)</code></td><td>note = «не указано»</td><td>сработал DEFAULT</td></tr><tr><td>без списка столбцов</td><td>нужны значения всех полей</td><td>порядок берётся из структуры таблицы</td></tr></tbody></table></div>
+    <p>В этой главе все строки передают <code>note</code> явно. Поэтому кадр показывает текст из запроса. Значение по умолчанию здесь не используется. Смысл DEFAULT уже проверен в главе 1.3; список столбцов помогает читать и менять запрос.</p>
+    <figure class="pic"><svg viewBox="0 0 880 180" role="img" aria-label="Список столбцов INSERT сопоставляет значения по позиции: id получает 1, product_id получает p-001, qty получает 2, note получает текст"><rect class="sc-ink" x="18" y="30" width="220" height="108" rx="6"/><text class="tw tc" x="128" y="57">значения</text><text class="tw" x="40" y="84">1 · p-001 · 2</text><text class="tw" x="40" y="112">«первая пачка»</text><path class="sc-arrow" d="M258 84 L336 84 M329 78 L336 84 L329 90"/><rect class="sc-soft" x="362" y="18" width="232" height="132" rx="6"/><text class="tb" x="380" y="46">столбцы</text><text class="t" x="380" y="72">id ← 1</text><text class="t" x="380" y="96">product_id ← p-001</text><text class="t" x="380" y="120">qty ← 2</text><text class="t" x="380" y="144">note ← текст</text><path class="sc-arrow" d="M614 84 L692 84 M685 78 L692 84 L685 90"/><rect class="sc-warm" x="718" y="42" width="144" height="84" rx="6"/><text class="tb tc" x="790" y="70">строка</text><text class="t tc" x="790" y="97">сохранена</text></svg><figcaption>Сопоставление значений со списком столбцов</figcaption></figure>
+    <p>Схема показывает позиционное соответствие. Если поменять порядок столбцов, нужно поменять порядок значений. Иначе запрос может завершиться ошибкой типа или записать данные в смыслово неподходящее поле.</p>
+
+    <h2 id="s6"><span class="sec">§6</span>Шаг 3. Вставить результат SELECT</h2>
+    <p class="purpose"><b>Зачем этот шаг</b>Перенесём строки из одной таблицы в другую без переписывания каждой строки в VALUES.</p>
+    <p>Форма <code>INSERT … SELECT</code> получает строки результатом запроса. Столбцы после имени назначения описывают порядок входных выражений после <code>SELECT</code>. В опыте создадим пустую копию структуры и перенесём только строки с количеством от 2.</p>
+    <figure class="code"><figcaption><span>Play UI</span><span>пустая таблица той же структуры</span></figcaption><pre>DROP TABLE IF EXISTS sandbox.insert_copy;
+CREATE TABLE sandbox.insert_copy AS sandbox.insert_lesson;</pre></figure>
+    <figure class="code"><figcaption><span>Play UI</span><span>вставить результат запроса</span></figcaption><pre>INSERT INTO sandbox.insert_copy (id, product_id, qty, note)
+SELECT id, product_id, qty, note
+FROM sandbox.insert_lesson
+WHERE qty &gt;= 2;</pre></figure>
+    <figure class="shot"><img loading="lazy" src="../../shots/15-02-select.png" alt="В таблице insert_copy две строки: id 1 с qty 2 и id 2 с qty 4"><figcaption>Результат INSERT SELECT: перенесены только строки с qty не меньше 2</figcaption></figure>
+    <p>На кадре остались строки с <code>id = 1</code> и <code>id = 2</code>. Строка с количеством 1 не прошла условие <code>WHERE</code>. Запрос одновременно читает источник и добавляет результат в назначение.</p>
+    <figure class="pic"><svg viewBox="0 0 880 190" role="img" aria-label="INSERT SELECT читает три строки, условие qty больше или равно 2 пропускает две, две строки записываются в insert_copy"><rect class="sc-ink" x="18" y="28" width="220" height="120" rx="6"/><text class="tw tc" x="128" y="55">insert_lesson</text><text class="tw" x="42" y="84">id 1 · qty 2</text><text class="tw" x="42" y="108">id 2 · qty 4</text><text class="tw" x="42" y="132">id 3 · qty 1</text><path class="sc-arrow" d="M258 88 L346 88 M339 82 L346 88 L339 94"/><rect class="sc-acc" x="372" y="42" width="214" height="92" rx="6"/><text class="tb tc" x="479" y="70">WHERE qty ≥ 2</text><text class="t tc" x="479" y="98">остаются id 1 и 2</text><path class="sc-arrow" d="M610 88 L698 88 M691 82 L698 88 L691 94"/><rect class="sc-warm" x="724" y="28" width="138" height="120" rx="6"/><text class="tb tc" x="793" y="58">insert_copy</text><text class="tm tc" x="793" y="88">id 1</text><text class="tm tc" x="793" y="112">id 2</text></svg><figcaption>Фильтрация источника перед INSERT SELECT</figcaption></figure>
+    <p>Стрелки показывают перенос результата фильтра. Значения уже отобраны запросом и сразу поступают в целевую таблицу.</p>
+    <p class="check">в копии две строки; их количество равно 2 и 4.</p>
+
+    <h2 id="s7"><span class="sec">§7</span>Одна вставка — одна часть</h2>
+    <p class="purpose"><b>Зачем это знать</b>Свяжем запросы INSERT с устройством MergeTree, которое разбирали в главе 1.4.</p>
+    <p>Каждый INSERT в MergeTree записывает отдельную порцию строк. В нашем опыте одиночная строка создала часть из 1 строки, а пакет из двух строк — часть из 2 строк. <code>INSERT SELECT</code> создал часть из 2 строк в таблице-копии.</p>
+    <figure class="shot"><img loading="lazy" src="../../shots/15-03-parts.png" alt="system.parts показывает insert_copy с частью на 2 строки и insert_lesson с частями на 1 и 2 строки"><figcaption>system.parts: три активные части, созданные разными вставками</figcaption></figure>
+    <p>В кадре столбец <code>table</code> различает две таблицы. У <code>insert_lesson</code> видны части на 1 и 2 строки. У <code>insert_copy</code> видна одна часть на 2 строки. Число частей не равно числу строк: одна пачка содержит несколько строк.</p>
+    <figure class="pic"><svg viewBox="0 0 880 190" role="img" aria-label="Три INSERT создают три части: insert_lesson получает части на 1 и 2 строки, insert_copy — часть на 2 строки"><text class="tb" x="18" y="25">запросы</text><rect class="sc-box" x="18" y="42" width="208" height="34" rx="4"/><text class="tm tc" x="122" y="64">одна строка</text><rect class="sc-box" x="18" y="86" width="208" height="34" rx="4"/><text class="tm tc" x="122" y="108">пачка 2 строки</text><rect class="sc-box" x="18" y="130" width="208" height="34" rx="4"/><text class="tm tc" x="122" y="152">INSERT SELECT</text><path class="sc-arrow" d="M250 103 L334 103 M327 97 L334 103 L327 109"/><rect class="sc-acc" x="360" y="35" width="218" height="136" rx="6"/><text class="tb tc" x="469" y="63">активные части</text><text class="t tc" x="469" y="91">insert_lesson: 1</text><text class="t tc" x="469" y="117">insert_lesson: 2</text><text class="t tc" x="469" y="143">insert_copy: 2</text><path class="sc-arrow" d="M602 103 L686 103 M679 97 L686 103 L679 109"/><rect class="sc-warm" x="712" y="48" width="150" height="110" rx="6"/><text class="tb tc" x="787" y="77">system.parts</text><text class="t tc" x="787" y="105">table</text><text class="t tc" x="787" y="129">rows</text></svg><figcaption>Части MergeTree после трёх вариантов INSERT</figcaption></figure>
+    <p>Схема связывает команды с наблюдаемым состоянием системной таблицы. Большие пачки уменьшают количество отдельных частей на один и тот же объём данных; слияния частей подробно рассматриваются позже в модуле про MergeTree.</p>
+
+    <h2 id="s8"><span class="sec">§8</span>Частые ошибки</h2>
+    <details class="err"><summary>Число значений не совпало с числом столбцов<small>NUMBER_OF_COLUMNS_DOESNT_MATCH</small></summary><p>Сверьте список после имени таблицы и каждую строку после <code>VALUES</code>. Уберите лишнее значение или добавьте нужный столбец с подходящим значением.</p></details>
+    <details class="err"><summary>Значение не помещается в тип<small>TYPE_MISMATCH или ошибка преобразования</small></summary><p>Проверьте тип через <code>DESCRIBE sandbox.insert_lesson</code>. Количество для <code>UInt16</code> должно быть в его диапазоне, а текст передаётся в кавычках.</p></details>
+    <details class="err"><summary>Повторно запустили INSERT<small>SELECT count() FROM sandbox.insert_lesson</small></summary><p>MergeTree не считает одинаковые строки ошибкой. Повторная команда добавит их ещё раз. Перед повтором опыта выполните подготовительный <code>DROP TABLE</code> и <code>CREATE TABLE</code>.</p></details>
+    <details class="err"><summary>INSERT SELECT создал пустую копию</summary><p>Проверьте условие <code>WHERE</code> и запрос источника отдельно. Сначала выполните <code>SELECT id, product_id, qty, note FROM sandbox.insert_lesson WHERE qty &gt;= 2</code>. Затем добавьте этот запрос после <code>INSERT INTO</code>.</p></details>
+    <details class="err"><summary>Ожидали порядок вставки в ответе</summary><p>Порядок ответа задаёт <code>ORDER BY</code> в запросе чтения. Ключ MergeTree определяет порядок хранения внутри частей, но сам по себе не является гарантией порядка выдачи.</p></details>
+
+    <h2 id="s9"><span class="sec">§9</span>Проверьте себя</h2>
+    <details><summary>В таблицу нужно добавить пять строк с одинаковыми столбцами. Какой вариант отправит их одной командой?</summary><p>Одна команда <code>INSERT INTO … VALUES</code> с пятью строками в круглых скобках, разделёнными запятыми.</p></details>
+    <details><summary>Почему в кадре parts у одной таблицы две строки, а не три?</summary><p>Первая вставка добавила одну строку и создала часть на 1 строку. Вторая вставка добавила две строки одной пачкой и создала часть на 2 строки. Число частей считает порции вставки, а не отдельные строки.</p></details>
+    <details><summary>Что попадёт в insert_copy при условии qty &gt;= 2?</summary><p>Строки с id 1 и 2. У них количество 2 и 4; строка id 3 с количеством 1 условие не проходит.</p></details>
+    <details><summary>Что изменится, если в INSERT не передать note?</summary><p>Для созданной таблицы сервер применит <code>DEFAULT 'не указано'</code>. Это правило действует, если способ вставки разрешает заполнение пропущенного столбца по умолчанию.</p></details>
+    <h3>Самостоятельно: перенести крупные заказы</h3>
+    <p>Создайте таблицу <code>sandbox.large_orders</code> той же структуры, но вставьте из <code>shop.orders</code> только заказы с суммой больше 100 000:</p>
+    <ol><li>создайте пустую таблицу через <code>CREATE TABLE … AS shop.orders</code>;</li><li>составьте отдельный <code>SELECT</code> с условием <code>total &gt; 100000</code>;</li><li>перенесите его результат через <code>INSERT INTO … SELECT</code>;</li><li>проверьте число строк и сумму через <code>count()</code> и <code>sum(total)</code>.</li></ol>
+    <details class="more"><summary>Критерии проверки</summary><p>В новой таблице есть только строки с <code>total &gt; 100000</code>. Список столбцов назначения и выражений SELECT совпадает по числу и порядку. Исходная таблица <code>shop.orders</code> не меняется.</p></details>
+
+    <h2 id="s10"><span class="sec">§10</span>Шпаргалка и итог</h2>
+    <div class="cheat"><div><b>Одна строка</b><code>INSERT INTO db.t (a, b) VALUES (1, 'x')</code></div><div><b>Пачка</b><code>VALUES (1, 'x'), (2, 'y')</code></div><div><b>Из запроса</b><code>INSERT INTO dst SELECT … FROM src</code></div><div><b>Проверить</b><code>SELECT * FROM db.t ORDER BY id</code><code>SELECT table, rows FROM system.parts</code></div></div>
+    <div class="glossary"><article class="gl"><div class="gl__text"><h3>Пачка<i>batch</i></h3><p class="gl__def">Несколько строк, отправленных одной командой INSERT.</p><p class="gl__ex"><b>Пример</b>две строки с id 1 и 2 в одном <code>VALUES</code>.</p><p class="gl__where"><b>Где</b>§4</p></div><figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Две строки входят в одну пачку"><rect class="sc-box" x="20" y="22" width="90" height="30" rx="4"/><text class="t tc" x="65" y="42">строка 1</text><rect class="sc-box" x="20" y="70" width="90" height="30" rx="4"/><text class="t tc" x="65" y="90">строка 2</text><path class="sc-arrow" d="M126 61 L156 61 M149 55 L156 61 L149 67"/><rect class="sc-acc" x="172" y="40" width="68" height="42" rx="4"/><text class="t tc" x="206" y="65">batch</text></svg></figure></article><article class="gl"><div class="gl__text"><h3>INSERT SELECT</h3><p class="gl__def">Добавление результата запроса в другую таблицу.</p><p class="gl__ex"><b>Пример</b><code>WHERE qty &gt;= 2</code> оставил две строки.</p><p class="gl__where"><b>Где</b>§6</p></div><figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Фильтр передаёт две строки в другую таблицу"><rect class="sc-ink" x="12" y="40" width="78" height="46" rx="4"/><text class="tw tc" x="51" y="67">source</text><path class="sc-arrow" d="M98 63 L136 63 M129 57 L136 63 L129 69"/><rect class="sc-warm" x="148" y="40" width="100" height="46" rx="4"/><text class="tm tc" x="198" y="67">destination</text></svg></figure></article></div>
+    <p>Итог главы: <code>VALUES</code> добавляет записанные вручную строки, пачка объединяет несколько строк одной командой, а <code>INSERT SELECT</code> переносит результат запроса. В MergeTree каждая вставка становится отдельной частью, поэтому размер пачки влияет на число частей.</p>
+    <p>Следующая тема — чтение столбцов и выражений с фильтрацией и сортировкой результата.</p>
+
+    <div class="pager"><a href="../14-create-table/index.html">← 1.4 CREATE TABLE и движок</a><a href="../../index.html#modules">К оглавлению модуля 1 →</a></div>
+    <div class="colophon"><span>Глава 1.5 · INSERT: строки и пачки · Справочник по ClickHouse</span><span class="author-line">Автор: Макаров Максим Николаевич</span></div>
+  </main>
+</div></div>
+<script src="../../book.js"></script>
+</body>
+</html>
