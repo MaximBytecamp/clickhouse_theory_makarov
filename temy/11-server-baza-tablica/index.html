@@ -76,6 +76,7 @@
             <li><a href="#s10">Проверьте себя</a></li>
             <li><a href="#s11">Самостоятельная задача</a></li>
             <li><a href="#s12">Шпаргалка</a></li>
+            <li><a href="#s13">Итог</a></li>
           </ol>
         </nav>
 
@@ -141,21 +142,21 @@
         <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>список баз</span></figcaption>
 <pre>SHOW DATABASES;</pre></figure>
         <p>В Play UI также можно выполнить запрос сочетанием <kbd>Ctrl</kbd> + <kbd>Enter</kbd> в Windows и Linux; на macOS — <kbd>⌘</kbd> + <kbd>Enter</kbd>. При проверке стенда версии <code>26.8.36.3</code> получен список баз <code>INFORMATION_SCHEMA</code>, <code>default</code>, <code>information_schema</code>, <code>iot</code>, <code>sandbox</code>, <code>shop</code>, <code>system</code> и <code>web</code>.</p>
-        <figure class="shot"><img src="assets/01-databases.png" alt="Результат команды SHOW DATABASES в Play UI"><figcaption>Список баз, который вернул сервер</figcaption></figure>
+        <figure class="shot"><img loading="lazy" src="assets/01-databases.png" alt="Результат команды SHOW DATABASES в Play UI"><figcaption>Список баз, который вернул сервер</figcaption></figure>
         <p>В ответе есть <code>shop</code> — теперь можно запросить её таблицы. Базы <code>INFORMATION_SCHEMA</code>, <code>information_schema</code> и <code>system</code> служебные: они предоставляют сведения о сервере и данных. Содержимое <code>sandbox</code> меняется во время практики; эта база может уже содержать таблицы.</p>
 
         <h2 id="s4"><span class="sec">§4</span>Шаг 2. Найти таблицу</h2>
         <p><b>Назначение команды.</b> <code>SHOW TABLES FROM shop</code> перечисляет таблицы в базе <code>shop</code>. Слово <code>FROM</code> здесь указывает, в какой базе искать.</p>
         <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>таблицы магазина</span></figcaption>
 <pre>SHOW TABLES FROM shop;</pre></figure>
-        <figure class="shot"><img src="assets/02-tables.png" alt="Результат команды SHOW TABLES FROM shop с таблицами магазина"><figcaption>Таблицы базы <code>shop</code></figcaption></figure>
+        <figure class="shot"><img loading="lazy" src="assets/02-tables.png" alt="Результат команды SHOW TABLES FROM shop с таблицами магазина"><figcaption>Таблицы базы <code>shop</code></figcaption></figure>
         <p>Сервер вернёт пять имён: <code>customers</code>, <code>order_items</code>, <code>orders</code>, <code>products</code> и <code>stock</code>. Для каталога выбираем <code>products</code>. Следующий шаг — узнать столбцы этой таблицы.</p>
 
         <h2 id="s5"><span class="sec">§5</span>Шаг 3. Прочитать устройство таблицы</h2>
         <p><b>Назначение команды.</b> <code>DESCRIBE TABLE</code> показывает структуру таблицы: по одной строке на столбец, с его именем и типом. Строки такого ответа описывают структуру; значения товаров прочитаем отдельным запросом.</p>
         <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>столбцы таблицы товаров</span></figcaption>
 <pre>DESCRIBE TABLE shop.products;</pre></figure>
-        <figure class="shot"><img src="assets/03-describe.png" alt="Результат DESCRIBE TABLE shop.products со столбцами и их типами"><figcaption>Столбцы и типы таблицы <code>shop.products</code></figcaption></figure>
+        <figure class="shot"><img loading="lazy" src="assets/03-describe.png" alt="Результат DESCRIBE TABLE shop.products со столбцами и их типами"><figcaption>Столбцы и типы таблицы <code>shop.products</code></figcaption></figure>
         <p>В ответе десять строк: каждая соответствует одному столбцу исходной таблицы. В колонке <code>name</code> записано имя, в <code>type</code> — тип. Например, пара <code>title String</code> означает текстовое название, <code>price UInt32</code> — целую неотрицательную цену. Другие колонки описывают дополнительные свойства структуры; для чтения достаточно первых двух.</p>
         <p>Для первой проверки каталога достаточно трёх столбцов: идентификатора товара <code>product_id</code>, названия <code>title</code> и цены <code>price</code>. Их и прочитаем в следующем запросе.</p>
 
@@ -166,7 +167,7 @@
 <pre>SELECT product_id, title, price
 FROM shop.products
 LIMIT 5;</pre></figure>
-        <figure class="shot"><img src="assets/04-read.png" alt="Результат SELECT из трёх столбцов таблицы shop.products с пятью строками"><figcaption>Небольшая выборка из таблицы товаров</figcaption></figure>
+        <figure class="shot"><img loading="lazy" src="assets/04-read.png" alt="Результат SELECT из трёх столбцов таблицы shop.products с пятью строками"><figcaption>Небольшая выборка из таблицы товаров</figcaption></figure>
         <p>На кадре стенд вернул товары <code>p-001</code> «Ноутбук Lenovo IdeaPad 3» за <code>42990</code>, <code>p-002</code> «Ноутбук ASUS VivoBook 15» за <code>51490</code> и другие строки. Другой запуск может вернуть другие товары или расположить их иначе.</p>
         <p><code>LIMIT 5</code> ограничивает только число строк <em>результата</em>. Он не задаёт число прочитанных байтов, время выполнения или число строк, которые серверу придётся просмотреть. В этом запросе порядок не задан, поэтому фиксированный набор и порядок пяти строк не гарантируются. Здесь достаточно проверить три столбца и пять строк результата.</p>
         <p>На кадре в строке состояния видно <code>5 rows in result</code> и <code>Read 21 rows</code>: вернулось пять строк, прочитана 21. Сервер обрабатывает данные порциями, поэтому число прочитанных строк может превысить <code>LIMIT</code>.</p>

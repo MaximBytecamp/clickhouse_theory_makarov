@@ -59,7 +59,7 @@ SELECT * FROM sandbox.null_lesson ORDER BY id;</pre></figure>
     <div class="table-scroll"><table><thead><tr><th>id</th><th>price</th><th>discount</th><th>label</th><th>Что известно</th></tr></thead><tbody>
       <tr><td>1</td><td>100</td><td>0</td><td><code>''</code></td><td>Скидка нулевая, подпись пустая.</td></tr><tr><td>2</td><td>100</td><td>10</td><td>sale</td><td>Скидка 10 %, подпись заполнена.</td></tr><tr><td>3</td><td>100</td><td>NULL</td><td>NULL</td><td>О скидке и подписи нет сведений.</td></tr>
     </tbody></table></div>
-    <figure class="shot"><img src="assets/01-rows.png" alt="Настоящий Play UI: поле запроса, кнопка Run и три строки таблицы null_lesson"><figcaption>Результат SELECT на отдельном стенде. Пустая ячейка label в строке 1 — пустая строка; в строке 3 отображается NULL. Кадры сняты на версии 26.8.36.3.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/01-rows.png" alt="Настоящий Play UI: поле запроса, кнопка Run и три строки таблицы null_lesson"><figcaption>Результат SELECT на отдельном стенде. Пустая ячейка label в строке 1 — пустая строка; в строке 3 отображается NULL. Кадры сняты на версии 26.8.36.3.</figcaption></figure>
     <p class="check">Получилось, если в discount три разных состояния: <code>0</code>, <code>10</code> и <code>NULL</code>. Кавычки у пустой строки в таблице выше добавлены для различения; интерфейс показывает пустую ячейку. Разберём, как тип столбца сохраняет различие между нулём и NULL.</p>
 
     <h2 id="s2"><span class="sec">§2</span>Как Nullable различает ноль и NULL</h2>
@@ -78,7 +78,7 @@ SELECT * FROM sandbox.null_lesson ORDER BY id;</pre></figure>
     <figure class="code"><figcaption><span>SQL</span><span>проверяем исходные строки</span></figcaption><pre>SELECT id, discount, isNull(discount) AS unknown,
        label, length(label) AS chars
 FROM sandbox.null_lesson ORDER BY id;</pre></figure>
-    <figure class="shot"><img src="assets/02-nullable.png" alt="discount 0, 10, NULL дают unknown 0, 0, 1; длина label — 0, 4, NULL"><figcaption>Пустая строка имеет длину 0. Для отсутствующей подписи результат length — NULL.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/02-nullable.png" alt="discount 0, 10, NULL дают unknown 0, 0, 1; длина label — 0, 4, NULL"><figcaption>Пустая строка имеет длину 0. Для отсутствующей подписи результат length — NULL.</figcaption></figure>
     <details class="simple"><summary>По-простому: незаполненная графа анкеты</summary><p>В бумажной анкете ответ «0 детей» отличается от незаполненной графы. Ноль участвует в подсчёте, пустая графа не сообщает число. <b>Что есть что:</b> анкета — строка, графа — столбец, отсутствие ответа — NULL.</p><p><b>Граница аналогии:</b> в таблице нет физически отсутствующей ячейки: у каждой строки есть этот столбец. Nullable хранит отметку отсутствия значения. Причину — «не ответили», «не спрашивали» или «сведения потеряны» — сама отметка не кодирует; для различения причин нужен отдельный признак.</p></details>
     <details class="more"><summary>Есть ли у Nullable дополнительная стоимость?</summary><p>Да: для маски в несжатом представлении используется байт на строку. Из этого устройства нельзя вычислить память целого запроса или размер файлов. Сжатие маски, выделенная память и время запроса — разные показатели. В этой главе нет опыта, который позволял бы назвать процент замедления или прибавку на диске.</p></details>
     <p class="check">Получилось, если строка 1 имеет <code>unknown = 0</code>, а строка 3 — <code>unknown = 1</code>. Теперь проверим, что происходит, когда клиент вообще не передаёт значение столбца.</p>
@@ -89,7 +89,7 @@ FROM sandbox.null_lesson ORDER BY id;</pre></figure>
     <figure class="code"><figcaption><span>SQL</span><span>спрашиваем значения типов</span></figcaption><pre>SELECT defaultValueOfTypeName('UInt8') AS number,
        defaultValueOfTypeName('String') AS text,
        defaultValueOfTypeName('Nullable(UInt8)') AS nullable;</pre></figure>
-    <figure class="shot"><img src="assets/03-defaults.png" alt="Значения типов по умолчанию: UInt8 — 0, String — пустая строка, Nullable(UInt8) — NULL"><figcaption>Три результата: 0, пустая ячейка и NULL. Это запрос о типах; строку в таблицу он не добавляет.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/03-defaults.png" alt="Значения типов по умолчанию: UInt8 — 0, String — пустая строка, Nullable(UInt8) — NULL"><figcaption>Три результата: 0, пустая ячейка и NULL. Это запрос о типах; строку в таблицу он не добавляет.</figcaption></figure>
     <p>Столбцу можно назначить другое правило через <b>DEFAULT</b> в его описании. Например, <code>city String DEFAULT 'не указан'</code> задаёт текст для пропуска города при вставке. Значение по умолчанию самого типа String остаётся пустой строкой.</p>
     <p class="null-note">DEFAULT задаёт правило заполнения. Происхождение сохранённого значения отдельно не отмечается. Если после вставки хранится <code>'не указан'</code>, по одному этому тексту нельзя узнать, подставил его сервер или отправил клиент.</p>
     <p class="check">Вы различаете две вещи: значение по умолчанию типа и выражение DEFAULT конкретного столбца. Проверим их действие на вставке.</p>
@@ -109,7 +109,7 @@ INSERT INTO sandbox.null_insert VALUES (2, NULL, 0, '');
 INSERT INTO sandbox.null_insert VALUES (3, 0, 0, 'не указан');
 
 SELECT * FROM sandbox.null_insert ORDER BY id;</pre></figure>
-    <figure class="shot"><img src="assets/04-insert.png" alt="Результаты трёх вставок: пропущенные столбцы получили NULL, 0 и не указан; явная пустая строка сохранилась"><figcaption>Строка 1: discount = NULL, qty = 0, city = «не указан». Строка 2: явный NULL сохранён в Nullable, явная пустая строка сохранена в String. Строка 3: скидка 0 осталась нулём.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/04-insert.png" alt="Результаты трёх вставок: пропущенные столбцы получили NULL, 0 и не указан; явная пустая строка сохранилась"><figcaption>Строка 1: discount = NULL, qty = 0, city = «не указан». Строка 2: явный NULL сохранён в Nullable, явная пустая строка сохранена в String. Строка 3: скидка 0 осталась нулём.</figcaption></figure>
     <p>Строки 1 и 3 содержат одинаковые <code>qty</code> и <code>city</code>, хотя в первом случае значения подставлены, а в третьем отправлены явно. Пропуск существует на входе. В сохранённой строке каждый столбец уже получил значение. Явная пустая строка во второй вставке не запускает DEFAULT.</p>
     <h3>Если передать NULL в обычный String</h3>
     <p>В <code>city String</code> NULL хранить нельзя. Но это ещё не определяет, будет ли ошибка на входе: поведение зависит от способа вставки и настроек. Вставим одну и ту же входную строку <code>(4, NULL)</code> через формат <code>VALUES</code>. Настройка <code>input_format_null_as_default</code> управляет обработкой NULL для обычных, не Nullable-столбцов при таком вводе. <code>SETTINGS имя=значение</code> задаёт настройку только для этой команды.</p>
@@ -161,7 +161,7 @@ ORDER BY name;</pre></figure>
        discount = 0 AS eq_zero,
        discount = NULL AS eq_null
 FROM sandbox.null_lesson ORDER BY id;</pre></figure>
-    <figure class="shot"><img src="assets/05-expressions.png" alt="Цена при скидках 0, 10 и NULL равна 100, 90 и NULL; сравнение со значением NULL даёт NULL во всех строках"><figcaption>eq_zero: 1, 0, NULL. eq_null: NULL во всех трёх строках. В числовом результате сравнения 1 означает «да», 0 — «нет».</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/05-expressions.png" alt="Цена при скидках 0, 10 и NULL равна 100, 90 и NULL; сравнение со значением NULL даёт NULL во всех строках"><figcaption>eq_zero: 1, 0, NULL. eq_null: NULL во всех трёх строках. В числовом результате сравнения 1 означает «да», 0 — «нет».</figcaption></figure>
     <p><code>NULL = NULL</code> даёт NULL: отметка отсутствия данных не сообщает, равны ли неизвестные значения. Поэтому <code>WHERE discount = NULL</code> не находит даже строку 3. <b>WHERE</b> оставляет строки, для которых условие истинно; 0 и NULL строку не пропускают. Для проверки отсутствия есть условие <code>IS NULL</code>.</p>
     <p>Проследим отбор, чтобы объяснить, почему «не равно нулю» не включает неизвестную скидку.</p>
     <figure class="pic"><div class="null-flow" role="img" aria-label="Скидки 0, 10, NULL после сравнения не равно нулю дают 0, 1, NULL; WHERE оставляет только id 2">
@@ -194,7 +194,7 @@ ORDER BY id;                             -- 2, 3</pre></figure>
        sum(discount) AS total, avg(discount) AS mean
 FROM sandbox.null_lesson
 SETTINGS aggregate_functions_null_for_empty = 0;</pre></figure>
-    <figure class="shot"><img src="assets/06-aggregates.png" alt="Агрегаты по скидкам 0, 10 и NULL: count() 3, count(discount) 2, sum 10, avg 5"><figcaption>rows = 3; known = 2; total = 10; mean = 5. Среднее здесь (0 + 10) / 2.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/06-aggregates.png" alt="Агрегаты по скидкам 0, 10 и NULL: count() 3, count(discount) 2, sum 10, avg 5"><figcaption>rows = 3; known = 2; total = 10; mean = 5. Среднее здесь (0 + 10) / 2.</figcaption></figure>
     <p><code>aggregate_functions_null_for_empty=0</code> отключает настройку, которая автоматически добавляет поведение «вернуть NULL для пустого набора» к агрегатным функциям. Фиксируем её, чтобы сравнение ниже не зависело от профиля сервера. Тип Nullable у аргумента продолжает влиять на результат.</p>
     <h3>Полностью NULL-набор и отсутствие строк</h3>
     <p>В первом случае строка есть, но известного числа нет. Во втором нет даже строки. Выполните тот же запрос, сначала добавив перед SETTINGS <code>WHERE id = 3</code>, затем заменив условие на <code>WHERE id &gt; 3</code>.</p>
@@ -215,7 +215,7 @@ SETTINGS aggregate_functions_null_for_empty = 0;
     <figure class="code"><figcaption><span>SQL</span><span>исходное значение и принятое допущение</span></figcaption><pre>SELECT id, discount, ifNull(discount, 0) AS assumed,
        price * (100 - ifNull(discount, 0)) / 100 AS estimated
 FROM sandbox.null_lesson ORDER BY id;</pre></figure>
-    <figure class="shot"><img src="assets/07-ifnull.png" alt="Исходные скидки 0, 10, NULL; после ifNull — 0, 10, 0; предварительные цены — 100, 90, 100"><figcaption>У id 3 исходная скидка осталась NULL. Цена 100 получена при явно принятом допущении; это не доказательство нулевой скидки.</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/07-ifnull.png" alt="Исходные скидки 0, 10, NULL; после ifNull — 0, 10, 0; предварительные цены — 100, 90, 100"><figcaption>У id 3 исходная скидка осталась NULL. Цена 100 получена при явно принятом допущении; это не доказательство нулевой скидки.</figcaption></figure>
     <p>Такая замена меняет и знаменатель среднего. Проверьте её отдельно:</p>
     <figure class="code"><figcaption><span>SQL</span><span>два разных вопроса к данным</span></figcaption><pre>SELECT avg(discount) AS known_mean,
        avg(ifNull(discount, 0)) AS assumed_mean
@@ -230,7 +230,7 @@ SETTINGS aggregate_functions_null_for_empty = 0;
        coalesce(label, 'без подписи') AS caption,
        coalesce(nullIf(label, ''), 'без подписи') AS normalized
 FROM sandbox.null_lesson ORDER BY id;</pre></figure>
-    <figure class="shot"><img src="assets/08-labels.png" alt="Пустая подпись остаётся пустой после coalesce, но после nullIf и coalesce становится без подписи; sale сохраняется; NULL заменяется"><figcaption>У id 1 caption — пустая строка, normalized — «без подписи». У id 2 оба результата — sale. У id 3 оба — «без подписи».</figcaption></figure>
+    <figure class="shot"><img loading="lazy" src="assets/08-labels.png" alt="Пустая подпись остаётся пустой после coalesce, но после nullIf и coalesce становится без подписи; sale сохраняется; NULL заменяется"><figcaption>У id 1 caption — пустая строка, normalized — «без подписи». У id 2 оба результата — sale. У id 3 оба — «без подписи».</figcaption></figure>
     <p>Здесь nullIf меняет обозначение отсутствия перед выбором запасной подписи. Переносить этот приём на скидку без основания нельзя: <code>nullIf(discount, 0)</code> превратит настоящий ноль строки 1 в NULL, и отчёт потеряет известный факт.</p>
     <p class="check">Вы можете объяснить каждую замену правилом задачи: предварительная цена, запасная подпись или нормализация входа. Если такого правила нет, сохраните NULL и покажите отсутствие сведений.</p>
 
