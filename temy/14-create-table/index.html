@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1C1A24">
+  <title>1.4 CREATE TABLE и движок · Справочник по ClickHouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,400&family=Pixelify+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    @media (max-width: 600px) { figure.pic svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="book">
+    <div class="book__body">
+      <div class="spine"><span>Модуль 1 · Первые данные</span></div>
+
+      <main class="leaf">
+        <div class="running">
+          <p class="eyebrow"><a href="../../index.html" style="text-decoration:none;color:inherit">Справочник по ClickHouse</a> · модуль 1 · первые данные</p>
+          <p class="running__folio">Глава 1.4</p>
+        </div>
+
+        <header class="chapter-head">
+          <span class="chapter-num">1.4</span>
+          <h1>CREATE TABLE<br>и движок</h1>
+          <p class="lead">В главе — команда <code>CREATE TABLE</code> по частям и движок таблицы: способ, которым сервер хранит строки. Создадим одну и ту же таблицу на двух движках, Memory и MergeTree, и посмотрим, чем они различаются при чтении и после перезапуска сервера.</p>
+        </header>
+
+        <dl class="passport">
+          <div><dt>Категория</dt><dd>Первые данные</dd></div>
+          <div><dt>Уровень</dt><dd>Начальный</dd></div>
+          <div><dt>Связанные темы</dt><dd>1.2 Типы · 1.3 Пустое значение · 1.5 INSERT · 3.3 Первичный индекс</dd></div>
+          <div><dt>Понадобится</dt><dd>поднятый стенд, clickhouse-client, терминал в папке стенда</dd></div>
+        </dl>
+
+        <section class="gist" aria-label="Суть главы">
+          <p class="gist__head">Суть за две минуты</p>
+          <div class="gist__cards">
+            <div><b data-n="1">Таблица = столбцы + движок</b><p>В <code>CREATE TABLE</code> перечисляют столбцы с типами и пишут <code>ENGINE</code> — как хранить строки.</p><p>Для работы почти всегда берут <code>MergeTree</code>.</p></div>
+            <div><b data-n="2">MergeTree хранит по порядку</b><p>Строки на диске лежат отсортированными по ключу <code>ORDER BY</code>.</p><p>Вставили 30, 10, 20 — прочитали 10, 20, 30.</p></div>
+            <div><b data-n="3">Memory живёт до перезапуска</b><p>Таблица Memory держит строки только в оперативной памяти.</p><p>После перезапуска сервера: MergeTree — 4 строки, Memory — 0.</p></div>
+          </div>
+          <ol class="route" aria-label="Шаги главы">
+            <li><a href="#s3"><b>Создать</b><small>MergeTree с ключом</small></a></li>
+            <li><a href="#s4"><b>Вставить</b><small>строки вперемешку</small></a></li>
+            <li><a href="#s5"><b>Memory</b><small>та же таблица</small></a></li>
+            <li><a href="#s6"><b>Перезапуск</b><small>что осталось</small></a></li>
+            <li><a href="#s8"><b>ORDER BY</b><small>как выбрать ключ</small></a></li>
+          </ol>
+        </section>
+
+        <nav class="contents">
+          <b>В этой главе</b>
+          <ol>
+            <li><a href="#s1">Что такое движок</a></li>
+            <li><a href="#s2">Команда CREATE TABLE по частям</a></li>
+            <li><a href="#s3">Шаг 1. Создать таблицу на MergeTree</a></li>
+            <li><a href="#s4">Шаг 2. Вставить строки вперемешку</a></li>
+            <li><a href="#s5">Шаг 3. Та же таблица на Memory</a></li>
+            <li><a href="#s6">Шаг 4. Перезапустить сервер</a></li>
+            <li><a href="#s7">Memory или MergeTree</a></li>
+            <li><a href="#s8">Шаг 5. Ключ ORDER BY</a></li>
+            <li><a href="#s9">Ещё три формы CREATE TABLE</a></li>
+            <li><a href="#s10">Если не получилось</a></li>
+            <li><a href="#s11">Проверьте себя</a></li>
+            <li><a href="#s12">Шпаргалка и глоссарий</a></li>
+          </ol>
+        </nav>
+
+        <h2 id="s1"><span class="sec">§1</span>Что такое движок</h2>
+        <p class="purpose"><b>Зачем это знать</b>В главе 1.1 у всех таблиц стенда в <code>system.tables</code> стояло <code>engine</code> = <code>MergeTree</code>. Разберёмся, что это за столбец.</p>
+        <p>Столбцы и типы говорят, <i>что</i> лежит в таблице. <b>Движок</b> говорит, <i>как</i> это лежит: в памяти или на диске, в каком порядке, что происходит при вставке и при чтении. Движок выбирают один раз при создании таблицы.</p>
+
+        <details class="simple">
+          <summary>движок на примере стола и картотеки</summary>
+          <div class="vsteps">
+            <div class="vcard"><i>ОЗУ</i><h5>Memory</h5><b>Бумаги на столе</b><small>Положил — сразу под рукой. При перезапуске строки исчезают.</small></div>
+            <div class="varr">или</div>
+            <div class="vcard is-hot"><i>ДИСК</i><h5>MergeTree</h5><b>Картотека по алфавиту</b><small>Каждую новую пачку карточек раскладывают по порядку и сохраняют. После перезапуска строки на месте.</small></div>
+          </div>
+          <p class="simple__map"><b>Что есть что:</b> стол — оперативная память, шкаф — диск. Вечерняя уборка — перезапуск сервера. Алфавит картотеки — ключ <code>ORDER BY</code>.</p>
+        </details>
+
+        <p>Движков в ClickHouse десятки. Книга почти всё время работает с семейством <b>MergeTree</b> — его разбирает модуль 3. В этой главе к нему добавим отдельный движок — <b>Memory</b>, чтобы увидеть разницу.</p>
+        <p>Сначала сравним место хранения и судьбу строк после перезапуска. Это поможет читать следующие команды как описание поведения таблицы.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 220" role="img" aria-label="Движок определяет место хранения строк: Memory хранит в оперативной памяти, MergeTree записывает на диск и сортирует по ключу">
+            <rect class="sc-ink" x="24" y="24" width="210" height="52" rx="6"/><text class="tw tc" x="129" y="56">таблица</text>
+            <path class="sc-arrow" d="M244 50 L316 50 M309 44 L316 50 L309 56"/>
+            <rect class="sc-soft" x="330" y="12" width="220" height="78" rx="6"/><text class="tb tc" x="440" y="39">Memory</text><text class="t tc" x="440" y="65">ОЗУ · порядок вставки</text>
+            <path class="sc-arrow" d="M244 50 L316 162 M309 156 L316 162 L309 168"/>
+            <rect class="sc-acc" x="330" y="124" width="220" height="78" rx="6"/><text class="tb tc" x="440" y="151">MergeTree</text><text class="t tc" x="440" y="177">диск · ORDER BY</text>
+            <rect class="sc-warm" x="604" y="124" width="246" height="78" rx="6"/><text class="tb tc" x="727" y="151">после перезапуска</text><text class="t tc" x="727" y="177">строки сохранены</text>
+            <path class="sc-arrow" d="M554 162 L596 162 M589 156 L596 162 L589 168"/>
+          </svg>
+          <figcaption>Движок задаёт место хранения и поведение строк</figcaption>
+        </figure>
+        <p>На схеме таблица получает один из двух способов хранения. Для Memory стрелка заканчивается в оперативной памяти. Для MergeTree показаны диск и ключ сортировки; из этого пути следует сохранность строк после перезапуска. Теперь разберём, как эти части записываются в <code>CREATE TABLE</code>.</p>
+
+        <h2 id="s2"><span class="sec">§2</span>Команда CREATE TABLE по частям</h2>
+        <p class="purpose"><b>Зачем это знать</b>В главе 1.3 таблицу <code>sandbox.visits</code> мы создали готовой командой. Теперь разберём её устройство на новой таблице — корзине покупателей.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 300" role="img" aria-label="CREATE TABLE по частям: имя, столбцы с типами и комментариями, движок, ключ сортировки, комментарий таблицы">
+            <rect class="sc-ink" x="10" y="10" width="560" height="280" rx="8"/>
+            <text class="tw" x="28" y="44" style="font:600 14px var(--mono)">CREATE TABLE sandbox.cart (</text>
+            <text class="tw" x="28" y="76" style="font:500 14px var(--mono)">    user_id    UInt32 COMMENT 'покупатель',</text>
+            <text class="tw" x="28" y="102" style="font:500 14px var(--mono)">    product_id String COMMENT 'товар',</text>
+            <text class="tw" x="28" y="128" style="font:500 14px var(--mono)">    qty        UInt16 COMMENT 'штук'</text>
+            <text class="tw" x="28" y="160" style="font:600 14px var(--mono)">)</text>
+            <text class="tw" x="28" y="192" style="font:600 14px var(--mono)">ENGINE = MergeTree</text>
+            <text class="tw" x="28" y="224" style="font:600 14px var(--mono)">ORDER BY (user_id, product_id)</text>
+            <text class="tw" x="28" y="256" style="font:600 14px var(--mono)">COMMENT 'корзины покупателей'</text>
+            <path class="sc-arrow" d="M590 40 L640 40"/><rect class="sc-acc" x="646" y="24" width="226" height="32" rx="5"/><text class="tb" x="656" y="45">1 · база.имя таблицы</text>
+            <path class="sc-arrow" d="M590 102 L640 102"/><rect class="sc-acc" x="646" y="72" width="226" height="60" rx="5"/><text class="tb" x="656" y="94">2 · столбцы через запятую</text><text class="t" x="656" y="116">имя, тип, пояснение</text>
+            <path class="sc-arrow" d="M590 188 L640 188"/><rect class="sc-warm" x="646" y="172" width="226" height="32" rx="5"/><text class="tb" x="656" y="193">3 · движок</text>
+            <path class="sc-arrow" d="M590 220 L640 220"/><rect class="sc-warm" x="646" y="210" width="226" height="32" rx="5"/><text class="tb" x="656" y="231">4 · ключ сортировки</text>
+            <path class="sc-arrow" d="M590 252 L640 252"/><rect class="sc-soft" x="646" y="248" width="226" height="32" rx="5"/><text class="tb" x="656" y="269">5 · пояснение к таблице</text>
+          </svg>
+          <figcaption>пять частей команды CREATE TABLE</figcaption>
+        </figure>
+        <ol class="short">
+          <li><b>Имя</b> — полное, с базой. Создаём в <code>sandbox</code>: эталонные базы стенда не трогаем.</li>
+          <li><b>Столбцы</b> в скобках через запятую: имя, тип из главы 1.2, по желанию <code>DEFAULT</code> из 1.3 и <code>COMMENT</code> — пояснение для людей.</li>
+          <li><b>ENGINE</b> — движок.</li>
+          <li><b>ORDER BY</b> — в каком порядке MergeTree хранит строки. У Memory этой части нет.</li>
+          <li><b>COMMENT</b> таблицы — пояснение, его видно в <code>system.tables</code>.</li>
+        </ol>
+        <p class="tech">Переносы строк и отступы серверу не важны, они для читателя. Запятая после последнего столбца не ставится.</p>
+
+        <h2 id="s3"><span class="sec">§3</span>Шаг 1. Создать таблицу на MergeTree</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Создаём корзину: кто положил, какой товар и сколько штук. Ключ — покупатель, затем товар.</p>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Play UI или clickhouse-client</span><span>создать таблицу</span></figcaption>
+<pre>CREATE TABLE sandbox.cart (
+    user_id    UInt32 COMMENT 'покупатель',
+    product_id String COMMENT 'товар',
+    qty        UInt16 COMMENT 'штук'
+)
+ENGINE = MergeTree
+ORDER BY (user_id, product_id)
+COMMENT 'корзины покупателей'</pre></figure>
+        <p>Ответ на <code>CREATE</code> не содержит строк. Нет ошибки — значит, таблица создана. Проверим, что получилось:</p>
+        <figure class="code"><figcaption><span>Play UI</span><span>устройство новой таблицы</span></figcaption>
+<pre>DESCRIBE sandbox.cart</pre></figure>
+        <figure class="shot"><img loading="lazy" src="../../shots/14-02-describe-comment.png" alt="DESCRIBE sandbox.cart: три столбца, в колонке comment — покупатель, товар, штук"><figcaption>Play UI · 1 — пояснения из COMMENT в колонке comment</figcaption></figure>
+        <p class="check"><code>DESCRIBE</code> показал три столбца с типами, а в колонке <code>comment</code> (рамка 1) — «покупатель», «товар», «штук». В главе 1.1 эта колонка была пустой.</p>
+
+        <h2 id="s4"><span class="sec">§4</span>Шаг 2. Вставить строки вперемешку</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Посмотрим, что делает с порядком строк ключ <code>ORDER BY</code>. Вставим четыре строки нарочно не по порядку покупателей.</p>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Play UI</span><span>четыре строки одной вставкой · INSERT — глава 1.5</span></figcaption>
+<pre>INSERT INTO sandbox.cart VALUES
+    (30, 'p-005', 1), (10, 'p-017', 2), (20, 'p-001', 1), (10, 'p-003', 1)</pre></figure>
+        <figure class="code"><figcaption><span>Play UI</span><span>прочитать</span></figcaption>
+<pre>SELECT * FROM sandbox.cart</pre></figure>
+        <figure class="shot"><img loading="lazy" src="../../shots/14-01-sorted.png" alt="Строки идут по user_id: 10 p-003, 10 p-017, 20 p-001, 30 p-005"><figcaption>Play UI · 1 — первым идёт покупатель 10, хотя вставляли его вторым; 2 — покупатель 30 стал последним</figcaption></figure>
+        <span class="phase phase--read">Разбираемся</span>
+        <figure class="pic">
+          <svg viewBox="0 0 880 240" role="img" aria-label="Вставка 30 p-005, 10 p-017, 20 p-001, 10 p-003; на диске: 10 p-003, 10 p-017, 20 p-001, 30 p-005">
+            <text class="tb" x="10" y="24">как вставили</text>
+            <rect class="sc-box" x="10" y="36" width="200" height="34" rx="4"/><text class="tm" x="22" y="58">30 · p-005 · 1</text>
+            <rect class="sc-box" x="10" y="76" width="200" height="34" rx="4"/><text class="tm" x="22" y="98">10 · p-017 · 2</text>
+            <rect class="sc-box" x="10" y="116" width="200" height="34" rx="4"/><text class="tm" x="22" y="138">20 · p-001 · 1</text>
+            <rect class="sc-box" x="10" y="156" width="200" height="34" rx="4"/><text class="tm" x="22" y="178">10 · p-003 · 1</text>
+            <rect class="sc-acc" x="300" y="80" width="240" height="66" rx="8"/><text class="tb tc" x="420" y="106">MergeTree сортирует</text><text class="tm tc" x="420" y="128">по (user_id, product_id)</text>
+            <path class="sc-arrow" d="M216 113 L294 113 M287 107 L294 113 L287 119 M546 113 L624 113 M617 107 L624 113 L617 119"/>
+            <text class="tb" x="630" y="24">как лежат на диске</text>
+            <rect class="sc-warm" x="630" y="36" width="240" height="34" rx="4"/><text class="tm" x="642" y="58">10 · p-003 · 1</text>
+            <rect class="sc-warm" x="630" y="76" width="240" height="34" rx="4"/><text class="tm" x="642" y="98">10 · p-017 · 2</text>
+            <rect class="sc-box" x="630" y="116" width="240" height="34" rx="4"/><text class="tm" x="642" y="138">20 · p-001 · 1</text>
+            <rect class="sc-box" x="630" y="156" width="240" height="34" rx="4"/><text class="tm" x="642" y="178">30 · p-005 · 1</text>
+            <text class="t" x="630" y="214">у покупателя 10 два товара —</text><text class="t" x="630" y="232">между собой по product_id: p-003, p-017</text>
+          </svg>
+          <figcaption>одна вставка в MergeTree: строки раскладываются по ключу</figcaption>
+        </figure>
+        <p>MergeTree при каждой вставке раскладывает строки по ключу <code>ORDER BY</code> и в таком виде пишет на диск. Ключ из двух столбцов работает как словарь: сначала по первой букве, при равенстве — по второй. У покупателя 10 два товара, и между собой они идут по <code>product_id</code>.</p>
+        <p class="check">первая строка — <code>10</code>, <code>p-003</code>, последняя — <code>30</code>, <code>p-005</code>.</p>
+        <details class="more">
+          <summary>можно ли на это рассчитывать</summary>
+          <p>Нет. Каждая вставка ложится на диск отдельной отсортированной <b>частью</b>. Две вставки — две части, и при чтении сервер может выдать сначала одну, потом другую. Позже он сливает части в одну, отсюда и название Merge Tree — «дерево слияний». Порядок в ответе гарантирует только <code>ORDER BY</code> в самом запросе <code>SELECT</code> — глава 1.6. Части и слияния подробно разбирает глава 3.2.</p>
+        </details>
+
+        <h2 id="s5"><span class="sec">§5</span>Шаг 3. Та же таблица на Memory</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Сравним с движком, который ничего не сортирует и не пишет на диск.</p>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Play UI</span><span>создать временную таблицу</span></figcaption>
+<pre>CREATE TABLE sandbox.cart_mem (user_id UInt32, product_id String, qty UInt16)
+ENGINE = Memory</pre></figure>
+        <figure class="code"><figcaption><span>Play UI</span><span>вставить четыре строки</span></figcaption>
+<pre>INSERT INTO sandbox.cart_mem VALUES
+    (30, 'p-005', 1), (10, 'p-017', 2), (20, 'p-001', 1), (10, 'p-003', 1)</pre></figure>
+        <figure class="code"><figcaption><span>Play UI</span><span>прочитать</span></figcaption>
+<pre>SELECT * FROM sandbox.cart_mem</pre></figure>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>последний запрос</span></figcaption>
+<pre>   ┌─user_id─┬─product_id─┬─qty─┐
+1. │      30 │ p-005      │   1 │
+2. │      10 │ p-017      │   2 │
+3. │      20 │ p-001      │   1 │
+4. │      10 │ p-003      │   1 │
+   └─────────┴────────────┴─────┘</pre></figure>
+        <p>У Memory нет <code>ORDER BY</code>: строки лежат в том порядке, в каком пришли. Хранятся они в оперативной памяти сервера.</p>
+        <p>Сравним входной порядок с результатом чтения. Здесь запрос не сортирует строки, поэтому виден порядок, который сохранил Memory.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 210" role="img" aria-label="Memory сохраняет четыре строки в порядке вставки: 30, 10, 20, 10">
+            <text class="tb" x="18" y="24">вставили</text>
+            <rect class="sc-box" x="18" y="40" width="178" height="32" rx="4"/><text class="tm tc" x="107" y="61">30 · p-005</text>
+            <rect class="sc-box" x="18" y="78" width="178" height="32" rx="4"/><text class="tm tc" x="107" y="99">10 · p-017</text>
+            <rect class="sc-box" x="18" y="116" width="178" height="32" rx="4"/><text class="tm tc" x="107" y="137">20 · p-001</text>
+            <rect class="sc-box" x="18" y="154" width="178" height="32" rx="4"/><text class="tm tc" x="107" y="175">10 · p-003</text>
+            <path class="sc-arrow" d="M222 114 L352 114 M345 108 L352 114 L345 120"/>
+            <rect class="sc-soft" x="380" y="68" width="206" height="92" rx="6"/><text class="tb tc" x="483" y="97">Memory</text><text class="t tc" x="483" y="123">порядок вставки</text><text class="t tc" x="483" y="145">без ключа сортировки</text>
+            <path class="sc-arrow" d="M610 114 L696 114 M689 108 L696 114 L689 120"/>
+            <text class="tb" x="720" y="92">прочитали</text><text class="tm" x="720" y="122">30 → 10 → 20 → 10</text><text class="t" x="720" y="148">тот же порядок</text>
+          </svg>
+          <figcaption>Memory возвращает строки в порядке вставки</figcaption>
+        </figure>
+        <p>На схеме четыре строки проходят через Memory без сортировки. Поэтому результат повторяет последовательность 30, 10, 20, 10. После перезапуска этот набор исчезнет; проверим это отдельно.</p>
+        <p class="check">строки в порядке вставки: 30, 10, 20, 10.</p>
+
+        <h2 id="s6"><span class="sec">§6</span>Шаг 4. Перезапустить сервер</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Проверим основное отличие: что останется в таблицах, если сервер перезапустится — после обновления, сбоя или перезагрузки компьютера.</p>
+        <span class="phase">Делаем</span>
+        <figure class="code"><figcaption><span>Терминал</span><span>из папки стенда</span></figcaption>
+<pre>docker compose restart clickhouse</pre></figure>
+        <figure class="code code--out"><figcaption><span>Вывод</span><span>через несколько секунд сервер снова отвечает</span></figcaption>
+<pre> Container course-clickhouse Restarting
+ Container course-clickhouse Started</pre></figure>
+        <figure class="code"><figcaption><span>Play UI</span><span>сколько строк в песочнице</span></figcaption>
+<pre>SELECT name, engine, total_rows
+FROM system.tables
+WHERE database = 'sandbox'</pre></figure>
+        <figure class="shot"><img loading="lazy" src="../../shots/14-03-after-restart.png" alt="После перезапуска: cart MergeTree — 4 строки, cart_mem Memory — 0 строк"><figcaption>Play UI · 1 — у MergeTree 4 строки; 2 — у Memory 0: таблица осталась, строки пропали</figcaption></figure>
+        <p class="check">у <code>cart</code> — 4, у <code>cart_mem</code> — 0. Сама таблица Memory осталась: её описание сервер хранит на диске. Пропали только строки.</p>
+
+        <h2 id="s7"><span class="sec">§7</span>Memory или MergeTree</h2>
+        <p class="purpose"><b>Зачем это знать</b>Сводим опыт в правило выбора.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th></th><th>Memory</th><th>MergeTree</th></tr></thead>
+            <tbody>
+              <tr><td>где строки</td><td>в оперативной памяти</td><td>на диске, сжатые</td></tr>
+              <tr><td>после перезапуска</td><td>пусто</td><td>всё на месте</td></tr>
+              <tr><td>порядок хранения</td><td>как вставили</td><td>по ключу <code>ORDER BY</code></td></tr>
+              <tr><td>сколько данных</td><td>сколько поместится в память</td><td>миллиарды строк</td></tr>
+              <tr><td>когда брать</td><td>маленький временный справочник, опыты</td><td>всё остальное</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="check">вы выбираете MergeTree, если данные нужны завтра. Все таблицы стенда — MergeTree.</p>
+
+        <h2 id="s8"><span class="sec">§8</span>Шаг 5. Ключ ORDER BY</h2>
+        <p class="purpose"><b>Зачем этот шаг</b>Ключ сортировки влияет на скорость поиска в MergeTree. От него зависит, какие участки таблицы сервер сможет пропустить.</p>
+        <p>Строки, отсортированные по ключу, похожи на словарь: слово на «М» ищут, открыв середину книги. Так сервер по ключу пропускает фрагменты таблицы, где нужных строк точно нет. Как именно — глава 3.3. Пока правило: в ключ ставят столбцы, по которым чаще всего отбирают строки.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Таблица стенда</th><th>Ключ</th><th>Частый вопрос</th></tr></thead>
+            <tbody>
+              <tr><td><code>shop.products</code></td><td><code>ORDER BY product_id</code></td><td>найти товар по номеру</td></tr>
+              <tr><td><code>sandbox.cart</code></td><td><code>ORDER BY (user_id, product_id)</code></td><td>корзина одного покупателя</td></tr>
+              <tr><td><code>web.events</code></td><td><code>ORDER BY (event_type, event_time)</code></td><td>все покупки за период</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Если сортировать незачем, пишут <code>ORDER BY tuple()</code> — «пустой ключ»: строки лежат в порядке вставки.</p>
+        <p class="check">для <code>sandbox.cart</code> вы можете объяснить ключ: корзину почти всегда открывают для одного покупателя.</p>
+        <details class="more">
+          <summary>что будет, если ORDER BY забыть</summary>
+          <p>Сервер 26.8 создаст таблицу без ошибки и сам допишет <code>ORDER BY tuple()</code> — так велит его настройка <code>create_table_empty_primary_key_by_default</code>, по умолчанию она включена. Проверить можно командой <code>SHOW CREATE TABLE</code>. Таблица без ключа работает, но сервер не сможет пропускать куски при поиске. В старых версиях ClickHouse без <code>ORDER BY</code> была ошибка, поэтому в книге ключ пишется всегда.</p>
+          <p>В ключ нельзя ставить <code>Nullable</code>-столбец — об этом глава 1.3. Выбор ключа на настоящих замерах — глава 3.4.</p>
+        </details>
+
+        <h2 id="s9"><span class="sec">§9</span>Ещё три формы CREATE TABLE</h2>
+        <p class="purpose"><b>Зачем это знать</b>Три варианта команды, которые часто встречаются в скриптах.</p>
+        <div class="life">
+          <div><code>CREATE TABLE IF NOT EXISTS sandbox.cart (…)</code><p>Создать, только если таблицы ещё нет. Если есть — ничего не делать и не выдавать ошибку.</p><div class="life__keep"><span class="y">старые строки</span></div></div>
+          <div><code>CREATE TABLE sandbox.cart2 AS sandbox.cart</code><p>Пустая таблица с теми же столбцами, движком и ключом.</p><div class="life__keep"><span class="y">устройство</span><span class="n">строки</span></div></div>
+          <div><code>SHOW CREATE TABLE sandbox.cart</code><p>Показать команду, которой таблицу можно создать заново.</p><div class="life__keep"><span class="y">ничего не меняет</span></div></div>
+        </div>
+        <p>Сопоставим три формы по результату: первая защищает повторный запуск, вторая переносит устройство без строк, третья только показывает описание.</p>
+        <figure class="pic">
+          <svg viewBox="0 0 880 190" role="img" aria-label="Три формы CREATE TABLE: IF NOT EXISTS сохраняет существующую таблицу, AS создаёт пустую копию структуры, SHOW CREATE TABLE только показывает описание">
+            <rect class="sc-acc" x="18" y="28" width="248" height="108" rx="6"/><text class="tb tc" x="142" y="55">IF NOT EXISTS</text><text class="t tc" x="142" y="83">таблица уже есть</text><text class="tm tc" x="142" y="111">строки остаются</text>
+            <rect class="sc-soft" x="316" y="28" width="248" height="108" rx="6"/><text class="tb tc" x="440" y="55">AS</text><text class="t tc" x="440" y="83">копия устройства</text><text class="tm tc" x="440" y="111">строк нет</text>
+            <rect class="sc-warm" x="614" y="28" width="248" height="108" rx="6"/><text class="tb tc" x="738" y="55">SHOW CREATE</text><text class="t tc" x="738" y="83">только описание</text><text class="tm tc" x="738" y="111">данные не меняются</text>
+          </svg>
+          <figcaption>Результат трёх дополнительных форм CREATE TABLE</figcaption>
+        </figure>
+        <details class="more">
+          <summary>что показывает SHOW CREATE TABLE</summary>
+          <figure class="code code--out"><figcaption><span>Вывод</span><span>clickhouse-client</span></figcaption>
+<pre>CREATE TABLE sandbox.cart
+(
+    `user_id` UInt32 COMMENT 'покупатель',
+    `product_id` String COMMENT 'товар',
+    `qty` UInt16 COMMENT 'штук'
+)
+ENGINE = MergeTree
+ORDER BY (user_id, product_id)
+SETTINGS index_granularity = 8192
+COMMENT 'корзины покупателей'</pre></figure>
+          <p>Сервер добавил то, чего мы не писали: обратные кавычки вокруг имён и строку <code>SETTINGS index_granularity = 8192</code>. Это число — по сколько строк MergeTree группирует данные для поиска, глава 3.3. В обратные кавычки берут имя, если в нём пробел или оно совпадает с командой SQL.</p>
+          <p>Таблица <code>sandbox.cart2</code> после <code>CREATE TABLE … AS</code> пустая: <code>SELECT count() FROM sandbox.cart2</code> → <code>0</code>. Скопировать строки — глава 1.5.</p>
+        </details>
+
+        <h2 id="s10"><span class="sec">§10</span>Если не получилось</h2>
+        <p>Найдите строку, похожую на то, что видите у себя, и раскройте её.</p>
+        <details class="err"><summary>Таблица уже есть<small>Code: 57. DB::Exception: Table sandbox.cart already exists. (TABLE_ALREADY_EXISTS)</small></summary><p>Вы создали её раньше. Работайте с ней, удалите (<code>DROP TABLE sandbox.cart</code>, глава 1.8) или добавьте <code>IF NOT EXISTS</code>.</p></details>
+        <details class="err"><summary>В ключе столбец, которого нет<small>Code: 47. DB::Exception: Missing columns: 'title' while processing: 'title', required columns: 'title', available columns: … 'id'. (UNKNOWN_IDENTIFIER)</small></summary><p>В <code>ORDER BY</code> можно ставить только столбцы этой таблицы. В конце сообщения — список доступных: служебные с подчёркиванием и ваши.</p></details>
+        <details class="err"><summary>Тип с опечаткой<small>Code: 50. DB::Exception: Unknown data type family: Uint16. Maybe you meant: ['UInt16','Int16']. (UNKNOWN_TYPE)</small></summary><p>Имена типов чувствительны к регистру: правильно <code>UInt16</code>. Сервер подсказывает правильное.</p></details>
+        <details class="err"><summary>Пропущена запятая между столбцами<small>Code: 62. DB::Exception: Syntax error: failed at position 38 (qty): qty UInt16) ENGINE = MergeTree ORDER BY id. Expected one of: … Comma, ClosingRoundBracket. (SYNTAX_ERROR)</small></summary><p>Запрос был <code>(id UInt32 qty UInt16)</code>. После типа сервер ждал запятую (<code>Comma</code>) или скобку, а встретил <code>qty</code>.</p></details>
+        <details class="err"><summary>Nullable в ключе<small>Code: 44. DB::Exception: Sorting key contains nullable columns, but merge tree setting `allow_nullable_key` is disabled. (ILLEGAL_COLUMN)</small></summary><p>Столбец ключа должен быть обычного типа — глава <a href="../13-pustoe-znachenie/index.html">1.3</a>.</p></details>
+        <details class="err"><summary>Таблица Memory опустела<small>SELECT count() FROM sandbox.cart_mem → 0</small></summary><p>Сервер перезапускался: Memory держит строки только в памяти (<a href="#s6">§6</a>). Для данных, которые нужны дольше, — MergeTree.</p></details>
+        <details class="err"><summary>Строки в ответе не по ключу<small>SELECT * FROM … — порядок другой, чем в книге</small></summary><p>Вставок было несколько, и части ещё не слились. Нужен порядок — допишите <code>ORDER BY</code> в <code>SELECT</code>.</p></details>
+
+        <h2 id="s11"><span class="sec">§11</span>Проверьте себя</h2>
+        <details>
+          <summary>Какие две обязательные части у CREATE TABLE для MergeTree, кроме имени и столбцов?</summary>
+          <p><code>ENGINE = MergeTree</code> и ключ <code>ORDER BY</code>. Сервер 26.8 допишет пустой ключ сам, но писать его стоит всегда — от ключа зависит скорость поиска.</p>
+        </details>
+        <details>
+          <summary>Вставили в MergeTree с ключом <code>ORDER BY qty</code> строки с qty 5, 1, 3 одной вставкой. В каком порядке их вернёт <code>SELECT *</code>?</summary>
+          <p>1, 3, 5: одна вставка ложится на диск одной частью, отсортированной по ключу. Но гарантирует порядок только <code>ORDER BY</code> в запросе.</p>
+        </details>
+        <details>
+          <summary>Почему после перезапуска таблица Memory есть, а строк в ней нет?</summary>
+          <p>Описание таблицы — имя, столбцы, движок — сервер хранит на диске. Строки Memory держит только в оперативной памяти, а она при перезапуске очищается.</p>
+        </details>
+        <details>
+          <summary>Какой ключ выбрать для таблицы замеров датчиков, если почти все вопросы — «показания датчика X за период»?</summary>
+          <p><code>ORDER BY (sensor_id, ts)</code>: сначала датчик, внутри него — время. Тогда показания одного датчика лежат рядом и по времени.</p>
+        </details>
+
+        <h2 id="s12"><span class="sec">§12</span>Шпаргалка и глоссарий</h2>
+        <div class="cheat">
+          <div>
+            <b>MergeTree</b>
+            <code>CREATE TABLE sandbox.t (</code>
+            <code>    id UInt32 COMMENT 'номер',</code>
+            <code>    …</code>
+            <code>) ENGINE = MergeTree</code>
+            <code>ORDER BY id</code>
+          </div>
+          <div>
+            <b>Memory</b>
+            <code>CREATE TABLE sandbox.t (…)</code>
+            <code>ENGINE = Memory</code>
+          </div>
+          <div>
+            <b>Варианты</b>
+            <code>CREATE TABLE IF NOT EXISTS …</code>
+            <code>CREATE TABLE t2 AS t1</code>
+            <code>ORDER BY tuple()   -- без ключа</code>
+          </div>
+          <div>
+            <b>Проверить</b>
+            <code>DESCRIBE sandbox.t</code>
+            <code>SHOW CREATE TABLE sandbox.t</code>
+            <code>docker compose restart clickhouse</code>
+          </div>
+        </div>
+        <details class="more">
+          <summary>5 терминов главы с картинками</summary>
+        <div class="glossary">
+          <article class="gl" id="g-engine">
+            <div class="gl__text">
+              <h3>Движок таблицы<i>table engine</i></h3>
+              <p class="gl__def">Способ хранения строк таблицы: где они лежат, в каком порядке, что происходит при вставке и чтении. Задаётся в <code>ENGINE =</code>.</p>
+              <p class="gl__ex"><b>Пример</b><code>ENGINE = MergeTree</code>, <code>ENGINE = Memory</code>.</p>
+              <p class="gl__where"><b>Где</b>§1, §2</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Одни и те же столбцы, два движка"><rect class="sc-box" x="70" y="10" width="120" height="30" rx="4"/><text class="tm tc" x="130" y="30">столбцы</text><path class="sc-line" d="M110 44 L60 70 M150 44 L200 70"/><rect class="sc-soft" x="14" y="74" width="100" height="40" rx="4"/><text class="t tc" x="64" y="99">Memory</text><rect class="sc-acc" x="146" y="74" width="100" height="40" rx="4"/><text class="t tc" x="196" y="99">MergeTree</text></svg></figure>
+          </article>
+          <article class="gl" id="g-mergetree">
+            <div class="gl__text">
+              <h3>MergeTree</h3>
+              <p class="gl__def">Основной движок ClickHouse. Хранит строки на диске частями, каждая часть отсортирована по ключу <code>ORDER BY</code>; позже части сливаются.</p>
+              <p class="gl__ex"><b>Пример</b>все таблицы стенда: <code>shop.products</code>, <code>web.events</code>.</p>
+              <p class="gl__where"><b>Где</b>§3, §4, модуль 3</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Две отсортированные части сливаются в одну"><rect class="sc-acc" x="14" y="16" width="80" height="40" rx="4"/><text class="tm tc" x="54" y="41">10 20</text><rect class="sc-acc" x="14" y="70" width="80" height="40" rx="4"/><text class="tm tc" x="54" y="95">15 30</text><path class="sc-arrow" d="M100 64 L140 64 M133 58 L140 64 L133 70"/><rect class="sc-warm" x="146" y="40" width="100" height="48" rx="4"/><text class="tm tc" x="196" y="69">10 15 20 30</text></svg></figure>
+          </article>
+          <article class="gl" id="g-memory">
+            <div class="gl__text">
+              <h3>Memory</h3>
+              <p class="gl__def">Движок, который держит строки в оперативной памяти в порядке вставки. После перезапуска сервера таблица остаётся пустой.</p>
+              <p class="gl__ex"><b>Пример</b><code>sandbox.cart_mem</code>: 4 строки до перезапуска, 0 после.</p>
+              <p class="gl__where"><b>Где</b>§5, §6</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="До перезапуска 4 строки, после 0"><rect class="sc-acc" x="14" y="40" width="100" height="48" rx="4"/><text class="tb tc" x="64" y="69">4 строки</text><path class="sc-arrow" d="M118 64 L142 64 M135 58 L142 64 L135 70"/><rect class="sc-soft" x="146" y="40" width="100" height="48" rx="4"/><text class="tb tc" x="196" y="69">0</text><text class="t tc" x="130" y="112">перезапуск</text></svg></figure>
+          </article>
+          <article class="gl" id="g-key">
+            <div class="gl__text">
+              <h3>Ключ сортировки<i>ORDER BY</i></h3>
+              <p class="gl__def">Столбцы, по которым MergeTree упорядочивает строки на диске. Сначала строки упорядочены по первому столбцу, при равенстве — по следующему.</p>
+              <p class="gl__ex"><b>Пример</b><code>ORDER BY (user_id, product_id)</code>; без ключа — <code>ORDER BY tuple()</code>.</p>
+              <p class="gl__where"><b>Где</b>§4, §8, глава 3.3</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Строки по возрастанию ключа"><rect class="sc-warm" x="40" y="14" width="180" height="24" rx="3"/><text class="tm" x="52" y="31">10 · p-003</text><rect class="sc-warm" x="40" y="42" width="180" height="24" rx="3"/><text class="tm" x="52" y="59">10 · p-017</text><rect class="sc-box" x="40" y="70" width="180" height="24" rx="3"/><text class="tm" x="52" y="87">20 · p-001</text><rect class="sc-box" x="40" y="98" width="180" height="24" rx="3"/><text class="tm" x="52" y="115">30 · p-005</text></svg></figure>
+          </article>
+          <article class="gl" id="g-part">
+            <div class="gl__text">
+              <h3>Часть<i>part</i></h3>
+              <p class="gl__def">Порция строк, которую MergeTree записал на диск за одну вставку, уже отсортированная по ключу. Части со временем сливаются.</p>
+              <p class="gl__ex"><b>Пример</b>4 строки <code>sandbox.cart</code> — одна часть <code>all_1_1_0</code>.</p>
+              <p class="gl__where"><b>Где</b>§4, глава 3.2</p>
+            </div>
+            <figure class="gl__pic"><svg viewBox="0 0 260 130" role="img" aria-label="Три вставки — три части"><rect class="sc-acc" x="20" y="40" width="64" height="48" rx="4"/><text class="t tc" x="52" y="69">часть 1</text><rect class="sc-acc" x="98" y="40" width="64" height="48" rx="4"/><text class="t tc" x="130" y="69">часть 2</text><rect class="sc-acc" x="176" y="40" width="64" height="48" rx="4"/><text class="t tc" x="208" y="69">часть 3</text></svg></figure>
+          </article>
+        </div>
+        </details>
+
+        <h3>Итог главы</h3>
+        <ul class="short">
+          <li><code>CREATE TABLE база.имя (столбцы) ENGINE = … ORDER BY …</code>; у столбцов и таблицы может быть <code>COMMENT</code>.</li>
+          <li>Движок задаёт, как хранятся строки. Основной — MergeTree, для опытов — Memory.</li>
+          <li>MergeTree пишет каждую вставку на диск, отсортированной по ключу <code>ORDER BY</code>.</li>
+          <li>Memory держит строки в памяти: после перезапуска таблица пустая.</li>
+          <li>В ключ ставят столбцы, по которым чаще всего ищут. Без ключа — <code>ORDER BY tuple()</code>.</li>
+        </ul>
+        <p>Дальше — следующая глава модуля: как вставлять строки — по одной, пачкой и из другой таблицы — и почему ClickHouse любит пачки.</p>
+
+        <div class="pager"><a href="../13-pustoe-znachenie/index.html">← 1.3 Пустое значение</a><a href="../../index.html#modules">К оглавлению модуля 1 →</a></div>
+
+        <div class="colophon">
+          <span>Глава 1.4 · CREATE TABLE и движок · Справочник по ClickHouse</span>
+          <span class="author-line">Автор: Макаров Максим Николаевич</span>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../../book.js"></script>
+</body>
+</html>
